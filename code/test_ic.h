@@ -1,0 +1,245 @@
+#pragma once
+#include "Argument.h"
+
+template <typename T, typename T1>
+bool vec_value_check(T &vec, T1 val, int equality, string str)  // equality: 1: should be equal to val, -1: shoud not equal to val, 2: should be greater than, -2: should be smaller than
+{
+	bool flag=false;
+	Nodelist vec_ind;
+	if(equality==1)
+	{
+		for(auto i=0;i<vec.size();i++)
+		{
+			auto this_val=vec[i];
+			if(this_val!=val)
+			{
+				flag=true;
+				vec_ind.push_back(i);
+			}
+		}
+		if(flag)
+		{
+			std::fstream result_bk(result, ios::app);
+			assert(!result_bk.fail());
+			result_bk<<str<<" vec Value errors: "<<endl;
+			for(auto i:vec_ind)
+			{
+				result_bk<<vec[i]<<", ";
+			}
+			result_bk<<endl;
+			result_bk.close();
+			vec_out(vec_ind, "vec_ind: ");
+			return true;
+		}
+		return false;
+	}
+	else if(equality==-1)
+	{
+		for(auto i:vec)
+		{
+			if(i==val)
+			{
+				cout<<str<<" vec Value error: "<<i<<" != "<<val<<endl;
+				vec_out(vec);
+				// exit(0);
+				return true;
+			}
+		}
+		return false;
+	}
+	else if(equality==2)
+	{
+		for(auto i:vec)
+		{
+			if(i<=val)
+			{
+				cout<<str<<" vec Value error: "<<i<<" != "<<val<<endl;
+				vec_out(vec);
+				// exit(0);
+				return true;
+			}
+		}
+		return false;
+	}
+	else if(equality==-2)
+	{
+		for(auto i:vec)
+		{
+			if(i>=val)
+			{
+				cout<<str<<" vec Value error: "<<i<<" != "<<val<<endl;
+				vec_out(vec);
+				// exit(0);
+				return true;
+			}
+		}
+		return false;
+	}
+	return false;
+}
+
+int FR_full_check(int rid, string str, Nodelist p_nodes={})
+{
+	mRRset &mRR=_mRRsets[rid];
+	for(auto &adj_list:mRR)
+	{
+		for(auto &node:adj_list)
+		{
+			// auto node=entry.first;
+			// if(_FRsets[node].find(rid)==_FRsets[node].end())
+			auto &frset= _FRsets[node];
+			auto it= lower_bound(frset.begin(), frset.end(), rid);
+			if( it == frset.end() )
+			{
+				set_out({node});
+				output_info(rid, false, p_nodes);
+				cout<<str+" Error in FR_full_check, mRR "<<rid<<" contains the node "<<node<<"; but the mRRid is not in node's _FRsets"<<endl;
+				// output_info(rid);
+				return node;
+			}
+		}
+	}
+	for(int i=0;i<__numV;i++)
+	{
+		// if(_FRsets[i].find(rid)!=_FRsets[i].end())
+		auto &frset= _FRsets[i];
+		auto it= lower_bound(frset.begin(), frset.end(), rid);
+		if( it != frset.end() )
+		{
+			bool find_it=false;
+			for(auto &adj_list:mRR)
+			{
+				// if(adj_list.find(i)==adj_list.end())
+				// {
+				// 	continue;
+				// }
+				// else
+				// {
+				// 	find_it=true;
+				// 	break;
+				// }
+			}
+			if(!find_it)
+			{
+				set_out({i});
+				// output_info(rid);
+				cout<<"Error in FR_full_check, _FRset[node] contains mRRid "<<rid<<", but the node "<<i<<" is not in any adj_list of the mRR "<<endl;
+				output_info(rid);
+				return i;
+			}
+		}
+	}
+	return -5;
+}
+
+bool FR_sorted_check(string str)
+{
+	int i=0;
+	for(const auto &fr: _FRsets)
+	{
+		if(!is_sorted(fr.begin(), fr.end()))
+		{
+			cout<<"Error in FR_sorted_check of "+str+" in checking the "+to_string(i)+"-th FRset. The _FRsets is not sorted."<<endl;
+			exit(1);
+		}
+		i++;
+	}
+	return 0;
+}
+
+bool FR_insert_check(int rid, int node)
+{
+	// if(_FRsets[node].find(rid)!=_FRsets[node].end())
+	auto &frset= _FRsets[node];
+	auto it= lower_bound(frset.begin(), frset.end(), rid);
+	if (it != frset.end() && *it == rid) 		
+	{
+		set_out({node});
+		// __log_message("INFO", __FILE__, __LINE__, __func__);
+		output_info(rid);
+		// exit(1);
+		return 1;
+	}
+	return 0;
+}
+
+template <typename T>
+void vec_out(T &vec, string str="")
+{
+	std::fstream result_bk(result, ios::app);
+	assert(!result_bk.fail());
+	result_bk<<str+"vec: ";
+	for(auto i:vec)
+	{
+		result_bk<<i<<", ";
+	}
+	result_bk<<endl;
+	result_bk.close();
+	// cout<<str+"vec: ";
+	// for(auto i:vec)
+	// {
+	// 	cout<<i<<", ";
+	// }
+	// cout<<endl;
+}
+
+void set_out(Nodelist p_nodes)
+{
+	// std::fstream result_bk(result, ios::out);
+	(*__arg).result_bk.open(result);
+	assert(!(*__arg).result_bk.fail());
+	for(auto i:p_nodes)
+	{
+		(*__arg).result_bk<<i<<"'s hashset values: "<<endl;
+		for(auto j:_FRsets[i])
+		{
+			(*__arg).result_bk<<j<<", ";
+		}		
+		(*__arg).result_bk<<endl;
+	}
+	(*__arg).result_bk.close();
+}
+
+bool output_info(int mRRid, bool erase=false, Nodelist p_nodes={})
+{		
+	// cout<<vec_virtual_roots[mRRid].size()<<endl;
+	// if(p_nodes.size()==0 && vec_virtual_roots[mRRid].size()==0)
+	// {
+	// 	return true;
+	// }
+	if(erase)
+		(*__arg).result_bk.open(result);
+	else
+		(*__arg).result_bk.open(result, ios::app);
+	assert(!(*__arg).result_bk.fail());
+	(*__arg).result_bk<<"==========================================================="<<endl;
+	(*__arg).result_bk<<"The vec_virtual_roots is: "<<endl;
+	for(auto i:vv_virtual_roots[mRRid])
+	{
+		(*__arg).result_bk<<i<<", ";
+	}
+	(*__arg).result_bk<<endl;
+	(*__arg).result_bk<<"The p_nodes are: "<<endl;
+	for(auto node:p_nodes)
+	{
+		(*__arg).result_bk<<node<<", ";
+	}
+	(*__arg).result_bk<<endl;
+	(*__arg).result_bk<<"The mRRid is: "<<mRRid<<endl;
+	// for(auto i=0;i<__numV;i++)
+	// {
+	// 	(*__arg).result_bk<<__vecVisitBool[i]<<", ";
+	// }
+	// (*__arg).result_bk<<endl;
+	// (*__arg).result_bk<<"The adj_list is: "<<endl;
+	// auto k=0;
+	// for(auto adj_list:_mRRsets[mRRid])
+	// {
+	// 	//if(k==0) 		continue;
+	// 	(*__arg).result_bk<<k<<"-th adj_list is: "<<endl;
+	// 	output_adj(adj_list);
+	// 	k++;
+	// }
+	// (*__arg).result_bk.close();
+	return false;
+}

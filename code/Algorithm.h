@@ -9,9 +9,8 @@
 #include <malloc.h>
 #include "Memory.h"
 #include "MemoryUsage.h"
-#include "test_ic.h"
+// #include "test_ic.h"
 using namespace std;
-
 
 class Algorithm
 {
@@ -73,7 +72,6 @@ public:
 		__dataset_No = arg.dataset_No;
 		__left_num = arg.left_num;
 		__over_pnodes = arg.over_pnodes;
-
 	}
 	
 	~Algorithm()
@@ -423,7 +421,9 @@ public:
 		{
 			auto start = std::chrono::high_resolution_clock::now();
 			// if((round_num)/5==0) malloc_trim(0);
-			root_num=ceil(1.0*__numV_left/__eta_left);
+			double decimal = 1.0 * (__numV_left) / (__eta_left);
+			root_num=floor(decimal);
+			residual = decimal - root_num;  // in (0,1)
 			
 			if(in_ending_rnd==false)
 			{
@@ -529,18 +529,6 @@ public:
 		std::ofstream result_bk;
 		result_bk.open(res, ios::app);
         assert(!result_bk.fail());
-		// for(auto &adj_list:RR._mRRsets[mRRid])
-		// {
-		// 	for(auto &entry:adj_list)
-		// 	{
-		// 		result_bk<<entry.first<<", ";
-		// 		for(auto &nbr:entry.second)
-		// 		{
-		// 			result_bk<<nbr<<", ";
-		// 		}
-		// 		result_bk<<endl;
-		// 	}
-		// }
 	}
 
 	void release_memory()
