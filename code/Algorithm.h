@@ -25,18 +25,17 @@ private:
 	string  _cascadeModel;
 	vector<tuple<int, int, double, int>> ratio_plain, ratio_UB;
 	vector<double> vec_UB; // store the upper bound of coverage for each node
+	vector<double> vec_LB;
+	Nodelist vec_deg;
 	
 	int counter=0;  // record the number of nodes being affected in total
 	Nodelist seed_batch;
 	int seed;
 	int batch_size=1;
-	int coverage=0;
-	double cov_UB=0.0;
-	double cov_LB=0.0;
 	int deg=0;
 	double approx=1.0;
 	double theta=0;
-	int ending_rnd=300000;  // not needed, if q_ratio is properly set. sample: 4, facebook: 80, dblp: 3000
+	int ending_rnd=3000000;  // not needed, if q_ratio is properly set. sample: 4, facebook: 80, dblp: 3000. Let it be a large value, so that it will never enter the ending round to generate fresh mRRsets.
 	const int root_num_bound=250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
 	const int window_size=5;  // sample:2, facebook: 3, dblp: 5
 	bool in_ending_rnd=false;
@@ -45,15 +44,14 @@ private:
 	int window_beg=0;
 	int max_size_within_window=0;
 	// Nodelist num_deg_incremental;
-	Nodelist vec_deg;
 	vector<bool> RR_Mark;
-	double a=0.0;
+	double a_1=0.0, a_2=0.0;
 	int __dataset_No = 0;
-	float __q_ratio = 0.0;
 	// double total_build_seedset_time = 0;
 	double pre_theta = 0.0;
 	float __left_num = 600.0;
 	float __over_pnodes = 10.0;
+	double residual=0.0;
 
 public:
 	mRRcollection RR;
@@ -68,10 +66,11 @@ public:
 		batch_size=arg.batch;
 		round_num=0;
 		vec_mRR_size.resize(1e4,0);
-		__q_ratio = arg.q_ratio;
 		__dataset_No = arg.dataset_No;
 		__left_num = arg.left_num;
 		__over_pnodes = arg.over_pnodes;
+		vec_UB= vector<double>(__numV, 0.0);
+		vec_LB= vector<double>(__numV, 0.0);
 	}
 	
 	~Algorithm()
@@ -92,7 +91,8 @@ public:
 		return ans;
 	}
 
-	void build_seedset(int theta)
+	/// the build_seedset function for the batch mode needs to be further examined. How to get the optimal upper bound set (although the objective function is submodular), and how to get the seed set(at least we can simply select the seed set based on the vanilla coverage).
+	bool build_seedset(int theta, double ratio=1.0)
 	{
 		vec_deg.assign(__numV,0);
 		seed_batch.clear();
@@ -101,64 +101,35 @@ public:
 		RR_Mark.assign(theta,false);
 		if(in_ending_rnd)
 		{
-			if(use_UB)
+			ratio_UB.reserve(__numV);
+			for (int i = (__numV); i--;) 
 			{
-				ratio_UB.reserve(__numV);
-				for (int i = (__numV); i--;) 
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					deg = RR._FRsets[i].size();  //The number of RR-sets covered by i.
-					vec_deg[i] = deg;
-					ratio_plain.push_back(make_tuple(i,deg,1.0*deg/(cost[i]),0));  // push back the plain ratio first
-					double deg_UB=deg+a+sqrt(2.0*a*deg+1.0*a*a);
-					vec_deg[i] = deg;
-					ratio_UB.push_back(make_tuple(i,deg,1.0*deg_UB/cost[i],0));  // do not push back, otherwise this vector will be very long
-				}
-			}
-			else 
-			{
-				for (int i = (__numV); i--;)  // initialize the benefit-to-cost ratio of each user
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					deg = RR._FRsets[i].size();  //The number of RR-sets covered by i.
-					vec_deg[i] = deg;
-					ratio_plain.push_back(make_tuple(i,deg,1.0*deg/cost[i],0));  // do not push back, otherwise this vector will be very long
-				}
+				if((__Activated)[i]) continue;  // activated nodes should not be considered
+				deg = RR._FRsets[i].size();  //The number of RR-sets covered by i.
+				vec_deg[i] = deg;
+				double deg_UB=deg+a_2+sqrt(2.0*a_2*deg+1.0*a_2*a_2);
+				ratio_UB.push_back(make_tuple(i,deg,1.0*deg_UB/cost[i],0));  // do not push back, otherwise this vector will be very long
 			}
 		}
 		else
 		{
+			ratio_UB.reserve(__numV);
+			int this_deg=0;
+			double a_2_2=a_2*a_2;
 			for(auto i=0;i<__numV;i++)  // in the same round, only newly updated mRR-sets will contribute to vec_deg
 			{
+				if((__Activated)[i]) continue;
 				auto &frset= RR._FRsets[i];
-				auto it= lower_bound(frset.begin(), frset.end(), theta);
-				auto k=it-frset.begin();  
-				vec_deg[i] = k;  // The number of RR-sets covered by i.
-			}
-
-			if(use_UB)
-			{
-				ratio_UB.reserve(__numV);
-				for(int i=0;i<(__numV);i++)
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					ratio_plain.push_back(make_tuple(i,vec_deg[i],1.0*vec_deg[i]/(cost)[i],0));  // push back the plain ratio first
-					double deg_UB=1.0*(vec_deg[i]+a+sqrt(2.0*a*vec_deg[i]+1.0*a*a));
-					ratio_UB.push_back(make_tuple(i,vec_deg[i],deg_UB/(cost)[i],0));
-				}
-			}
-			else 
-			{
-				for(int i=0;i<(__numV);i++)
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					ratio_plain.push_back(make_tuple(i,vec_deg[i],1.0*vec_deg[i]/(cost)[i],0));
-				}
+				this_deg= lower_bound(frset.begin(), frset.end(), theta)-frset.begin();
+				vec_deg[i] =this_deg;
+				// double deg_UB=1.0*(this_deg+a_2+sqrt(2.0*a_2*this_deg+a_2_2));
+				// ratio_UB.push_back(make_tuple(i,this_deg,deg_UB/(cost)[i],0));
+				ratio_plain.push_back(make_tuple(i,this_deg,1.0*this_deg/(cost)[i],0));
 			}
 		}
 
 		make_max_heap(ratio_plain);
-		coverage=0;  // reset coverage in each trial
+		int coverage=0;  // reset coverage in each trial
 		for(int i =0;i<batch_size;i++)  // select k seeds
 		{
 			while(get<3>(ratio_plain[0])!=i)
@@ -166,17 +137,14 @@ public:
 				seed=get<0>(ratio_plain[0]);
 				// int nodeDeg=get<1>(ratio_plain[0]);
 				int nodeDeg=vec_deg[seed];  // RR_Mark is shared throughout the selection of this batch. Thus, true states will be taken account repeatedly. Each time the number of true states is actually the total number.
-				auto pre_nodeDeg=nodeDeg;
 				for(int RRId: RR._FRsets[seed])
 				{
 					// if((RR_Mark[RRId]==true)||(RRId>=theta)) 	nodeDeg--;
 					if((RR_Mark[RRId]==true) && RRId<theta) 	nodeDeg--;  // may need to check RRId<theta, since acessing a value outside RR_Mark is permitted in C++  // no need to check RRId>=theta, since nodeDeg only counts deg in current mRR-sets
 				}
-				if(nodeDeg>RR._num_mRRsets) 
-				{
-					cout<<"error, nodeDeg>num_mRRsets: "<<nodeDeg<<",  "<<RR._num_mRRsets<<". The original node_deg is "<<pre_nodeDeg<<endl; exit(1);
-				}
-				tuple<int,int, double, int> updated_node=make_tuple(seed,nodeDeg, 1.0*nodeDeg/(cost)[seed],i);
+				assert(nodeDeg>=0);
+				// double nodeDeg_UB=1.0*(nodeDeg+a_2+sqrt(2.0*a_2*nodeDeg+a_2*a_2));
+				tuple<int,int, double, int> updated_node=make_tuple(seed,nodeDeg, nodeDeg/(cost)[seed],i);
 				max_heap_replace_max_value(ratio_plain, updated_node);
 			}
 			seed=get<0>(ratio_plain[0]);
@@ -190,98 +158,40 @@ public:
 			tuple<int, int, double, int> disable_node=make_tuple(seed, 0, -1.0, i);
 			max_heap_replace_max_value(ratio_plain, disable_node);
 		}
+		return (coverage + 2.0 * a_1 / 3.0 - sqrt(2 * a_1 * coverage + 4.0* a_1 *a_1 / 9.0)) >= ratio * (coverage + a_2 + sqrt(2 * a_2 * coverage + a_2 * a_2));  // fix the number of seeds selected in each round, and assume the budget fits this round automatically
 	}
 
-	void build_max_single_seed(int theta){
-		// RR.output_info(1);
-		vec_deg.assign(__numV,0);
-		seed_batch.clear();
-		ratio_plain.clear();ratio_UB.reserve(__numV);		
-		RR_Mark.assign(theta,false);
-		vec_UB.resize(__numV);
-		fill(vec_UB.begin(), vec_UB.end(), 0.0);
-		if(in_ending_rnd)
+	bool build_max_single_seed(int theta, double ratio=1.0)
+	{
+		double a_1_23 = 2.0 * a_1 / 3.0, a_1_49=4.0* a_1 *a_1 / 9.0, a_2_2=a_2 * a_2;		
+		double seed_ratio_LB = 0.0, max_ratio_UB = 0.0, this_LB_ratio=0.0, this_UB_ratio=0.0, ratio_i=0.0;
+		int seed = 0, max_node=0;
+		for(auto i=0;i<__numV;i++)  // in the same round, only newly updated mRR-sets will contribute to vec_deg
 		{
-			if(use_UB)
+			if((__Activated)[i]) continue;
+			auto &frset= RR._FRsets[i];
+			ratio_i=frset.size()/(cost[i]);
+			if(ratio_i<seed_ratio_LB) continue;		
+			int k= lower_bound(frset.begin(), frset.end(), theta)-frset.begin();
+			this_LB_ratio = (k + a_1_23 - sqrt(2 * a_1 * k + a_1_49))/(cost[i]);
+			this_UB_ratio = (k+a_2+sqrt(2*a_2*k+a_2_2))/(cost[i]);
+			if(this_LB_ratio>seed_ratio_LB)  // find the max seed ratio
 			{
-				ratio_UB.reserve(__numV);
-				for (int i = (__numV); i--;) 
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					deg = RR._FRsets[i].size();  //The number of RR-sets covered by i.
-					ratio_plain.push_back(make_tuple(i,deg,1.0*deg/(cost[i]),0));  // push back the plain ratio first
-					double deg_UB=deg+a+sqrt(2.0*a*deg+1.0*a*a);
-					ratio_UB.push_back(make_tuple(i,deg,1.0*deg_UB/cost[i],0));  // do not push back, otherwise this vector will be very long
-				}
+				seed_ratio_LB=this_LB_ratio;
+				seed=i;
 			}
-			else 
+			if(this_UB_ratio>max_ratio_UB)  // find the max ratio
 			{
-				for (int i = (__numV); i--;)  // initialize the benefit-to-cost ratio of each user. From 0 to numV-1
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					deg = RR._FRsets[i].size();  //The number of RR-sets covered by i.
-					double deg_UB=deg+a+sqrt(2.0*a*deg+1.0*a*a);
-					vec_UB[i]=deg_UB;
-					ratio_plain.push_back(make_tuple(i,deg,1.0*deg/cost[i],0));  // do not push back, otherwise this vector will be very long
-				}
-			}
-		}
-		else
-		{
-			for(auto i=0;i<__numV;i++)  // in the same round, only newly updated mRR-sets will contribute to vec_deg
-			{
-				auto &frset= RR._FRsets[i];
-				auto it= lower_bound(frset.begin(), frset.end(), theta);
-				auto k=it-frset.begin();  
-				vec_deg[i] = k;  // The number of RR-sets covered by i.
-			}
-			if(use_UB)
-			{
-				ratio_UB.reserve(__numV);
-				for(int i=0;i<(__numV);i++)
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					ratio_plain.push_back(make_tuple(i,vec_deg[i],1.0*vec_deg[i]/(cost)[i],0));  // push back the plain ratio first
-					double deg_UB=1.0*(vec_deg[i]+a+sqrt(2.0*a*vec_deg[i]+1.0*a*a));
-					ratio_UB.push_back(make_tuple(i,vec_deg[i],deg_UB/(cost)[i],0));
-				}
-			}
-			else 
-			{
-				for(int i=0;i<(__numV);i++)
-				{
-					if((__Activated)[i]) continue;  // activated nodes should not be considered
-					deg = vec_deg[i];
-					double deg_UB=deg+a+sqrt(2.0*a*deg+1.0*a*a);
-					vec_UB[i]=deg_UB;
-					ratio_plain.push_back(make_tuple(i,deg,1.0*deg/(cost)[i],0));
-				}
-			}
-		}
-		double max_ratio = 0.0;
-		int seed = 0;
-		coverage=0;
-		for (int i = 0; i< ratio_plain.size();i++){
-			double cur_ratio = get<2>(ratio_plain[i]);
-			if (cur_ratio > max_ratio){
-				seed = get<0>(ratio_plain[i]);
-				max_ratio = cur_ratio;
-				coverage = get<1>(ratio_plain[i]);
+				max_node=i;
+				max_ratio_UB=this_UB_ratio;
 			}
 		}
 		seed_batch.push_back(seed);
+		return seed_ratio_LB>=ratio*max_ratio_UB;  // seed ratio and max ratio
 	}
 
 	void OneRoundSelect()
 	{
-		// RR.out_a(__LINE__);
-		// double __eps_hat, __eps_prime, __delta=1.0/(__numV_left);
-		// __eps_prime=(1-__eps_hat)/(1+__eps_hat);
-		// __eps_hat=(eps-__delta)/(1-__delta);
-		// double theta_max=ceil(2.0*__numV_left*(1+__eps_prime/3.0)*log(6.0/__delta)/(__eps_prime*__eps_prime*(1-1.0/2.71828)));
-		// double T=ceil(log(1.0*__numV_left/(__eps_prime*__eps_prime))/log(2));
-		// theta=1.0*theta_max/T;
-		// a=log(3.0*T/__delta);
 		//===================================
 		delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
 		double eps_hat=99.0*eps/(100.0-eps);
@@ -293,103 +203,31 @@ public:
 
 		const double i_max = ceil(log(__numV_left / batch_size / eps_hat / eps_hat) / log(2)) + 1;
 
-		const double a1 = log(3 * i_max / delta) + logcnk(__numV_left, batch_size);	
-		const double a2 = log(3 * i_max / delta);
-		a = a2;
-		//===================================
-		
-		bool set_q = false;
-		RR.__q_ratio = __q_ratio;
-		while(theta<theta_max)
-		{	
-		    /* change q_ratio when eta_left < 500 or to much activated nodes in pre round*/
-			if (!set_q)
-			{
-				if(__eta_left < __left_num){
-					RR.__q_ratio = 1e-8;
-					set_q = true;
-				}
-			}
-			// 	else if ( round_num < 1){
-			// 		RR.__q_ratio = __q_ratio; //default q_ratio
-			// 		set_q = true;
-			// 	}
-			// 	else
-			// 	{				
-			// 		//count interval activated nodes number
-			// 		int num_activated_nodes = 0;
-			// 		int cur_mRR_size = theta;
-			// 		int last_overmRR_index = -1;
-			// 		for (int i = round_num -1 ; i >= 0; i--) {
-			// 			if (vec_mRR_size[i] > cur_mRR_size) {
-			// 				last_overmRR_index = i;
-			// 				break;
-			// 			}
-			// 		}
+		a_1 = log(3 * i_max / delta) + logcnk(__numV_left, batch_size);	
+		a_2 = log(3 * i_max / delta);
 
-			// 		if(last_overmRR_index!=-1){
-			// 			for(int i = last_overmRR_index + 1; i < activated_nodes.size(); i++){
-			// 				num_activated_nodes += activated_nodes[i].size(); //activated_nodes initialize with a empty entry
-			// 			}
-			// 		}
-			// 		if (num_activated_nodes > __over_pnodes){
-			// 			RR.__q_ratio = 1e-8;
-			// 			set_q = true;
-			// 		}
-			// 	}		
-			// }
-			// result << "round " << (round_num+1) <<" q_ratio value " << RR.__q_ratio << " theta " <<theta << endl;
+		double ratio=(1-eps_hat)*approx;
+		//===================================
+		bool select=false;
+		while(theta<theta_max)
+		{
 			if(in_ending_rnd)
 			{
 				RR.build_n_mRRsets_fresh_vec(theta);
 			}
 			else
 			{
-				RR.build_n_mRRsets_tree(theta, 0);
-			}
-			// build_seedset(theta);		
-			if (batch_size > 1) build_seedset(theta);
-			else  build_max_single_seed(theta);
-			bool select=false;
-			//===================================
-			// cov_UB=1.0*coverage/approx;
-			// cov_UB=cov_UB+a+sqrt(2.0*a*cov_UB+a*a);
-			// cov_LB=1.0*( coverage+2.0*a/3.0-sqrt(2.0*a*coverage+4.0*a*a/9.0) );
-			// if(cov_LB>=(1-__eps_hat)*approx*cov_UB) {select=true;}
-			//===================================
-			cov_UB=coverage*1.0/approx+a2+sqrt(2.0*a2*coverage/approx+a2*a2);
-			cov_LB=1.0*(coverage+2.0*a1/3.0-sqrt(2.0*a1*coverage+4.0*a1*a1/9.0));
-			if(cov_LB>=(1-eps_hat)*approx*cov_UB) {select=true;}
-			//===================================
-			if(!select && batch_size < 2)
-			{
-				int i=0;
-				double ratio = 1.0 * coverage /cost[seed_batch[0]];
-				for(;i<__numV_left;i++)
-				{
-					if(__Activated[i]) continue; // skip already activated nodes
-					if(ratio<vec_UB[i]*1.581976707/cost[i])
-					{
-						if(i!=seed_batch[0])	break;
-					}
-				}
-				if(i==__numV_left)
-				{
-					select=true;
-				}
-				// else  // for the batch version, we let the budget in each round be the costs used by the candidate set.
-				// {
-				// 	if(coverage/approx)
-				// }
-			}
-			if(select)
+				RR.build_n_mRRsets_tree(theta);
+			}		
+			if (batch_size > 1) select=build_seedset(theta, ratio);
+			else  select=build_max_single_seed(theta, ratio);
+			if(select) 
 			{
 				(seed_set).insert((seed_set).end(),seed_batch.begin(),seed_batch.end());
 				total_theta+=theta;
-				pre_theta = theta;
 				return;
 			}
-			if(theta>=RR_thr)
+			if(theta>=RR_thr)  // modify the increase of mRR-sets from double to linear
 			{
 				theta+=RR_step;
 			}
@@ -400,10 +238,7 @@ public:
 		}
 		// build_seedset(theta);
 		if (batch_size > 1) build_seedset(theta);
-		else  build_max_single_seed(theta);		
-		cov_UB=1.0*coverage/approx;
-		cov_UB=cov_UB+a+sqrt(2.0*a*cov_UB+a*a);
-		cov_LB=1.0*( coverage+2.0*a/3.0-sqrt(2.0*a*coverage+4.0*a*a/9.0) );
+		else  build_max_single_seed(theta);
 		(seed_set).insert((seed_set).end(),seed_batch.begin(),seed_batch.end());
 		total_theta+=theta;
 		return;
@@ -413,14 +248,13 @@ public:
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 		std::ofstream result;
-		string file_name = "../results/ourround/round_" + std::to_string(__dataset_No) + "_" + std::to_string(int(__eta*__numV))+ "_" + std::to_string(__q_ratio);
+		string file_name = "../results/ourround/round_" + std::to_string(__dataset_No) + "_" + std::to_string(int(__eta*__numV));
 		result.open(file_name, ios::app);
 		assert(!result.fail());
 		auto single_start = std::chrono::high_resolution_clock::now();
 		while((__eta_left)>0)
 		{
 			auto start = std::chrono::high_resolution_clock::now();
-			// if((round_num)/5==0) malloc_trim(0);
 			double decimal = 1.0 * (__numV_left) / (__eta_left);
 			root_num=floor(decimal);
 			residual = decimal - root_num;  // in (0,1)
@@ -492,7 +326,7 @@ public:
 			// 		RR.refresh_FRmRRsets(max_size_within_window);
 			// 	}
 			// }
-			if(1.0*(__numV_left)/(__eta_left)>root_num_bound)
+			if(decimal>root_num_bound)
 			{
 				if (round_num < window_size){
 					window_beg = 0;
@@ -500,8 +334,7 @@ public:
 				else{
 					window_beg = round_num - window_size;
 				}
-				auto iter = max_element(vec_mRR_size.begin()+window_beg, vec_mRR_size.begin()+round_num);
-				max_size_within_window = *iter;
+				max_size_within_window = *(max_element(vec_mRR_size.begin()+window_beg, vec_mRR_size.begin()+round_num));
 				if(RR._num_mRRsets> max_size_within_window)
 				{
 					// cout << "Truncating the mRR-sets at round "<<(round_num)<<endl;
@@ -529,6 +362,7 @@ public:
 		std::ofstream result_bk;
 		result_bk.open(res, ios::app);
         assert(!result_bk.fail());
+		result_bk.close();
 	}
 
 	void release_memory()

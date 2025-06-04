@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <climits>
+#include <random>
 using namespace std;
 
 class mRRcollection
@@ -26,6 +27,7 @@ class mRRcollection
 	vint __vecNewTree;
 	Nodelist __vecVisitNode;
 	vector<vector<int>> vv_virtual_roots;
+    vector<int> vecRoot_num;
 	float rand_div=1.0;
 
 	public:
@@ -43,7 +45,11 @@ class mRRcollection
 	string result;
 	int num_update=0;
 	int num_add_root=0;
+    int num_delete=0;
 	vint vec_round;
+    vvint vv_polluted_nodes; 
+    vvint vv_roots_source;
+    std::random_device rd; // initialize random number generator
 
 
 	double mRR_traversal_time = 0.0;
@@ -87,13 +93,12 @@ class mRRcollection
 			}
 			PO[i].pop_back();  // the last row is empty, due to the mechanism of eof, a duplicated nbr will be added. Thus, we need to pop_back here
 		}
-		// __q_ratio = arg.q_ratio;
+		// __q_ratio = arg.q_ratio; 
 	}
 
 	/// Genrerate a possible world, PO.
 	void generate_possible_world()
 	{
-
 		for(int i=0;i<(__numV);i++)
 		{
 			auto nbrs=(O_graph)[i];
@@ -113,9 +118,13 @@ class mRRcollection
 		int counter_real = 0;  // local counter not used
 		for (auto seed : seeds)
 		{		
-		 	++counter_real;  // only one seed
+		 	++counter_real;
 		 	(__Activated)[seed] = true;
 		 	__vecVisitNode[numVisitNode++]=seed;
+            for(const auto &rrid: _FRsets[seed])
+            {
+                vv_polluted_nodes[rrid].push_back(seed);
+            }
 		}
 		while (curr_Node<numVisitNode)
 		{
@@ -126,6 +135,10 @@ class mRRcollection
 				__vecVisitNode[numVisitNode++]=v;
 				++counter_real;
 				(__Activated)[v] = true;
+                for(const auto &rrid: _FRsets[v])
+                {
+                    vv_polluted_nodes[rrid].push_back(v);
+                }
 			}
 		}
 		Nodelist temp(__vecVisitNode.begin(), __vecVisitNode.begin()+numVisitNode); 
@@ -134,6 +147,7 @@ class mRRcollection
 	}
 
  #include "test_ic.h"
+
 
 	/// Generate a set of n mRR sets
 	void build_n_mRRsets_tree(const size_t numSamples, const int pre_theta)
@@ -144,49 +158,41 @@ class mRRcollection
 		const auto prevSize = _num_mRRsets;  // previous total number of mRR-sets
 		vector<bool> mRR_mark(prevSize, false); // false indicates this mRR is not directly reused.
 		int num_revise_RR=(prevSize>numSamples?numSamples:prevSize);  // the number of mRR-sets that will be revised (revisable mRR-sets)
-		vector<int> vecRoot_num(num_revise_RR,0);
 		int curr_round;
+        vint vec_rootnum_RRid, vec_rootnum_1_RRid; 
+        vec_rootnum_RRid.reserve(num_revise_RR); vec_rootnum_1_RRid.reserve(num_revise_RR);
 		if(prevSize<numSamples)
 		{
 			vv_virtual_roots.resize(numSamples);
 			vec_round.resize(numSamples);
 			_mRRsets.resize(numSamples);
+            vv_polluted_nodes.resize(numSamples);
+            vecRoot_num.resize(numSamples);
+            vv_roots_source.resize(numSamples);
 		}
-        Nodelist polluted_nodes; polluted_nodes.reserve(200);
+        std::mt19937 gen(rd());
+        std::binomial_distribution<int> dist(num_revise_RR, residual);
+        ceil_root_RR=dist(gen);
 		for(int i=0;i<num_revise_RR;i++)  // build the basic information of previous mRR-sets, and update these mRR-sets
 		{
-			polluted_nodes.clear();
-			for(auto j=vec_round[i];j<round_num;j++)  // append all previously polluted nodes, which have not take effect.  CHECK the for limits
-			{
-				polluted_nodes.insert(polluted_nodes.end(), (activated_nodes)[j].begin(), (activated_nodes)[j].end());
-			}
-			if(vec_round[i]<round_num)
-			{
-				Nodelist p_nodes; p_nodes.reserve(polluted_nodes.size());
-				for(auto p_node:polluted_nodes)
-				{
-					// if(_FRsets[p_node].find(i)!=_FRsets[p_node].end())
-					auto &frset= _FRsets[p_node];
-					auto it=lower_bound(frset.begin(), frset.end(), i);
-					if(it != frset.end() && *it == i)
-					{
-						p_nodes.push_back(p_node);
-					}
-				}
-				vec_round[i]=round_num;  // the mRR is also updated even there is no p_node for it
-				if(p_nodes.size()>0)
-				{
-					mRR_update(i, p_nodes);
-				}
-			}
+            vint &polluted_nodes=vv_polluted_nodes[i];
+            if(polluted_nodes.size()>0)
+            {
+                mRR_update(i, polluted_nodes);
+                polluted_nodes.clear();
+            }
 			// The root info should be recorded after the mRR-sets are updated.
-			pre_root_num=_mRRsets[i].size()+vv_virtual_roots[i].size();  // do not use mRR size, since there exist virtual vv_roots that do not add an adj_list but add a root to rnd_roots
-			root_num_map[pre_root_num].emplace_back(i);
-			vecRoot_num[i]=pre_root_num;
-			if(dsfmt_gv_genrand_open_close() <= residual)  ceil_root_RR++;  // Get the number of ceil_root_num to be generated BTW
+            if(vecRoot_num[i]==root_num)
+            {
+                vec_rootnum_RRid.push_back(i);
+            }
+            else if(vecRoot_num[i]==root_num+1)
+            {
+                vec_rootnum_1_RRid.push_back(i);
+            }
 		}
 		floor_root_RR=num_revise_RR-ceil_root_RR;
-		for(auto mRRid:root_num_map[root_num])  // directly reuse updated previous mRR-sets with root number root_num, if there is any such mRR-sets
+		for(auto mRRid:vec_rootnum_RRid)  // directly reuse updated previous mRR-sets with root number root_num, if there is any such mRR-sets
 		{
 			if(floor_root_RR>0)  // if still need floor_root_RR
 			{
@@ -194,7 +200,7 @@ class mRRcollection
 				floor_root_RR--;
 			}
 		}
-		for(auto mRRid:root_num_map[root_num+1])  // directly reuse updated previous mRR-sets with root number root_num+1
+		for(auto mRRid:vec_rootnum_1_RRid)  // directly reuse updated previous mRR-sets with root number root_num+1
 		{
 			if(ceil_root_RR>0)
 			{
@@ -256,10 +262,10 @@ class mRRcollection
 	{
 		int root;
 		root_num += (dsfmt_gv_genrand_open_close() <= residual);
+        vv_roots_source[mRRid].assign(root_num, -1);
+        vecRoot_num[mRRid]=root_num;
 		mRRset &mRR=_mRRsets[mRRid];
 		mRR.resize(root_num);
-		// auto mRR_size = mRR.size();
-		// vint &roots=vv_roots[mRRid];
 		vec_round[mRRid]=round_num;
 		for (int i = 0; i < root_num; i++) // roots should be independent, and thus are selected in advance, while the diffusion from them is dependent
 		{
@@ -369,10 +375,11 @@ class mRRcollection
 	void mRR_update(int mRRid, Nodelist &del_nodes)
 	{
 		mRRset &mRR=_mRRsets[mRRid];
-		ulint mRR_size=mRR.size(), del_nodes_size=del_nodes.size();
+		ulint mRR_size=mRR.size();
+        vint &v_roots_source=vv_roots_source[mRRid];
 		vint &v_roots=vv_virtual_roots[mRRid];
 		ulint v_roots_size=v_roots.size();
-        vint roots; roots.reserve(v_roots_size+mRR_size);
+        vint roots, del_roots; roots.reserve(v_roots_size+mRR_size); del_roots.reserve(mRR_size);
         mRRset mRR_copy(mRR_size);
 		int min_tree=__numV, first_del_node, first_del_idx;
         bool find_del=false;
@@ -393,14 +400,26 @@ class mRRcollection
                     break;
                 }
             }
-            if(!__Activated[RR[0]] && i>=min_tree)  // only records roots after min_tree
+            if(i>=min_tree)  // only records roots after min_tree
             {
-                roots.push_back(RR[0]);
-                __vecNewTree[RR[0]] = mRR_size;  // should not be added into some tree during the new exploration
-                RR.swap(mRR_copy[i]);
+                if(__Activated[RR[0]])
+                {
+                    del_roots.push_back(i);
+                }
+                else
+                {
+                    roots.push_back(RR[0]);
+                    __vecNewTree[RR[0]] = mRR_size;  // should not be added into some tree during the new exploration
+                    RR.swap(mRR_copy[i]);
+                }
             }
 		}
         mRR.resize(min_tree);  // delete empty trees
+        for(const auto &node : del_roots)
+        {
+            v_roots_source.erase(v_roots_source.begin()+node);
+        }
+        ulint pre_roots_size=roots.size();
 		for(ulint i=v_roots_size-1;i>-1;i--)  // I did not record the idx of v_roots here like before
 		{
 			int root=v_roots[i];
@@ -416,6 +435,11 @@ class mRRcollection
                 __vecNewTree[root] = mRR_size; // mark realized v_roots
 			}
 		}
+        ulint roots_size=roots.size();
+        for(ulint i=pre_roots_size;i<roots_size;i++)
+        {
+            v_roots_source.push_back(-1);  // re-propagate, thus they become actual roots
+        }
         vint last_RR; last_RR.assign(mRR_copy[min_tree].begin(), mRR_copy[min_tree].begin()+first_del_idx);
         for(ulint i=0;i<first_del_idx;i++)
         {
@@ -571,10 +595,12 @@ class mRRcollection
                 __vecNewTree[node] = -1;  // reset the tree id
             }
         }
+        vecRoot_num[mRRid]=mRR_size+v_roots.size();
     }
 
 	void add_root(int mRRid, int num)
 	{
+        vecRoot_num[mRRid] += num;
 		mRRset &mRR=_mRRsets[mRRid];
 		vint roots, new_roots; roots.reserve(root_num); new_roots.reserve(num); mRR.reserve(root_num+num);
         auto &v_roots=vv_virtual_roots[mRRid];
@@ -669,10 +695,36 @@ class mRRcollection
 
 	void delete_root(int mRRid, int num_del_roots)
 	{
+        vecRoot_num[mRRid] -= num_del_roots;
 		mRRset &mRR=_mRRsets[mRRid];
 		ulint mRR_size=mRR.size();
 		vint &v_roots=vv_virtual_roots[mRRid], roots;
 		ulint v_roots_size=v_roots.size();
+        if(v_roots_size>= num_del_roots)  
+        {
+            v_roots.resize(v_roots_size-num_del_roots);
+        }
+        else
+        {
+            v_roots.clear();
+            num_del_roots -= v_roots_size;
+        }
+        for(int i=0;i<num_del_roots;i++)
+        {
+            auto &RR=mRR[mRR_size-1-i];
+            for(const auto &node:RR)
+            {
+                auto &frset = _FRsets[node];
+                    auto it=lower_bound(frset.begin(), frset.end(), mRRid);
+                    if (it != frset.end() && *it == mRRid) 
+                    {
+                        frset.erase(it);
+                    }
+            }
+        }
+        mRR.resize(mRR_size-num_del_roots);
+
+
         mRRset mRR_copy(mRR_size);
         int del_beg=mRR_size-num_del_roots;
         for(ulint i=0;i<mRR_size;i++)
@@ -793,17 +845,6 @@ class mRRcollection
 
 	void refresh_FRmRRsets(int max_size)
 	{
-		// refresh FRsets
-		// for (auto i =max_size; i< _num_mRRsets; i++)
-		// {
-		// 	for(auto &RR:_mRRsets[i])
-		// 	{
-		// 		for(auto &entry:RR)
-		// 		{
-		// 			_FRsets[entry.first].erase(i);
-		// 		}
-		// 	}
-		// }
 		for(auto i=0;i<__numV;i++)
 		{
 			auto &frset= _FRsets[i];
@@ -813,10 +854,6 @@ class mRRcollection
 		}
 		for (auto i =max_size; i< _num_mRRsets; i++)
 		{
-			for(auto &RR:_mRRsets[i])
-			{
-				RR.clear();
-			}
 			mRRset().swap(_mRRsets[i]);
 		}
 		_mRRsets.resize(max_size);
@@ -824,7 +861,11 @@ class mRRcollection
 		{
 			Nodelist().swap(vv_virtual_roots[i]);
 		}
+        vv_roots_source.resize(max_size);
+        vecRoot_num.resize(max_size);
+        vv_polluted_nodes.resize(max_size);
 		vv_virtual_roots.resize(max_size);
+        vec_round.resize(max_size);
 		_num_mRRsets = max_size;  // important
 	}
 
