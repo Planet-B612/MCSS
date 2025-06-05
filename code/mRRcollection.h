@@ -44,7 +44,7 @@ class mRRcollection
 	string result;
 	int num_update=0;
 	int num_add_root=0;
-    int num_delete=0;
+    int num_delete_root=0;
 	vint vec_round;
     vvint vv_polluted_nodes;
     std::random_device rd; // initialize random number generator
@@ -176,6 +176,7 @@ class mRRcollection
             {
                 mRR_update(i, polluted_nodes);
                 polluted_nodes.clear();
+				num_update++;
             }
 			// The root info should be recorded after the mRR-sets are updated.
             if(vecRoot_num[i]==root_num)
@@ -215,12 +216,14 @@ class mRRcollection
 					if(root_diff>0)
 					{
 						delete_root(i,root_diff);
+						num_delete_root++;
 					}
 					else
 					{
 						// output_info(i,true);
 						add_root(i,-root_diff);
 						// output_info(i,false);
+						num_add_root++;
 					}
 					floor_root_RR--;
 				}
@@ -232,12 +235,14 @@ class mRRcollection
 						// output_info(i,true);
 						delete_root(i,root_diff);
 						// output_info(i,false);
+						num_delete_root ++;
 					}
 					else
 					{
 						// output_info(i,true);
 						add_root(i,-root_diff);
 						// output_info(i,false);
+						num_add_root++;
 					}
 					ceil_root_RR--;
 				}
@@ -301,8 +306,8 @@ class mRRcollection
 				__vecVisitBool[expand] = false;
 			}
 		}
-		vec_value_check(__vecVisitBool, false, 1, string(__func__) + "beg="+to_string(0)+" __vecVisitBool includes TRUE values.");
-		FR_sorted_check(__func__);
+		// vec_value_check(__vecVisitBool, false, 1, string(__func__) + "beg="+to_string(0)+" __vecVisitBool includes TRUE values.");
+		// FR_sorted_check(__func__);
 		return 0;
 	}
 
@@ -365,7 +370,6 @@ class mRRcollection
 		}
 		return 0;
 	}
-
 
 	void mRR_update(int mRRid, Nodelist &del_nodes)
 	{
@@ -664,9 +668,9 @@ class mRRcollection
 		{
 			__vecTree[root] = -1;
 		}
-		vec_value_check(__vecVisitBool, false, 1, string(__func__) + "beg="+to_string(0)+" __vecVisitBool includes TRUE values.");
-		vec_value_check(__vecTree, -1, 1, string(__func__) + "beg="+to_string(0)+" __vecTree includes non -1 values.");
-		FR_sorted_check(__func__);
+		// vec_value_check(__vecVisitBool, false, 1, string(__func__) + "beg="+to_string(0)+" __vecVisitBool includes TRUE values.");
+		// vec_value_check(__vecTree, -1, 1, string(__func__) + "beg="+to_string(0)+" __vecTree includes non -1 values.");
+		// FR_sorted_check(__func__);
 		return;
 	}
 

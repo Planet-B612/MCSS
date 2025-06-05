@@ -246,7 +246,7 @@ public:
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 		std::ofstream result;
-		string file_name = "../results/ourround/round_" + std::to_string(__dataset_No) + "_" + std::to_string(int(__eta*__numV));
+		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(int(__eta*__numV));
 		result.open(file_name, ios::app);
 		assert(!result.fail());
 		auto single_start = std::chrono::high_resolution_clock::now();
@@ -341,8 +341,10 @@ public:
 			}
 	
 			round_num++;
-			result<<(round_num)<<", \t"<<counter<<", \t"<<(__eta_left)<<", \t"<<1.0*(__numV_left)/(__eta_left)<<", \t theta = "<<theta<<"; \t"<< RR.num_update<<" = "<<num_gen<<"+"<<num_addback<<", \t"<< RR.num_add_root<<", \t"<<RR.num_delete<<", \t"<< disp_mem_usage()<<" MB, \t"<<elapsed.count() << " 秒"<<endl;  // the round that is currently running
-
+			result<<(round_num)<<", \t"<<counter<<", \t"<<(__eta_left)<<", \t"<<1.0*(__numV_left)/(__eta_left)<<", \t theta = "<<theta<<"; \t update: "<< RR.num_update <<"\t add root: "<< RR.num_add_root<<" \t delete root: "<<RR.num_delete_root<<", \t"<< disp_mem_usage()<<" MB, \t"<<elapsed.count() << " 秒"<<endl;  // the round that is currently running
+			RR.num_update=0;
+			RR.num_add_root=0;
+			RR.num_delete_root=0;
 		}
 		auto single_end = std::chrono::high_resolution_clock::now();
 		std::chrono::duration <double> single_elapsed = single_end - single_start;
@@ -351,7 +353,7 @@ public:
 		// cout << "mRR traversal time " <<RR.mRR_traversal_time <<endl;
 		cout << "Single time " << single_elapsed.count() << " s" << endl;
 		cout << "Single spread " << (-(__eta_left))+ __eta*__numV <<endl;
-		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete,single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
+		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
 	}
 
 	void output_mRR(int mRRid)
