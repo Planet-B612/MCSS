@@ -47,8 +47,7 @@ class mRRcollection
 	int num_add_root=0;
     int num_delete=0;
 	vint vec_round;
-    vvint vv_polluted_nodes; 
-    vvint vv_roots_source;
+    vvint vv_polluted_nodes;
     std::random_device rd; // initialize random number generator
 
 
@@ -168,7 +167,6 @@ class mRRcollection
 			_mRRsets.resize(numSamples);
             vv_polluted_nodes.resize(numSamples);
             vecRoot_num.resize(numSamples);
-            vv_roots_source.resize(numSamples);
 		}
         std::mt19937 gen(rd());
         std::binomial_distribution<int> dist(num_revise_RR, residual);
@@ -262,7 +260,6 @@ class mRRcollection
 	{
 		int root;
 		root_num += (dsfmt_gv_genrand_open_close() <= residual);
-        vv_roots_source[mRRid].assign(root_num, -1);
         vecRoot_num[mRRid]=root_num;
 		mRRset &mRR=_mRRsets[mRRid];
 		mRR.resize(root_num);
@@ -376,7 +373,6 @@ class mRRcollection
 	{
 		mRRset &mRR=_mRRsets[mRRid];
 		ulint mRR_size=mRR.size();
-        vint &v_roots_source=vv_roots_source[mRRid];
 		vint &v_roots=vv_virtual_roots[mRRid];
 		ulint v_roots_size=v_roots.size();
         vint roots, del_roots; roots.reserve(v_roots_size+mRR_size); del_roots.reserve(mRR_size);
@@ -400,26 +396,14 @@ class mRRcollection
                     break;
                 }
             }
-            if(i>=min_tree)  // only records roots after min_tree
+            if(i>=min_tree && !__Activated[RR[0]])  // only records roots after min_tree
             {
-                if(__Activated[RR[0]])
-                {
-                    del_roots.push_back(i);
-                }
-                else
-                {
-                    roots.push_back(RR[0]);
-                    __vecNewTree[RR[0]] = mRR_size;  // should not be added into some tree during the new exploration
-                    RR.swap(mRR_copy[i]);
-                }
+                roots.push_back(RR[0]);
+                __vecNewTree[RR[0]] = mRR_size;  // should not be added into some tree during the new exploration
+                RR.swap(mRR_copy[i]);
             }
 		}
         mRR.resize(min_tree);  // delete empty trees
-        for(const auto &node : del_roots)
-        {
-            v_roots_source.erase(v_roots_source.begin()+node);
-        }
-        ulint pre_roots_size=roots.size();
 		for(ulint i=v_roots_size-1;i>-1;i--)  // I did not record the idx of v_roots here like before
 		{
 			int root=v_roots[i];
@@ -435,11 +419,6 @@ class mRRcollection
                 __vecNewTree[root] = mRR_size; // mark realized v_roots
 			}
 		}
-        ulint roots_size=roots.size();
-        for(ulint i=pre_roots_size;i<roots_size;i++)
-        {
-            v_roots_source.push_back(-1);  // re-propagate, thus they become actual roots
-        }
         vint last_RR; last_RR.assign(mRR_copy[min_tree].begin(), mRR_copy[min_tree].begin()+first_del_idx);
         for(ulint i=0;i<first_del_idx;i++)
         {
@@ -723,101 +702,6 @@ class mRRcollection
             }
         }
         mRR.resize(mRR_size-num_del_roots);
-
-
-        mRRset mRR_copy(mRR_size);
-        int del_beg=mRR_size-num_del_roots;
-        for(ulint i=0;i<mRR_size;i++)
-		{
-            vint &RR=mRR[i];
-            ulint RR_size=RR.size();
-            for(ulint j=0;j<RR_size;j++)
-            {
-                int node=RR[j];
-                __vecTree[node] = i;
-            }
-            if(i>=del_beg)
-            {
-                RR.swap(mRR_copy[i]);
-            }
-		}
-        for(ulint i=v_roots_size-1;i>-1;i--)
-        {
-            int root=v_roots[i];
-            if(__vecTree[root]>=del_beg)
-            {
-                __vecNewTree[root] = mRR_size;  // indicate that root is still in the mRR
-                roots.push_back(root);
-                v_roots.erase(v_roots.begin()+i);
-            }
-        }
-        mRR.resize(del_beg+roots.size());  // delete empty trees
-        int root_idx=0;
-        for(const auto &root:roots)
-        {
-            auto &RR=mRR[del_beg+root_idx];
-            RR.push_back(root);
-            __vecNewTree[root] = mRR_size;
-            int numVisitNode = 1, currNode = 0;
-            while(currNode<numVisitNode)
-            {
-                const auto expand=RR[currNode++];
-                for (const auto &nbrId : (R_graph)[expand])
-                {
-                    if(__vecTree[nbrId]<del_beg || __vecNewTree[nbrId]>-1 || (__Activated)[nbrId])  // not a previous node in mRR, not a virtual root/newly added node, or already activated node
-                        continue;
-                    if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[expand])
-                        continue;
-                    RR.push_back(nbrId);
-                    numVisitNode++;
-                    __vecNewTree[nbrId] = mRR_size;
-                    if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
-                    {
-                        auto &frset = _FRsets[nbrId];
-                        auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-                        frset.insert(it, mRRid);
-                    }
-                }
-            }
-        }
-        for(const auto &RR:mRR_copy)
-        {
-            for(const auto &node:RR)
-            {
-                if(__vecNewTree[node]<0)  // previously in mRR but now not in mRR
-                {
-                    auto &frset = _FRsets[node];
-                    auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-                    if (it != frset.end() && *it == mRRid) 
-                    {
-                        frset.erase(it);
-                    }
-                }
-                __vecTree[node] =-1;
-            }
-        }
-        // reset all static variables
-        for(ulint i=0;i<del_beg;i++)
-        {
-            auto &RR=mRR[i];
-            for(const auto &node:RR)
-            {
-                __vecTree[node] = -1;  // reset the tree id
-            }
-        }        
-        for(const auto &root:roots)
-        {
-            __vecTree[root] = -1;
-        }
-        mRR_size=mRR.size();
-        for(ulint i=del_beg;i<mRR_size;i++)
-        {
-            auto &RR=mRR[i];
-            for(const auto &node:RR)
-            {
-                __vecNewTree[node] = -1;  // reset the tree id
-            }
-        }
 	}
 
 	/// Refresh the RRsets
@@ -861,7 +745,6 @@ class mRRcollection
 		{
 			Nodelist().swap(vv_virtual_roots[i]);
 		}
-        vv_roots_source.resize(max_size);
         vecRoot_num.resize(max_size);
         vv_polluted_nodes.resize(max_size);
 		vv_virtual_roots.resize(max_size);

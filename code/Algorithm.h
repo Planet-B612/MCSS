@@ -113,7 +113,6 @@ public:
 		}
 		else
 		{
-			ratio_UB.reserve(__numV);
 			int this_deg=0;
 			double a_2_2=a_2*a_2;
 			for(auto i=0;i<__numV;i++)  // in the same round, only newly updated mRR-sets will contribute to vec_deg
