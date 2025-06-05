@@ -36,7 +36,6 @@ class mRRcollection
 	mRRsets _mRRsets;
 	size_t _num_mRRsets = 0;
 	double decimal=1.0;
-	int root_num = 1;
 	double residual=0.0;
 	int pre_root_num=0;
 	Argument *__arg;
@@ -149,9 +148,8 @@ class mRRcollection
 
 
 	/// Generate a set of n mRR sets
-	void build_n_mRRsets_tree(const size_t numSamples, const int pre_theta)
+	void build_n_mRRsets_tree(const int numSamples)
 	{
-		root_num_map.clear();  // the map of previous revisable mRR-sets
 		int floor_root_RR=0;
 		int ceil_root_RR=0;  // the number mRR-sets with root number root_num+1 in the previous revisable mRR-sets
 		const auto prevSize = _num_mRRsets;  // previous total number of mRR-sets

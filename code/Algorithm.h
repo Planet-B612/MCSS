@@ -34,7 +34,7 @@ private:
 	int batch_size=1;
 	int deg=0;
 	double approx=1.0;
-	double theta=0;
+	int theta=0;
 	int ending_rnd=3000000;  // not needed, if q_ratio is properly set. sample: 4, facebook: 80, dblp: 3000. Let it be a large value, so that it will never enter the ending round to generate fresh mRRsets.
 	const int root_num_bound=250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
 	const int window_size=5;  // sample:2, facebook: 3, dblp: 5
@@ -48,7 +48,6 @@ private:
 	double a_1=0.0, a_2=0.0;
 	int __dataset_No = 0;
 	// double total_build_seedset_time = 0;
-	double pre_theta = 0.0;
 	float __left_num = 600.0;
 	float __over_pnodes = 10.0;
 	double residual=0.0;

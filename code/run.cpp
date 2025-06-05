@@ -53,10 +53,6 @@ int main(int argn, char **argv)
         cout << " Running MINE_Alg at eta = " << arg.eta_0 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<< ", real_time_pw = "<<arg.real_time_pw<<", q_ratio = "<<arg.q_ratio << endl;
         // result_bk<< "Running MINE_Alg at eta = " << arg.eta_0 + i * 0.01 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<<", time = "<<arg.time<< ", real_time_pw = "<<arg.real_time_pw <<", q_ratio = "<<arg.q_ratio << endl;
         TAlg Alg(arg);
-
-        Alg.RR.build_one_mRRset_tree(0,3,0);
-        Alg.RR.add_root(0,3);
-
         vector<int> seeds;
         auto RR_info = Alg.AdaptiveSelect();
         seeds = seed_set;
