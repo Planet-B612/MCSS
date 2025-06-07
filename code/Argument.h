@@ -41,7 +41,7 @@ public:
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
-    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar"};
+    vector<string> dataset = {"sample", "facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar"};
     // vector<int> data={4};
     int dataset_No = 4;
     int cur_data;//=data[0];

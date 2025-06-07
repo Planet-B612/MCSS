@@ -1,6 +1,49 @@
 #pragma once
 #include "Argument.h"
 
+bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool, int seq, int fr)
+{
+	bool a=false,b=false,c=false,d=false,e=false;
+	if(newtree) a=vec_value_check(__vecNewTree, -1, 1, str + " __vecNewTree includes non -1 values.");
+	if(tree) b=vec_value_check(__vecTree, -1, 1, str + " __vecTree includes non -1 values.");
+	if(visitBool) c=vec_value_check(__vecVisitBool, false, 1, str + " __vecVisitBool includes TRUE values.");
+	if(seq) d=vec_value_check(__vecSeq, -1, 1, str + " __vecSeq includes non -1 values.");
+	if(fr) e=FR_check(mRRid, str+" FR_check");
+	if(a || b || c || d || e)
+	{
+		cout<<"Error in synthetic_check of "<<str<<endl;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool v_roots_check(int mRRid, string str)
+{
+	for(const auto &root : vv_virtual_roots[mRRid])
+	{
+		if(__vecTree[root]<0 && __vecNewTree[root]<0 && __vecVisitBool[root]==false)
+		{
+			cout<<"Error in v_roots_check of "<<str<<", the root "<<root<<" is not in mRR "<<mRRid<<" or new mRR."<<endl;
+			return true;
+		}
+	}
+}
+
+void del_nodes_check(int mRRid, vint &del_nodes)
+{
+	for(const auto &node:del_nodes)
+	{
+		if(__vecTree[node]<0)
+		{
+			cout<<"Error in del_nodes_check of mRR "<<mRRid<<", the del_node "<<node<<" is not in mRR or new mRR."<<endl;
+			vec_out(del_nodes, "del_nodes: ");
+		}
+	}
+}
+
 template <typename T, typename T1>
 bool vec_value_check(T &vec, T1 val, int equality, string str)  // equality: 1: should be equal to val, -1: shoud not equal to val, 2: should be greater than, -2: should be smaller than
 {
@@ -78,7 +121,7 @@ bool vec_value_check(T &vec, T1 val, int equality, string str)  // equality: 1: 
 	return false;
 }
 
-int FR_full_check(int rid, string str, Nodelist p_nodes={})
+bool FR_check(int rid, string str, Nodelist p_nodes={})
 {
 	mRRset &mRR=_mRRsets[rid];
 	for(auto &adj_list:mRR)
@@ -95,41 +138,41 @@ int FR_full_check(int rid, string str, Nodelist p_nodes={})
 				output_info(rid, false, p_nodes);
 				cout<<str+" Error in FR_full_check, mRR "<<rid<<" contains the node "<<node<<"; but the mRRid is not in node's _FRsets"<<endl;
 				// output_info(rid);
-				return node;
+				return true;
 			}
 		}
 	}
-	for(int i=0;i<__numV;i++)
-	{
-		// if(_FRsets[i].find(rid)!=_FRsets[i].end())
-		auto &frset= _FRsets[i];
-		auto it= lower_bound(frset.begin(), frset.end(), rid);
-		if( it != frset.end() )
-		{
-			bool find_it=false;
-			for(auto &adj_list:mRR)
-			{
-				// if(adj_list.find(i)==adj_list.end())
-				// {
-				// 	continue;
-				// }
-				// else
-				// {
-				// 	find_it=true;
-				// 	break;
-				// }
-			}
-			if(!find_it)
-			{
-				set_out({i});
-				// output_info(rid);
-				cout<<"Error in FR_full_check, _FRset[node] contains mRRid "<<rid<<", but the node "<<i<<" is not in any adj_list of the mRR "<<endl;
-				output_info(rid);
-				return i;
-			}
-		}
-	}
-	return -5;
+	// for(int i=0;i<__numV;i++)
+	// {
+	// 	// if(_FRsets[i].find(rid)!=_FRsets[i].end())
+	// 	auto &frset= _FRsets[i];
+	// 	auto it= lower_bound(frset.begin(), frset.end(), rid);
+	// 	if( it != frset.end() )
+	// 	{
+	// 		bool find_it=false;
+	// 		for(auto &adj_list:mRR)
+	// 		{
+	// 			// if(adj_list.find(i)==adj_list.end())
+	// 			// {
+	// 			// 	continue;
+	// 			// }
+	// 			// else
+	// 			// {
+	// 			// 	find_it=true;
+	// 			// 	break;
+	// 			// }
+	// 		}
+	// 		if(!find_it)
+	// 		{
+	// 			set_out({i});
+	// 			// output_info(rid);
+	// 			cout<<"Error in FR_full_check, _FRset[node] contains mRRid "<<rid<<", but the node "<<i<<" is not in any adj_list of the mRR "<<endl;
+	// 			output_info(rid);
+	// 			return i;
+	// 		}
+	// 	}
+	// }
+	return false;
 }
 
 bool FR_sorted_check(string str)
@@ -244,20 +287,24 @@ bool output_info(int mRRid, bool erase=false, Nodelist p_nodes={})
 	}
 	(*__arg).result_bk<<endl;
 	(*__arg).result_bk<<"The mRRid is: "<<mRRid<<endl;
-	// for(auto i=0;i<__numV;i++)
-	// {
-	// 	(*__arg).result_bk<<__vecVisitBool[i]<<", ";
-	// }
-	// (*__arg).result_bk<<endl;
-	// (*__arg).result_bk<<"The adj_list is: "<<endl;
-	// auto k=0;
-	// for(auto adj_list:_mRRsets[mRRid])
-	// {
-	// 	//if(k==0) 		continue;
-	// 	(*__arg).result_bk<<k<<"-th adj_list is: "<<endl;
-	// 	output_adj(adj_list);
-	// 	k++;
-	// }
-	// (*__arg).result_bk.close();
+	for(auto i=0;i<__numV;i++)
+	{
+		(*__arg).result_bk<<__vecVisitBool[i]<<", ";
+	}
+	(*__arg).result_bk<<endl;
+	(*__arg).result_bk<<"The trees are: "<<endl;
+	auto k=0;
+	for(auto adj_list:_mRRsets[mRRid])
+	{
+		//if(k==0) 		continue;
+		(*__arg).result_bk<<k<<"-th tree is: "<<endl;
+		for(auto node:adj_list)
+		{
+			(*__arg).result_bk<<node<<", ";
+		}
+		(*__arg).result_bk<<endl;
+		k++;
+	}
+	(*__arg).result_bk.close();
 	return false;
 }
