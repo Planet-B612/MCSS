@@ -405,10 +405,25 @@ class mRRcollection
                 RR.swap(mRR_copy[i]);
             }
 		}
+        #ifndef NDEBUG
+            if(min_tree>mRR_size)
+            {
+                cout<<"Error: min_tree > mRR_size in mRR_update, mRRid="<<mRRid<<", min_tree="<<min_tree<<", mRR_size="<<mRR_size<<endl;
+                mRR_out(mRRid);
+                exit(1);
+            }
+        #endif
         mRR.resize(min_tree);  // delete empty trees
 		for(ulint i=v_roots_size-1;i>-1;i--)  // I did not record the idx of v_roots here like before
 		{
 			int root=v_roots[i];
+            #ifndef NDEBUG
+                if(__vecTree[root]<0)
+                {
+                    cout<<__func__<<": root="<<root<<" not in mRR, __vecTree[root]="<<__vecTree[root]<<", mRRid="<<mRRid<<endl;
+                    exit(1);
+                }
+            #endif
 			if(__Activated[root])  // is a del_node
 			{
 				v_roots.erase(v_roots.begin()+i);
@@ -456,7 +471,7 @@ class mRRcollection
             __vecSeq[last_RR[i]] = -1;
         }
         last_RR.resize(first_del_idx);
-        if(first_del_idx>0)  // the first del_node has a unique parent
+        if(par_node_seq>0)  // the first del_node has a unique parent
         {
             auto it=std::upper_bound(nbr_first_del_node.begin(), nbr_first_del_node.end(), first_del_node); // the first nbr larger than first_del_node
             for(ulint i=it-nbr_first_del_node.begin();i<nbr_first_del_node.size();i++)
@@ -472,13 +487,18 @@ class mRRcollection
 					__vecNewTree[nbrId] = min_tree;
                     if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
                     {
+                        if(FR_insert_check(mRRid, nbrId))
+                        {
+                            cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " not in _FRsets." << endl;
+                            exit(1);
+                        }
                         auto &frset = _FRsets[nbrId];
                         auto it=lower_bound(frset.begin(), frset.end(), mRRid);
                         frset.insert(it, mRRid);
                     }
                 }
             }            
-            for(ulint i=par_node_seq+1;i<last_RR.size();i++)
+            for(ulint i=par_node_seq+1;i<last_RR.size();i++)  // last_RR is dynamic
             {
                 const int node=last_RR[i];
                 for(const auto &nbrId : (R_graph)[node])
@@ -495,6 +515,11 @@ class mRRcollection
                     __vecNewTree[nbrId] = min_tree;
                     if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
                     {
+                        if(FR_insert_check(mRRid, nbrId))
+                        {
+                            cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " not in _FRsets." << endl;
+                            exit(1);
+                        }
                         auto &frset = _FRsets[nbrId];
                         auto it=lower_bound(frset.begin(), frset.end(), mRRid);
                         frset.insert(it, mRRid);
@@ -530,6 +555,11 @@ class mRRcollection
 					__vecNewTree[nbrId] = mRR_size+i;
                     if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
                     {
+                        if(FR_insert_check(mRRid, nbrId))
+                        {
+                            cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " not in _FRsets." << endl;
+                            exit(1);
+                        }
                         auto &frset = _FRsets[nbrId];
                         auto it=lower_bound(frset.begin(), frset.end(), mRRid);
                         frset.insert(it, mRRid);
@@ -577,6 +607,10 @@ class mRRcollection
             }
         }
         vecRoot_num[mRRid]=mRR_size+v_roots.size();
+        vec_value_check(__vecNewTree, -1, 1, string(__func__) + "end __vecNewTree includes non -1 values.");
+        vec_value_check(__vecTree, -1, 1, string(__func__) + "end __vecTree includes non -1 values.");
+        vec_value_check(__vecVisitBool, false, 1, string(__func__) + "end __vecVisitBool includes TRUE values.");
+        vec_value_check(__vecSeq, -1, 1, string(__func__) + "end __vecSeq includes non -1 values.");
     }
 
 	void add_root(int mRRid, int num)

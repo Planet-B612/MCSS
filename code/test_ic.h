@@ -39,7 +39,7 @@ bool vec_value_check(T &vec, T1 val, int equality, string str)  // equality: 1: 
 		{
 			if(i==val)
 			{
-				cout<<str<<" vec Value error: "<<i<<" != "<<val<<endl;
+				cout<<str<<" vec Value error: "<<i<<" = "<<val<<endl;
 				vec_out(vec);
 				// exit(0);
 				return true;
@@ -181,6 +181,24 @@ void vec_out(T &vec, string str="")
 	// 	cout<<i<<", ";
 	// }
 	// cout<<endl;
+}
+
+void mRR_out(int mRRid, string str="")
+{
+	std::fstream result_bk(result, ios::app);
+	assert(!result_bk.fail());
+	result_bk<<str+"mRRset: "<<mRRid<<endl;
+	auto &mRR=_mRRsets[mRRid];
+	for(auto i=0;i<mRR.size();i++)
+	{
+		result_bk<<i<<"-th RR: ";
+		for(auto j:mRR[i])
+		{
+			result_bk<<j<<", ";
+		}
+		result_bk<<endl;
+	}
+	result_bk.close();
 }
 
 void set_out(Nodelist p_nodes)
