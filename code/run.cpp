@@ -50,9 +50,13 @@ int main(int argn, char **argv)
         double total_cost=0.0;
         __eta_left = (arg.eta_0 ) * arg.numV;
         root_num=ceil(1.0/arg.eta_0);  // initial root number
-        cout << " Running MINE_Alg at eta = " << arg.eta_0 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<< ", real_time_pw = "<<arg.real_time_pw<<", q_ratio = "<<arg.q_ratio << endl;
+        cout << " Running MINE_Alg at eta = " << arg.eta_0 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<< ", real_time_pw = "<<arg.real_time_pw << endl;
         // result_bk<< "Running MINE_Alg at eta = " << arg.eta_0 + i * 0.01 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<<", time = "<<arg.time<< ", real_time_pw = "<<arg.real_time_pw <<", q_ratio = "<<arg.q_ratio << endl;
         TAlg Alg(arg);
+
+        Alg.RR.test_mRR();
+
+
         vector<int> seeds;
         auto RR_info = Alg.AdaptiveSelect();
         seeds = seed_set;

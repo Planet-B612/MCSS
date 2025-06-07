@@ -30,7 +30,7 @@ int num_addback = 0;
 
 class Argument{
 public:
-    float eta_0 = 10000;
+    float eta_0 = 24;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
@@ -43,7 +43,7 @@ public:
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"sample", "facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar"};
     // vector<int> data={4};
-    int dataset_No = 4;
+    int dataset_No = 0;
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
@@ -54,10 +54,8 @@ public:
     int linear_search_thr=0;  // recommended 50 for formal running
     bool seed_out=true;
     bool gene_ini_pw=false;
-    bool real_time_pw=false;
-    // int pw_num=1;
+    bool real_time_pw=true;
     int numV=1;
-    float q_ratio=0.001;
     float left_num = 100.0;
     float over_pnodes = 10.0;
     vector<double> Inv_inDeg;
@@ -83,8 +81,6 @@ public:
                 dataset_No = stoi(argv[i + 1]);
             if (argv[i] == string("-Rnd_cost"))
                 Rnd_cost = stoi(argv[i + 1]);
-            if (argv[i] == string("-q_ratio"))
-                q_ratio = stof(argv[i + 1]);
             if (argv[i] == string("-eta_0"))
                 eta_0 = stof(argv[i + 1]);
             if (argv[i] == string("-batch"))
@@ -163,7 +159,7 @@ public:
             exit(1);
         }
         inFile.seekg(0, std::ios_base::beg);
-        for (size_t i = 0; i < numV; i++)
+        for (int i = 0; i < numV; i++)
         {
             inFile >> cost[i];
             assert(cost[i] >= 0 && cost[i] <= 1);
@@ -199,7 +195,7 @@ public:
                 {
                     out_pw.open(pw_path + dataset[dataset_No] + "_pw_lt" + to_string(i) + ".txt");
                     assert((!out_pw.fail()));
-                    for(long unsigned int v=0;v<(numV);v++)
+                    for(int v=0;v<(numV);v++)
                     {
                         auto nbrs=(R_graph)[v];
                         auto nbrs_size=nbrs.size();
@@ -230,7 +226,7 @@ public:
     
     void seed_record(vector<int> seeds,int k,int i)
     {
-        ofstream out_seeds("../results/newseeds/MINE_" + dataset[k] + "_" + to_string(eta_0) + +"_" + to_string(q_ratio) +"_" + to_string(i) + ".txt", ios::out);
+        ofstream out_seeds("../results/newseeds/MINE_" + dataset[k] + "_" + to_string(eta_0) + +"_" + to_string(i) + ".txt", ios::out);
         assert((!out_seeds.fail()));
         for (auto node : seeds)
         {
@@ -241,14 +237,14 @@ public:
 
     bool graph_sort_check(const Graph &graph)
     {
-        for (int i = 0; i < graph.size(); i++)
+        for (ulint i = 0; i < graph.size(); i++)
         {
             auto node = graph[i];
             if(node.size() <2)
             {
                 continue;
             }
-            for (int j = 0; j < node.size() - 1; j++)
+            for (ulint j = 0; j < node.size() - 1; j++)
             {
                 if (node[j] > node[j + 1])
                 {

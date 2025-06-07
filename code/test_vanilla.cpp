@@ -83,8 +83,16 @@ static bool comp(pair<int, double> a, pair<int, double> b)
 
 int main(int argn, char **argv)
 {
-    vint vec={1};//{1,23,3445,7678,9999,18913,23456,34567,45678,56789,67890,78901,89012};
-    vec.insert(vec.begin()+1, 999);
+    vint vec;
+    auto it=lower_bound(vec.begin(), vec.end(), 2);
+    if(it!=vec.end())
+    {
+        cout<<"it is 2"<<endl;
+    }
+    else
+    {
+        cout<<"it is not 2"<<endl;
+    }
     // vector<tuple<int,int,int,int>> vec;
     // int a[4]={1,2,3,4};
     // vec.emplace_back(a[0], a[1], a[2], a[3]);

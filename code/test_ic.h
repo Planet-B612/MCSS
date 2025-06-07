@@ -1,6 +1,25 @@
 #pragma once
 #include "Argument.h"
 
+void test_mRR()
+{
+	gene_syn_mRR();
+	add_root(0, 2);
+	delete_root(0, 1);
+}
+
+void gene_syn_mRR()
+{
+	__Activated[17]=true;
+	mRRset mRR;
+	mRR.push_back({5,4,21,0,6,22,18,15,13});
+	mRR.push_back({20,12,19,10,14,1,3,23});
+	_mRRsets.push_back(mRR);
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num={2};
+}
+
 bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool, int seq, int fr)
 {
 	bool a=false,b=false,c=false,d=false,e=false;
@@ -30,9 +49,10 @@ bool v_roots_check(int mRRid, string str)
 			return true;
 		}
 	}
+	return false;
 }
 
-void del_nodes_check(int mRRid, vint &del_nodes)
+bool del_nodes_check(int mRRid, vint &del_nodes)
 {
 	for(const auto &node:del_nodes)
 	{
@@ -40,8 +60,10 @@ void del_nodes_check(int mRRid, vint &del_nodes)
 		{
 			cout<<"Error in del_nodes_check of mRR "<<mRRid<<", the del_node "<<node<<" is not in mRR or new mRR."<<endl;
 			vec_out(del_nodes, "del_nodes: ");
+			return true;
 		}
 	}
+	return false;
 }
 
 template <typename T, typename T1>

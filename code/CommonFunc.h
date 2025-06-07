@@ -145,7 +145,7 @@ inline void make_min_heap(Nodelist &vec)
 }
 
 /// Replace the value for the first element and down-heap this element.
-inline void min_heap_replace_min_value(Nodelist &vec, const size_t &val)
+inline void min_heap_replace_min_value(Nodelist &vec, const int &val)
 {
 	// Increase the value of the first element
 	const auto size = vec.size();
