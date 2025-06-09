@@ -26,7 +26,7 @@ private:
 	vector<tuple<int, int, double, int>> ratio_plain, ratio_UB;
 	vector<double> vec_UB; // store the upper bound of coverage for each node
 	vector<double> vec_LB;
-	Nodelist vec_deg;
+	vint vec_deg;
 	
 	int counter=0;  // record the number of nodes being affected in total
 	Nodelist seed_batch;
@@ -40,7 +40,7 @@ private:
 	const int window_size=5;  // sample:2, facebook: 3, dblp: 5
 	bool in_ending_rnd=false;
 	bool delete_extra_mRR=false;
-	vector<int> vec_mRR_size;
+	vector<int> vec_mRR_num;
 	int window_beg=0;
 	ulint max_size_within_window=0;
 	// Nodelist num_deg_incremental;
@@ -64,12 +64,13 @@ public:
 		__eta=arg.eta_0;
 		batch_size=arg.batch;
 		round_num=0;
-		vec_mRR_size.resize(1e4,0);
+		vec_mRR_num.resize(1e4,0);
 		__dataset_No = arg.dataset_No;
 		__left_num = arg.left_num;
 		__over_pnodes = arg.over_pnodes;
 		vec_UB= vector<double>(__numV, 0.0);
 		vec_LB= vector<double>(__numV, 0.0);
+		vec_deg= vector<int>(__numV, 0);
 	}
 	
 	~Algorithm()
@@ -119,8 +120,6 @@ public:
 				auto &frset= RR._FRsets[i];
 				this_deg= lower_bound(frset.begin(), frset.end(), theta)-frset.begin();
 				vec_deg[i] =this_deg;
-				// double deg_UB=1.0*(this_deg+a_2+sqrt(2.0*a_2*this_deg+a_2_2));
-				// ratio_UB.push_back(make_tuple(i,this_deg,deg_UB/(cost)[i],0));
 				ratio_plain.push_back(make_tuple(i,this_deg,1.0*this_deg/(cost)[i],0));
 			}
 		}
@@ -137,7 +136,8 @@ public:
 				for(int RRId: RR._FRsets[seed])
 				{
 					// if((RR_Mark[RRId]==true)||(RRId>=theta)) 	nodeDeg--;
-					if((RR_Mark[RRId]==true) && RRId<theta) 	nodeDeg--;  // may need to check RRId<theta, since acessing a value outside RR_Mark is permitted in C++  // no need to check RRId>=theta, since nodeDeg only counts deg in current mRR-sets
+					if(RRId>=theta) break;
+					if((RR_Mark[RRId]==true)) 	nodeDeg--;  // may need to check RRId<theta, since acessing a value outside RR_Mark is permitted in C++  // no need to check RRId>=theta, since nodeDeg only counts deg in current mRR-sets
 				}
 				assert(nodeDeg>=0);
 				// double nodeDeg_UB=1.0*(nodeDeg+a_2+sqrt(2.0*a_2*nodeDeg+a_2*a_2));
@@ -199,7 +199,7 @@ public:
 
 		const double i_max = ceil(log(__numV_left / batch_size / eps_hat / eps_hat) / log(2)) + 1;
 
-		a_1 = log(3 * i_max / delta) + logcnk(__numV_left, batch_size);	
+		a_1 = log(3 * i_max / delta) + logcnk(__numV_left, batch_size);
 		a_2 = log(3 * i_max / delta);
 
 		double ratio=(1-eps_hat)*approx;
@@ -244,7 +244,7 @@ public:
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 		std::ofstream result;
-		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(int(__eta*__numV));
+		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV));
 		result.open(file_name, ios::app);
 		assert(!result.fail());
 		auto single_start = std::chrono::high_resolution_clock::now();
@@ -255,21 +255,21 @@ public:
 			root_num=floor(decimal);
 			residual = decimal - root_num;  // in (0,1)
 			
-			if(in_ending_rnd==false)
-			{
-				if((__eta_left)<((__numV)/ending_rnd))
-				{
-					in_ending_rnd=true;
-					cout<<"Entering the ending round"<<endl;
-					RR.refresh_RRsets();
-					// cout<<"Refreshed the RR-sets complete"<<endl;
-				}
-			}
-			else  // in an ending round, refresh mRR and FR-sets
-			{
-				RR.refresh_mRRFRsets();
-				// cout<<"Refreshed mRRFR-sets in ending rounds success at round: "<<(round_num)<<endl;
-			}
+			// if(in_ending_rnd==false)
+			// {
+			// 	if((__eta_left)<((__numV)/ending_rnd))
+			// 	{
+			// 		in_ending_rnd=true;
+			// 		cout<<"Entering the ending round"<<endl;
+			// 		RR.refresh_RRsets();
+			// 		// cout<<"Refreshed the RR-sets complete"<<endl;
+			// 	}
+			// }
+			// else  // in an ending round, refresh mRR and FR-sets
+			// {
+			// 	RR.refresh_mRRFRsets();
+			// 	// cout<<"Refreshed mRRFR-sets in ending rounds success at round: "<<(round_num)<<endl;
+			// }
 
 			if((__eta_left)<=batch_size)
 			{
@@ -302,7 +302,7 @@ public:
 			(__numV_left)-= counter;  // mRR-sets need to be updated;
 			(__eta_left)-=counter;
 
-			vec_mRR_size[round_num] = theta;
+			vec_mRR_num[round_num] = theta;
 
 			// if(1.0*(__numV_left)/(__eta_left)>root_num_bound)
 			// {
@@ -324,13 +324,15 @@ public:
 			// }
 			if(decimal>root_num_bound)
 			{
-				if (round_num < window_size){
+				if (round_num < window_size)
+				{
 					window_beg = 0;
 				}
-				else{
+				else
+				{
 					window_beg = round_num - window_size;
 				}
-				max_size_within_window = *(max_element(vec_mRR_size.begin()+window_beg, vec_mRR_size.begin()+round_num));
+				max_size_within_window = *(max_element(vec_mRR_num.begin()+window_beg, vec_mRR_num.begin()+round_num));
 				if(RR._num_mRRsets> max_size_within_window)
 				{
 					// cout << "Truncating the mRR-sets at round "<<(round_num)<<endl;

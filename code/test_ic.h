@@ -4,8 +4,15 @@
 void test_mRR()
 {
 	gene_syn_mRR();
-	add_root(0, 2);
-	delete_root(0, 1);
+	vint del_nodes={16};
+	for(const auto &node:del_nodes)
+	{
+		__Activated[node]=true;
+	}
+	vv_virtual_roots[0].push_back(1);
+	// add_root(0, 2);
+	// delete_root(0, 1);
+	mRR_update(0,del_nodes);
 }
 
 void gene_syn_mRR()
@@ -13,7 +20,14 @@ void gene_syn_mRR()
 	__Activated[17]=true;
 	mRRset mRR;
 	mRR.push_back({5,4,21,0,6,22,18,15,13});
-	mRR.push_back({20,12,19,10,14,1,3,23});
+	mRR.push_back({20,12,19,10,14,1,16,3,7});
+	for(const auto &RR:mRR)
+	{
+		for(const auto &node:RR)
+		{
+			_FRsets[node].push_back(0);
+		}
+	}
 	_mRRsets.push_back(mRR);
 	vv_virtual_roots.resize(1);
 	vv_polluted_nodes.resize(1);

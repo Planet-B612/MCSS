@@ -379,27 +379,30 @@ class mRRcollection
 		for(int i=0;i<mRR_size;i++)  // mark previous roots, and traverse the mRRset. Traversing from the end is not necessary, since we need to know whether a node us already in the mRR if regenerating.
 		{
             vint &RR=mRR[i];
-            int RR_size=int(RR.size());
+            int RR_size=static_cast<int>(RR.size());
             for(int j=0;j<RR_size;j++)
             {
                 int node=RR[j];
                 __vecTree[node] = i;
-                if(__Activated[node] && !find_del)
+                if(!find_del && __Activated[node])
                 {
                     min_tree=i;
                     first_del_idx=j;
                     first_del_node=node;
                     find_del=true;
-                    break;
                 }
             }
-            if(i>=min_tree && !__Activated[RR[0]])  // only records roots after min_tree
+            if(i>min_tree)  // only records roots after min_tree
             {
-                roots.push_back(RR[0]);
-                __vecNewTree[RR[0]] = mRR_size;  // should not be added into some tree during the new exploration
+                if(!__Activated[RR[0]])
+                {
+                    roots.push_back(RR[0]);
+                    __vecNewTree[RR[0]] = mRR_size;  // should not be added into some tree during the new exploration
+                }
                 RR.swap(mRR_copy[i]);
             }
 		}
+		mRR[min_tree].swap(mRR_copy[min_tree]);
         if(del_nodes_check(mRRid, del_nodes))
         {
             cout<<"Error: del_nodes_check failed in mRR_update, mRRid="<<mRRid<<endl;
@@ -451,9 +454,8 @@ class mRRcollection
                 break;
             }
             __vecSeq[node] = i;  // record the sequence of nodes in the RR
-            __vecNewTree[node] = min_tree;  // these nodes will still be in the mRR
         }
-        int par_node_seq=-1;
+        int par_node_seq=-1, pre_first_del_idx=first_del_idx;
         bool find_par=false;
         const auto &nbr_first_del_node=O_graph[first_del_node];
         for(const auto &node : nbr_first_del_node)
@@ -461,7 +463,7 @@ class mRRcollection
             if(__vecTree[node]==min_tree && __vecSeq[node]<first_del_idx && __vecSeq[node]>-1)  // nodes before first_del_idx must be an actual valid node
             {
                 if(find_par)  // there are multiple parents, we can not tell which influenced the first del_node
-                {
+                {					
                     par_node_seq=-1;
                     first_del_idx=1;
                     break;
@@ -470,78 +472,78 @@ class mRRcollection
                 find_par=true;
             }
         }
-        for(int i=0;i<first_del_idx;i++)  // reset __vecSeq
-        {
-            __vecSeq[last_RR[i]] = -1;
-        }
+		for(int i=0;i<first_del_idx;i++)  
+		{
+            __vecNewTree[last_RR[i]] = min_tree;  // only these nodes will still be in the mRR
+		}
+		for(int i=0;i<pre_first_del_idx;i++)  // reset __vecSeq. first_del_idx may be changed
+		{
+			__vecSeq[last_RR[i]] = -1;
+		}
         last_RR.resize(first_del_idx);
         if(par_node_seq>0)  // the first del_node has a unique parent
         {
-            auto it=std::upper_bound(nbr_first_del_node.begin(), nbr_first_del_node.end(), first_del_node); // the first nbr larger than first_del_node
-            for(ulint i=it-nbr_first_del_node.begin();i<nbr_first_del_node.size();i++)
+			vint &nbr_first_del_par=R_graph[last_RR[par_node_seq]];
+			ulint nbr_del_par_size=nbr_first_del_par.size();
+			float inv_inDeg_par=__Inv_inDeg[last_RR[par_node_seq]];
+            auto it=std::upper_bound(nbr_first_del_par.begin(), nbr_first_del_par.end(), first_del_node); // the first nbr larger than first_del_node
+            for(ulint i=it-nbr_first_del_par.begin();i<nbr_del_par_size;i++)
             {
-                const int node=nbr_first_del_node[i];
-                for (const auto &nbrId : (R_graph)[node])
+                const int node=nbr_first_del_par[i];
+				if(__Activated[node] || (__vecTree[node]>-1 && __vecTree[node]<min_tree) || __vecNewTree[node]>-1)
+					continue;
+				if (dsfmt_gv_genrand_open_close() > inv_inDeg_par)
+					continue;
+				last_RR.push_back(node);
+				__vecNewTree[node] = min_tree;
+				if(__vecTree[node]<0)  // nbrId was not in this mRR previously
 				{
-					if(__Activated[nbrId] || (__vecTree[nbrId]>-1 && __vecTree[nbrId]<min_tree) || __vecNewTree[nbrId]>-1)
-						continue;
-					if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
-						continue;
-                    last_RR.push_back(nbrId);
-					__vecNewTree[nbrId] = min_tree;
-                    if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
-                    {
-                        auto &frset = _FRsets[nbrId];
-                        auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-                        if(*it==mRRid)
-                        {
-                            cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
-                            exit(1);
-                        }
-                        frset.insert(it, mRRid);
-                    }
-                }
-            }            
-            for(ulint i=par_node_seq+1;i<last_RR.size();i++)  // last_RR is dynamic
-            {
-                const int node=last_RR[i];
-                for(const auto &nbrId : (R_graph)[node])
-                {
-                    if(__Activated[nbrId] || (__vecTree[nbrId]>-1 && __vecTree[nbrId]<min_tree) || __vecNewTree[nbrId]>-1)
-                    {
-                        continue;
-                    }
-                    if(dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
-                    {
-                        continue;
-                    }
-                    last_RR.push_back(nbrId);
-                    __vecNewTree[nbrId] = min_tree;
-                    if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
-                    {
-                        if(FR_insert_check(mRRid, nbrId))
-                        {
-                            cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " not in _FRsets." << endl;
-                            exit(1);
-                        }
-                        auto &frset = _FRsets[nbrId];
-                        auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-                        if(*it==mRRid)
-                        {
-                            cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
-                            exit(1);
-                        }
-                        frset.insert(it, mRRid);
-                    }
-                }
+					auto &frset = _FRsets[node];
+					auto it=lower_bound(frset.begin(), frset.end(), mRRid);
+					if(it!=frset.end() && *it==mRRid)
+					{
+						cout<<"Error: mRRid="<<mRRid<<", node="<<node<<" already in _FRsets."<<endl;
+						exit(1);
+					}
+					frset.insert(it, mRRid);
+				}
             }
-            mRR.emplace_back(std::move(last_RR));
-            mRR_size=min_tree+1;
         }
-        else
-        {
-            mRR_size=min_tree;
-        }
+		for(ulint i=par_node_seq+1;i<last_RR.size();i++)  // last_RR is dynamic
+		{
+			const int node=last_RR[i];
+			for(const auto &nbrId : (R_graph)[node])
+			{
+				if(__Activated[nbrId] || (__vecTree[nbrId]>-1 && __vecTree[nbrId]<min_tree) || __vecNewTree[nbrId]>-1)
+				{
+					continue;
+				}
+				if(dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
+				{
+					continue;
+				}
+				last_RR.push_back(nbrId);
+				__vecNewTree[nbrId] = min_tree;
+				if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
+				{
+					if(FR_insert_check(mRRid, nbrId))
+					{
+						cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " not in _FRsets." << endl;
+						exit(1);
+					}
+					auto &frset = _FRsets[nbrId];
+					auto it=lower_bound(frset.begin(), frset.end(), mRRid);
+					if(it!=frset.end()&&*it==mRRid)
+					{
+						cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
+						exit(1);
+					}
+					frset.insert(it, mRRid);
+				}
+			}
+		}
+		mRR.emplace_back(std::move(last_RR));
+		mRR_size=min_tree+1;
         ulint num_new_roots=roots.size();
         mRR.resize(mRR_size+num_new_roots);
         for(ulint i=0;i<num_new_roots;i++)
@@ -566,7 +568,7 @@ class mRRcollection
                     {
                         auto &frset = _FRsets[nbrId];
                         auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-                        if(*it==mRRid)
+                        if(it!=frset.end() && *it==mRRid)
                         {
                             cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
                             exit(1);
@@ -680,7 +682,7 @@ class mRRcollection
 				__vecVisitBool[root] = true;
 				auto &frset = _FRsets[root];
 				auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-                if(it!=frset.end())
+                if(it!=frset.end() && *it==mRRid)
                 {
                     cout<<"Error: mRRid="<<mRRid<<", nbrId="<<root<<" already in _FRsets."<<endl;
                     exit(1);
@@ -702,7 +704,7 @@ class mRRcollection
 						numVisitNode++;
 						auto &frset = _FRsets[nbrId];
 						auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-                        if(it!=frset.end())
+                        if(it!=frset.end() && *it==mRRid)
                         {
                             cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
                             exit(1);
@@ -755,7 +757,7 @@ class mRRcollection
             v_roots.clear();
             num_del_roots -= v_roots_size;
         }
-        for(ulint i=0;i<num_del_roots;i++)
+        for(int i=0;i<num_del_roots;i++)
         {
             auto &RR=mRR[mRR_size-1-i];
             for(const auto &node:RR)

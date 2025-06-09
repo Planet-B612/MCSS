@@ -20,6 +20,7 @@ int RR_thr=3000000;
 double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
+int deg_amplifier=1; // amplify the in_deg_threshold to make diffusion easier
 
 // #define debug
 // #define debugroots
@@ -30,7 +31,7 @@ int num_addback = 0;
 
 class Argument{
 public:
-    float eta_0 = 24;
+    float eta_0 = 0.05;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
@@ -43,7 +44,7 @@ public:
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"sample", "facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar"};
     // vector<int> data={4};
-    int dataset_No = 0;
+    int dataset_No = 5;
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
@@ -134,7 +135,7 @@ public:
         Inv_inDeg.resize(numV);
         for(int i=0;i<numV;i++)
         {
-            Inv_inDeg[i]=static_cast<float>(1.0/R_graph[i].size());
+            Inv_inDeg[i]=static_cast<float>(1.0/R_graph[i].size())*deg_amplifier;
         }
 
         cost.resize(numV);
