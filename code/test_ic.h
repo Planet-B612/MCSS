@@ -34,15 +34,16 @@ void gene_syn_mRR()
 	vecRoot_num={2};
 }
 
-bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool, int seq, int fr)
+bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool, int seq, int fr, bool reverse=false)
 {
-	bool a=false,b=false,c=false,d=false,e=false;
+	bool a=false,b=false,c=false,d=false,e=false,f=false;
 	if(newtree) a=vec_value_check(__vecNewTree, -1, 1, str + " __vecNewTree includes non -1 values.");
 	if(tree) b=vec_value_check(__vecTree, -1, 1, str + " __vecTree includes non -1 values.");
 	if(visitBool) c=vec_value_check(__vecVisitBool, false, 1, str + " __vecVisitBool includes TRUE values.");
 	if(seq) d=vec_value_check(__vecSeq, -1, 1, str + " __vecSeq includes non -1 values.");
 	if(fr) e=FR_check(mRRid, str+" FR_check");
-	if(a || b || c || d || e)
+	if(reverse) f=FR_reverse_check(str+" FR_reverse_check");
+	if(a || b || c || d || e || f)
 	{
 		cout<<"Error in synthetic_check of "<<str<<endl;
 		return true;
@@ -51,6 +52,15 @@ bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool
 	{
 		return false;
 	}
+	// for(const auto &RR:_mRRsets[mRRid])
+	// {
+	// 	if(RR.empty())
+	// 	{
+	// 		cout<<"Error in synthetic_check of "<<str<<", mRR "<<mRRid<<" contains an empty RR."<<endl;
+	// 		return true;
+	// 	}
+	// }
+	// return false;
 }
 
 bool v_roots_check(int mRRid, string str)
@@ -157,7 +167,37 @@ bool vec_value_check(T &vec, T1 val, int equality, string str)  // equality: 1: 
 	return false;
 }
 
-bool FR_check(int rid, string str, Nodelist p_nodes={})
+bool FR_reverse_check(string str)
+{
+	for(int i=0;i<__numV;i++)
+	{
+		bool find_it=false;
+		if(__Activated[i]) continue;
+		auto &frset= _FRsets[i];
+		for(const auto &rid:frset)
+		{
+			for(const auto &RR:_mRRsets[rid])
+			{
+				for(const auto &node:RR)
+				{
+					if(node== i)
+					{
+						find_it=true;
+						break;
+					} 
+				}
+			}
+			if(!find_it)
+			{
+				cout<<str+" Error in FR_reverse_check, the node "<<i<<" is not in any RR of mRR "<<rid<<"; but the node's _FRsets contains the mRRid"<<endl;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool FR_check(int rid, string str)
 {
 	mRRset &mRR=_mRRsets[rid];
 	for(auto &adj_list:mRR)
@@ -171,7 +211,7 @@ bool FR_check(int rid, string str, Nodelist p_nodes={})
 			if( it == frset.end() )
 			{
 				set_out({node});
-				output_info(rid, false, p_nodes);
+				output_info(rid, false);
 				cout<<str+" Error in FR_full_check, mRR "<<rid<<" contains the node "<<node<<"; but the mRRid is not in node's _FRsets"<<endl;
 				// output_info(rid);
 				return true;

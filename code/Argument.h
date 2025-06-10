@@ -38,7 +38,7 @@ public:
     string model = "IC";
     bool Rnd_cost = true;
     //int simRnd = 100;
-    float eps = 0.5;
+    float eps = 0.8;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
@@ -84,6 +84,8 @@ public:
                 Rnd_cost = stoi(argv[i + 1]);
             if (argv[i] == string("-eta_0"))
                 eta_0 = stof(argv[i + 1]);
+            if (argv[i] == string("-eps"))
+                eps = stof(argv[i + 1]);
             if (argv[i] == string("-batch"))
                 batch = stof(argv[i + 1]);
             if (argv[i] == string("-run_times"))

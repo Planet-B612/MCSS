@@ -120,6 +120,7 @@ class mRRcollection
 		 	__vecVisitNode[numVisitNode++]=seed;
             for(const auto &rrid: _FRsets[seed])
             {
+				if(rrid>=_num_mRRsets) continue;
                 vv_polluted_nodes[rrid].push_back(seed);
             }
 		}
@@ -134,12 +135,13 @@ class mRRcollection
 				(__Activated)[v] = true;
                 for(const auto &rrid: _FRsets[v])
                 {
+					if(rrid>=_num_mRRsets) continue;
                     vv_polluted_nodes[rrid].push_back(v);
                 }
 			}
 		}
 		Nodelist temp(__vecVisitNode.begin(), __vecVisitNode.begin()+numVisitNode); 
-		activated_nodes.insert((activated_nodes).end(),temp);  
+		activated_nodes.insert((activated_nodes).end(),temp);
 		return counter_real;
 	}
 
@@ -232,7 +234,7 @@ class mRRcollection
 						// output_info(i,true);
 						delete_root(i,root_diff);
 						// output_info(i,false);
-						num_delete_root ++;
+						num_delete_root++;
 					}
 					else
 					{
@@ -369,7 +371,7 @@ class mRRcollection
 	void mRR_update(int mRRid, Nodelist &del_nodes)
 	{
 		mRRset &mRR=_mRRsets[mRRid];
-		int mRR_size=int(mRR.size());
+		int mRR_size=static_cast<int>(mRR.size());
 		vint &v_roots=vv_virtual_roots[mRRid];
 		ulint v_roots_size=v_roots.size();
         vint roots, del_roots; roots.reserve(v_roots_size+mRR_size); del_roots.reserve(mRR_size);
@@ -403,16 +405,21 @@ class mRRcollection
             }
 		}
 		mRR[min_tree].swap(mRR_copy[min_tree]);
-        if(del_nodes_check(mRRid, del_nodes))
-        {
-            cout<<"Error: del_nodes_check failed in mRR_update, mRRid="<<mRRid<<endl;
-            exit(1);
-        }
-        if(v_roots_check(mRRid, string(__func__)+" end"))
-        {
-            exit(1);
-        }
-        #ifndef NDEBUG
+		#ifndef NDEBUG
+			if(mRR_copy[min_tree].empty())
+			{
+				cout<<"Error: mRR_copy[min_tree] is empty in mRR_update, mRRid="<<mRRid<<", min_tree="<<min_tree<<endl;
+				exit(1);
+			}
+			if(del_nodes_check(mRRid, del_nodes))
+			{
+				cout<<"Error: del_nodes_check failed in mRR_update, mRRid="<<mRRid<<endl;
+				exit(1);
+			}
+			if(v_roots_check(mRRid, string(__func__)+" end"))
+			{
+				exit(1);
+			}
             if(min_tree>mRR_size)
             {
                 cout<<"Error: min_tree > mRR_size in mRR_update, mRRid="<<mRRid<<", min_tree="<<min_tree<<", mRR_size="<<mRR_size<<endl;
@@ -526,15 +533,11 @@ class mRRcollection
 				__vecNewTree[nbrId] = min_tree;
 				if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
 				{
-					if(FR_insert_check(mRRid, nbrId))
-					{
-						cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " not in _FRsets." << endl;
-						exit(1);
-					}
 					auto &frset = _FRsets[nbrId];
 					auto it=lower_bound(frset.begin(), frset.end(), mRRid);
 					if(it!=frset.end()&&*it==mRRid)
 					{
+						cout<<*it<<", "<<mRRid<<", "<<it-frset.begin()<<endl;
 						cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
 						exit(1);
 					}
@@ -542,8 +545,15 @@ class mRRcollection
 				}
 			}
 		}
-		mRR.emplace_back(std::move(last_RR));
-		mRR_size=min_tree+1;
+		if(last_RR.size()>0)
+		{
+			mRR.emplace_back(std::move(last_RR));
+			mRR_size=min_tree+1;
+		}
+		else
+		{			
+			mRR_size=min_tree;
+		}
         ulint num_new_roots=roots.size();
         mRR.resize(mRR_size+num_new_roots);
         for(ulint i=0;i<num_new_roots;i++)
@@ -595,10 +605,12 @@ class mRRcollection
             }
         }
         // reset all static variables
+		#ifndef NDEBUG
         if(v_roots_check(mRRid, string(__func__)+" end"))
         {
             exit(1);
         }
+		#endif
         for(int i=0;i<min_tree;i++)
         {
             auto &RR=mRR[i];
@@ -622,10 +634,12 @@ class mRRcollection
             }
         }
         vecRoot_num[mRRid]=mRR_size+v_roots.size();
-        if(synthetic_check(mRRid, string(__func__)+" end", 1,1,1,1,1))
+		#ifndef NDEBUG
+        if(synthetic_check(mRRid, string(__func__)+" end", 1,1,1,1,1,1))
         {
             exit(1);
         }
+		#endif
     }
 
 	void add_root(int mRRid, int num)
@@ -648,10 +662,12 @@ class mRRcollection
 		{
 			__vecTree[root]=1024; // a root
 		}
+		#ifndef NDEBUG
         if(v_roots_check(mRRid, string(__func__)+" end"))
         {
             exit(1);
         }
+		#endif
 		for (int j = 0; j < num; j++)  // generate new roots
 		{
 			int root = dsfmt_gv_genrand_uint32_range(__numV);
@@ -662,9 +678,6 @@ class mRRcollection
 			__vecTree[root] = 1024;
 			new_roots.push_back(root);
 		}
-		#ifndef NDEBUG
-		cout<<"True num : "<<count(__vecVisitBool.begin(), __vecVisitBool.end(), true)<<endl;
-		#endif
 		for(const auto &root : new_roots)  // traverse the mRRset
 		{
 			if(__vecVisitBool[root])
@@ -714,10 +727,12 @@ class mRRcollection
 				}
 			}
 		}
+		#ifndef NDEBUG
         if(v_roots_check(mRRid, string(__func__)+" end"))
         {
             exit(1);
         }
+		#endif
 		for(const auto &RR:mRR)
 		{
 			for (const auto &expand : RR)
@@ -733,10 +748,12 @@ class mRRcollection
 		{
 			__vecTree[root] = -1;
 		}
-        if(synthetic_check(mRRid, string(__func__)+" end",0,1,1,0,0))
+		#ifndef NDEBUG
+        if(synthetic_check(mRRid, string(__func__)+" end",0,1,1,0,1,1))
         {
             exit(1);
         }
+		#endif
 		return;
 	}
 

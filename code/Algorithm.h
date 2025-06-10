@@ -244,7 +244,7 @@ public:
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 		std::ofstream result;
-		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV));
+		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+".txt";
 		result.open(file_name, ios::app);
 		assert(!result.fail());
 		auto single_start = std::chrono::high_resolution_clock::now();
