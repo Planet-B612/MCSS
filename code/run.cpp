@@ -56,7 +56,6 @@ int main(int argn, char **argv)
 
         Alg.RR.test_mRR();
 
-
         vector<int> seeds;
         auto RR_info = Alg.AdaptiveSelect();
         seeds = seed_set;

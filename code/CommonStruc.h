@@ -33,7 +33,7 @@ typedef std::vector<int> FRset;
 typedef std::vector<FRset> FRsets;
 typedef std::vector<FRsets> FRcollection;
 /// One reverse reachable set
-typedef std::vector<vint> mRRset;
+typedef std::vector<vvint> mRRset;
 // typedef std::vector<int_vec_patchmap> mRRset;
 typedef std::vector<mRRset> mRRsets;
 

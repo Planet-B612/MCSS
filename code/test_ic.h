@@ -19,13 +19,16 @@ void gene_syn_mRR()
 {
 	__Activated[17]=true;
 	mRRset mRR;
-	mRR.push_back({5,4,21,0,6,22,18,15,13});
-	mRR.push_back({20,12,19,10,14,1,16,3,7});
+	mRR.push_back({{5},{4,21},{0,6,22},{18,15,13}});
+	mRR.push_back({{20},{12,19},{10,14,1},{16,3},{7}});
 	for(const auto &RR:mRR)
 	{
-		for(const auto &node:RR)
+		for(const auto &layer:RR)
 		{
-			_FRsets[node].push_back(0);
+			for(const auto &node:layer)
+			{
+				_FRsets[node].push_back(0);
+			}
 		}
 	}
 	_mRRsets.push_back(mRR);
@@ -178,13 +181,16 @@ bool FR_reverse_check(string str)
 		{
 			for(const auto &RR:_mRRsets[rid])
 			{
-				for(const auto &node:RR)
+				for(const auto &layer:RR)
 				{
-					if(node== i)
+					for(const auto &node:layer)
 					{
-						find_it=true;
-						break;
-					} 
+						if(node== i)
+						{
+							find_it=true;
+							break;
+						} 
+					}
 				}
 			}
 			if(!find_it)
@@ -200,21 +206,24 @@ bool FR_reverse_check(string str)
 bool FR_check(int rid, string str)
 {
 	mRRset &mRR=_mRRsets[rid];
-	for(auto &adj_list:mRR)
+	for(auto &RR:mRR)
 	{
-		for(auto &node:adj_list)
+		for(auto &layer:RR)
 		{
-			// auto node=entry.first;
-			// if(_FRsets[node].find(rid)==_FRsets[node].end())
-			auto &frset= _FRsets[node];
-			auto it= lower_bound(frset.begin(), frset.end(), rid);
-			if( it == frset.end() )
+			for(const auto &node:layer)
 			{
-				set_out({node});
-				output_info(rid, false);
-				cout<<str+" Error in FR_full_check, mRR "<<rid<<" contains the node "<<node<<"; but the mRRid is not in node's _FRsets"<<endl;
-				// output_info(rid);
-				return true;
+				// auto node=entry.first;
+				// if(_FRsets[node].find(rid)==_FRsets[node].end())
+				auto &frset= _FRsets[node];
+				auto it= lower_bound(frset.begin(), frset.end(), rid);
+				if( it == frset.end() )
+				{
+					set_out({node});
+					output_info(rid, false);
+					cout<<str+" Error in FR_full_check, mRR "<<rid<<" contains the node "<<node<<"; but the mRRid is not in node's _FRsets"<<endl;
+					// output_info(rid);
+					return true;
+				}
 			}
 		}
 	}
@@ -311,9 +320,12 @@ void mRR_out(int mRRid, string str="")
 	for(auto i=0;i<mRR.size();i++)
 	{
 		result_bk<<i<<"-th RR: ";
-		for(auto j:mRR[i])
+		for(auto &layer:mRR[i])
 		{
-			result_bk<<j<<", ";
+			for(auto j:layer)
+			{
+				result_bk<<j<<", ";
+			}
 		}
 		result_bk<<endl;
 	}
@@ -370,15 +382,18 @@ bool output_info(int mRRid, bool erase=false, Nodelist p_nodes={})
 	(*__arg).result_bk<<endl;
 	(*__arg).result_bk<<"The trees are: "<<endl;
 	auto k=0;
-	for(auto adj_list:_mRRsets[mRRid])
+	for(auto &RR:_mRRsets[mRRid])
 	{
 		//if(k==0) 		continue;
 		(*__arg).result_bk<<k<<"-th tree is: "<<endl;
-		for(auto node:adj_list)
+		for(auto &layer:RR)
 		{
-			(*__arg).result_bk<<node<<", ";
+			for(auto node:layer)
+			{
+				(*__arg).result_bk<<node<<", ";
+			}
+			(*__arg).result_bk<<endl;
 		}
-		(*__arg).result_bk<<endl;
 		k++;
 	}
 	(*__arg).result_bk.close();
