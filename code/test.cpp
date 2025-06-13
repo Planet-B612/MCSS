@@ -2,60 +2,96 @@
 #include <vector>
 #include <chrono>
 // #include <algorithm>
-// #include "CommonStruc.h"
-// #include "../dSFMT/dSFMT.h"
-// #include "Memory.h"
-// #include "MemoryUsage.h"
-// #include "robin_hood.h"
-// #include "graph.h"
-// #include <malloc.h>
+#include "CommonStruc.h"
+#include "../dSFMT/dSFMT.h"
+#include "mRRcollection.h"
+#include "Algorithm.h"
+#include "../dSFMT/dSFMT.h"
+#include "graph.h"
+#include <iostream>
+#include <vector>
+#include "CommonStruc.h"
+#include <cstring>
+#include "Timer.h"
+#include "Memory.h"
+#include "MemoryUsage.h"
+#include <queue>
+#include "test_ic.h"
 
-// #include <bits/stdc++.h>
+
 // #include <unordered_map>
 
 using namespace std;
 
 #define Test_Time 0
 
-// int main()
-// {
-//     string graph_path="/data/fc/graphInfo/new/livejournal";
-//     GraphBase::format_graph(graph_path, 0);
-//     return 0;
-// }
-
-int main()
+int main(int argn, char **argv)
 {
-    // int arr[10]={1,2,3,4,5,6,7,8,9};
-    // cout<<arr[20]<<endl;
-    // exit(0);
-    for (int i = 5; i--;)
-    {
-        cout<<i<<endl;        
-    }
-    // int num=1000000;
-    // vector<int> a={125,234,567};
-    // for(auto i=0;i<10;i++)
-    // {
-    //     cout<<a.capacity()<<endl;
-    //     a.push_back(i);
-    // }
-    // vector<vector<int>> b;
-    // for(auto i=0;i<num+20;i++)
-    // {
-    //     a.push_back(i);
-    // }
-    // auto start = std::chrono::high_resolution_clock::now();
-    // for(auto i=0;i<num;i++)
-    // {
-    //     b.emplace_back(a.begin()+i,a.begin()+i+10);
-    // }
-    // auto end = std::chrono::high_resolution_clock::now();
-	// std::chrono::duration<double> elapsed = end - start;
-    // std::cout << elapsed.count() << " 秒, " << std::endl;
-
+    Argument arg;
+    arg.dataset_No = 0;
+    arg.real_time_pw = true;  // generate possible world in real time
+    string graph_path="/data/gongyao/graphInfo/sample";
+    R_graph.clear(), O_graph.clear();  // global variables
+    GraphBase::load_graph_directly_nbr_sorted(graph_path, O_graph, R_graph);
+    __Activated.clear();
+    activated_nodes.clear();
+    activated_nodes.push_back({});
+    seed_set.clear();
+    cost.clear();
+    dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));  // the type must be uint32_t, to be accord with the function definition
+    arg.arg_update(argn, argv);
+    arg.load_cost_graph(0);
+    mRRcollection RR(arg);
+    root_num = 3;
+    // RR[0] = {}
+    RR.build_n_mRRsets_tree(10);
+    RR.output_info(0);
+    RR.add_root(0,2);
+    // RR.add_root(0,2);
+    // RR.output_info(0);
+    // RR.delete_root(0,1);
+    // RR.output_info(0);
+    __Activated[1] = true;
+    __Activated[2] = true;
+    vector<int> del_nodes = {1, 2};
+    RR.mRR_update(0,del_nodes);
+    __Activated[3] = true;
+    __Activated[4] = true;
     return 0;
 }
+
+// int main()
+// {
+//     // int arr[10]={1,2,3,4,5,6,7,8,9};
+//     // cout<<arr[20]<<endl;
+//     // exit(0);
+//     for (int i = 5; i--;)
+//     {
+//         cout<<i<<endl;        
+//     }
+//     // int num=1000000;
+//     // vector<int> a={125,234,567};
+//     // for(auto i=0;i<10;i++)
+//     // {
+//     //     cout<<a.capacity()<<endl;
+//     //     a.push_back(i);
+//     // }
+//     // vector<vector<int>> b;
+//     // for(auto i=0;i<num+20;i++)
+//     // {
+//     //     a.push_back(i);
+//     // }
+//     // auto start = std::chrono::high_resolution_clock::now();
+//     // for(auto i=0;i<num;i++)
+//     // {
+//     //     b.emplace_back(a.begin()+i,a.begin()+i+10);
+//     // }
+//     // auto end = std::chrono::high_resolution_clock::now();
+// 	// std::chrono::duration<double> elapsed = end - start;
+//     // std::cout << elapsed.count() << " 秒, " << std::endl;
+
+//     return 0;
+// }
 
 /*
 int main_a()

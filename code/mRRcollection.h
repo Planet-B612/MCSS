@@ -396,7 +396,7 @@ class mRRcollection
 		{
 			auto &RR= mRR[i];
 			int RR_size=static_cast<int>(RR.size());
-			for(int j=0;i<RR_size;j++)
+			for(int j=0;j<RR_size;j++)
 			{
 				auto &layer=RR[j];
 				for(const auto &node:layer)
@@ -526,6 +526,8 @@ class mRRcollection
 					}
 				}
 			}
+			layer_nodes = new_layer_nodes;
+			affected_layer++;
 		}
 		if(last_RR[0].size()>0)  // make sure it is not empty
 		{

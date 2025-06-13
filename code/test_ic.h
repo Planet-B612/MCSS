@@ -10,8 +10,8 @@ void test_mRR()
 		__Activated[node]=true;
 	}
 	vv_virtual_roots[0].push_back(1);
-	// add_root(0, 2);
-	// delete_root(0, 1);
+	add_root(0, 1);
+	delete_root(0, 1);
 	mRR_update(0,del_nodes);
 }
 
