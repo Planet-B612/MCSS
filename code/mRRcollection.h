@@ -467,14 +467,10 @@ class mRRcollection
 			}
 		}
         vvint last_RR; last_RR.assign(mRR_copy[min_tree].begin(), mRR_copy[min_tree].begin()+affected_layer+1);  // last_RR is the last RR that will be regenerated
-		int pre_affected_layer=affected_layer;
-		bool find_new_layer=false;
+		// int pre_affected_layer=affected_layer;
+		// bool find_new_layer=false;
         for(int i=0;i<=affected_layer;i++)
         {
-			if(find_new_layer)
-			{
-				break;  
-			}
 			auto &layer_nodes=last_RR[i];
 			for(const auto &node:layer_nodes)
 			{
@@ -489,9 +485,9 @@ class mRRcollection
         }
 		auto &layer_nodes=last_RR[affected_layer];
 		ulint layer_nodes_size=layer_nodes.size();
-		for(ulint i=layer_nodes_size-1;i>-1;i--)
-		{
-			if(__Activated[layer_nodes[i]] || __vecNewTree[layer_nodes[i]]>-1)
+		for(int i=layer_nodes_size-1;i>-1;i--)
+		{	
+			if(__Activated[layer_nodes[i]]) // only consider the activated nodes in this layer now
 			{
 				layer_nodes.erase(layer_nodes.begin()+i);  // remove del_nodes and v_roots
 			}
@@ -526,7 +522,10 @@ class mRRcollection
 					}
 				}
 			}
-			layer_nodes = new_layer_nodes;
+			if (new_layer_nodes.size()>0)
+			{
+				last_RR.push_back(new_layer_nodes);
+			}
 			affected_layer++;
 		}
 		if(last_RR[0].size()>0)  // make sure it is not empty
@@ -536,8 +535,9 @@ class mRRcollection
 		}
 		else
 		{			
-			mRR_size=min_tree;
+			mRR_size=min_tree;  // if the last RR root is a del_node
 		}
+		mRR.resize(mRR_size);  // keep unpolluted mRRs and the last RR
         ulint num_new_roots=roots.size();
         mRR.resize(mRR_size+num_new_roots);
         for(ulint i=0;i<num_new_roots;i++)
