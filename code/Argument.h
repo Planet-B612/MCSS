@@ -20,7 +20,7 @@ int RR_thr=3000000;
 double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
-int deg_amplifier=1; // amplify the in_deg_threshold to make diffusion easier
+float deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 // #define debug
 // #define debugroots
@@ -55,7 +55,7 @@ public:
     int linear_search_thr=0;  // recommended 50 for formal running
     bool seed_out=true;
     bool gene_ini_pw=false;
-    bool real_time_pw=true;
+    bool real_time_pw=false;
     int numV=1;
     float left_num = 100.0;
     float over_pnodes = 10.0;
@@ -64,8 +64,10 @@ public:
     
     Argument()
     {
-        #ifdef debug
-            data={0};
+        #ifndef _NDEBUG
+        dataset_No=0;
+        real_time_pw = true;
+        deg_amplifier=1.2;
         #endif
     }
     void arg_update(int argn, char** argv)

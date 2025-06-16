@@ -1,11 +1,7 @@
 #pragma once
 #include <vector>
 
-#if !defined(DSFMT_MEXP)
-#ifdef __GNUC__
-#define DSFMT_MEXP 19937
-#endif
-#endif
+
 
 /// A set of reverse reachable sets
 // typedef int_vec_patchmap mRRset;

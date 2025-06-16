@@ -4,15 +4,16 @@
 void test_mRR()
 {
 	gene_syn_mRR();
-	vint del_nodes={16};
+	vint del_nodes={5};
 	for(const auto &node:del_nodes)
 	{
 		__Activated[node]=true;
 	}
-	vv_virtual_roots[0].push_back(1);
+	vv_virtual_roots[0]={6,12}; vecRoot_num[0]=4;
 	add_root(0, 1);
-	delete_root(0, 1);
+	// delete_root(0, 1);
 	mRR_update(0,del_nodes);
+	add_root(0, 1);
 }
 
 void gene_syn_mRR()
@@ -83,12 +84,26 @@ bool del_nodes_check(int mRRid, vint &del_nodes)
 {
 	for(const auto &node:del_nodes)
 	{
-		if(__vecTree[node]<0)
+		__vecVisitBool[node]=true;
+	}
+	for(const auto &RR:_mRRsets[mRRid])
+	{
+		for(const auto &layer:RR)
 		{
-			cout<<"Error in del_nodes_check of mRR "<<mRRid<<", the del_node "<<node<<" is not in mRR or new mRR."<<endl;
-			vec_out(del_nodes, "del_nodes: ");
-			return true;
+			for(const auto &node:layer)
+			{
+				if(__vecVisitBool[node])
+				{
+					__vecVisitBool[node]=false;
+				}
+			}
 		}
+	}
+	if(count(__vecVisitBool.begin(), __vecVisitBool.end(),true)>0)
+	{
+		cout<<"Error in del_nodes_check of mRR "<<mRRid<<", at least one del_node is not in mRR or new mRR."<<endl;
+		vec_out(del_nodes, "del_nodes: ");
+		return true;
 	}
 	return false;
 }

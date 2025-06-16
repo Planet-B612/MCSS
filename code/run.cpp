@@ -1,3 +1,9 @@
+
+#if !defined(DSFMT_MEXP)
+#ifdef __GNUC__
+#define DSFMT_MEXP 19937
+#endif
+#endif
 #include "../dSFMT/dSFMT.h"
 #include "graph.h"
 #include <iostream>
@@ -55,6 +61,9 @@ int main(int argn, char **argv)
         TAlg Alg(arg);
 
         Alg.RR.test_mRR();
+        // Alg.RR.vecRoot_num.resize(1,0);
+        // Alg.RR._mRRsets.resize(1);
+        // Alg.RR.build_one_mRRset_tree(0,2,0.0);
 
         vector<int> seeds;
         auto RR_info = Alg.AdaptiveSelect();

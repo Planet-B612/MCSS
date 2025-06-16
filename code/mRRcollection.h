@@ -27,13 +27,13 @@ class mRRcollection
 	vint __vecNewTree;
 	Nodelist __vecVisitNode;
 	vector<vector<int>> vv_virtual_roots;
-    vector<int> vecRoot_num;
 	float rand_div=1.0;
 
 	public:
 	vector<vector<int>> PO;
 	FRsets _FRsets;
 	mRRsets _mRRsets;
+    vector<int> vecRoot_num;
 	ulint _num_mRRsets = 0;
 	double decimal=1.0;
 	double residual=0.0;
@@ -280,9 +280,10 @@ class mRRcollection
 		for (auto &RR:mRR)
 		{
 			int layer=0;
-			while(RR.size()>layer)
+			while(true)
 			{
-				vint &layer_nodes= RR[layer], new_layer_nodes;
+				RR.resize(layer + 2);
+				vint &layer_nodes= RR[layer], &new_layer_nodes= RR[layer + 1];
 				for(const auto &node:layer_nodes)
 				{
 					for(const auto &nbrId : (R_graph)[node])
@@ -298,11 +299,11 @@ class mRRcollection
 				}
 				if(new_layer_nodes.size()>0)
 				{
-					RR.emplace_back(std::move(new_layer_nodes));
 					layer++;
 				}
 				else
 				{
+					RR.pop_back();
 					break;
 				}
 			}
@@ -389,8 +390,20 @@ class mRRcollection
 		vint &v_roots=vv_virtual_roots[mRRid];
 		ulint v_roots_size=v_roots.size();
         vint roots, del_roots; roots.reserve(v_roots_size+mRR_size); del_roots.reserve(mRR_size);
-        mRRset mRR_copy(mRR_size);
-		int min_tree=__numV, first_del_node=0, affected_layer=-1;
+
+		for(int i=static_cast<int>(v_roots_size-1);i>-1;i--)  // I did not record the idx of v_roots here like before
+		{
+			int root=v_roots[i];
+			if(__Activated[root])  // is a del_node
+			{
+				v_roots.erase(v_roots.begin()+i);
+				continue;
+			}
+            __vecNewTree[root] = mRR_size; // mark realized v_roots
+		}
+		v_roots_size=v_roots.size();
+
+		int min_tree=__numV, affected_layer=__numV;
         bool find_del=false;
 		for(int i=0;i<mRR_size;i++)  // mark previous roots, and traverse the mRRset. Traversing from the end is not necessary, since we need to know whether a node us already in the mRR if regenerating.
 		{
@@ -404,23 +417,74 @@ class mRRcollection
 					__vecTree[node] = i;
 					if(!find_del && __Activated[node])
 					{
+						__vecTree[node]=-1;
+						auto &frset = _FRsets[node];
+						auto it=lower_bound(frset.begin(), frset.end(), mRRid);
+						if (it != frset.end() && *it == mRRid) 
+						{
+							frset.erase(it);
+						}
+						else
+						{
+							cout<<__LINE__<<", erase error: can not find mRRid in _FRsets of "<<node<<endl;
+						}
 						min_tree=i;
 						affected_layer=j;
 						find_del=true;
 					}
 				}
-			}
-            if(i>min_tree)  // only records roots after min_tree
-            {
-                if(!__Activated[RR[0][0]])
-                {
-                    roots.push_back(RR[0][0]);
-                    __vecNewTree[RR[0][0]] = mRR_size;  // should not be added into some tree during the new exploration
-                }
-                RR.swap(mRR_copy[i]);
-            }
+				if(find_del)
+				{
+					break;
+				}
+			}			
+			if(find_del)
+			{
+				break;
+			}         
 		}
-		mRR[min_tree].swap(mRR_copy[min_tree]);
+		vvint &last_RR=mRR[min_tree];
+		ulint last_RR_size=last_RR.size();
+        mRRset mRR_copy(mRR_size-min_tree);
+		vvint &partial_RR= mRR_copy[0];
+		int remain_size=affected_layer+1;
+		partial_RR.resize(last_RR_size-remain_size);
+		for(ulint i=remain_size;i<last_RR_size;i++)
+		{
+			vint &layer_nodes=last_RR[i];
+			for(const auto &node:layer_nodes)
+			{
+				__vecTree[node] = __numV;  // indicate it is in min_tree, but are not preserved
+			}
+			partial_RR[i-remain_size] = std::move(layer_nodes);
+		}
+		ulint roots_size_min_tree=roots.size();
+		for(int i=min_tree+1;i<mRR_size;i++)
+		{
+			auto &RR= mRR[i];
+			if(!__Activated[RR[0][0]])
+			{
+				roots.push_back(RR[0][0]);
+				__vecNewTree[RR[0][0]] = mRR_size;  // should not be added into some tree during the new exploration
+			}
+			for(auto &layer:RR)
+			{
+				for(const auto &node:layer)
+				{
+					__vecTree[node] = i;
+				}
+			}
+			RR.swap(mRR_copy[i-min_tree]);
+		}
+		for(int i=static_cast<int>(v_roots_size-1);i>-1;i--)
+		{
+			int root=v_roots[i];
+			if(__vecTree[root]>min_tree)  // delete realized v_roots
+			{
+				roots.push_back(root);
+				v_roots.erase(v_roots.begin()+i);
+			}
+		}
 		#ifndef NDEBUG
 			if(mRR_copy[min_tree].empty())
 			{
@@ -442,68 +506,29 @@ class mRRcollection
                 mRR_out(mRRid);
                 exit(1);
             }
-        #endif
-        mRR.resize(min_tree);  // delete empty trees
-		for(int i=int(v_roots_size-1);i>-1;i--)  // I did not record the idx of v_roots here like before
-		{
-			int root=v_roots[i];
-            #ifndef NDEBUG
-                if(__vecTree[root]<0)
-                {
-                    cout<<__func__<<": root="<<root<<" not in mRR, __vecTree[root]="<<__vecTree[root]<<", mRRid="<<mRRid<<endl;
-                    exit(1);
-                }
-            #endif
-			if(__Activated[root])  // is a del_node
-			{
-				v_roots.erase(v_roots.begin()+i);
-				continue;
-			}
-			if(__vecTree[root]>=min_tree)  // only realize v_roots that are affected by del_nodes
-			{
-				roots.push_back(root); // to facilitate the regeneration process
-				v_roots.erase(v_roots.begin()+i);  // this v_root will be realized and thus should be removed from the v_roots
-                __vecNewTree[root] = mRR_size; // mark realized v_roots
-			}
-		}
-        vvint last_RR; last_RR.assign(mRR_copy[min_tree].begin(), mRR_copy[min_tree].begin()+affected_layer+1);  // last_RR is the last RR that will be regenerated
-		// int pre_affected_layer=affected_layer;
-		// bool find_new_layer=false;
-        for(int i=0;i<=affected_layer;i++)
-        {
-			auto &layer_nodes=last_RR[i];
-			for(const auto &node:layer_nodes)
-			{
-				if(__vecNewTree[node]>-1)  // a v_root
-				{
-					find_new_layer=true;
-					affected_layer=i;
-					break;
-				}
-				__vecNewTree[node] = min_tree;
-			}
-        }
+        #endif	
 		auto &layer_nodes=last_RR[affected_layer];
 		ulint layer_nodes_size=layer_nodes.size();
-		for(int i=layer_nodes_size-1;i>-1;i--)
-		{	
+		for(int i=static_cast<int>(layer_nodes_size-1);i>-1;i--)
+		{
 			if(__Activated[layer_nodes[i]]) // only consider the activated nodes in this layer now
 			{
-				layer_nodes.erase(layer_nodes.begin()+i);  // remove del_nodes and v_roots
+				layer_nodes.erase(layer_nodes.begin()+i);  // remove del_nodes
 			}
 			else
 			{
 				__vecNewTree[layer_nodes[i]] = min_tree;
 			}
 		}
-		while(last_RR.size()>affected_layer)
+		while(true)
 		{
-			vint &layer_nodes=last_RR[affected_layer], new_layer_nodes;
-			for(const auto &node:layer_nodes)
+			last_RR.resize(remain_size+1);  // initially, remain_size= affected_layer+1
+			vint &cur_layer_nodes=last_RR[remain_size-1], &new_layer_nodes= last_RR[remain_size];
+			for(const auto &node:cur_layer_nodes)
 			{
 				for(const auto &nbrId : (R_graph)[node])
 				{
-					if(__Activated[nbrId] || (__vecTree[nbrId]>-1 && __vecTree[nbrId]<min_tree) || __vecNewTree[nbrId]>-1)
+					if(__Activated[nbrId] || (__vecTree[nbrId]>-1 && __vecTree[nbrId]<=min_tree) || __vecNewTree[nbrId]>-1)
 						continue;
 					if(dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
 						continue;
@@ -524,20 +549,23 @@ class mRRcollection
 			}
 			if (new_layer_nodes.size()>0)
 			{
-				last_RR.push_back(new_layer_nodes);
+				remain_size++;
 			}
-			affected_layer++;
+			else
+			{
+				last_RR.pop_back();
+				break;
+			}
 		}
-		if(last_RR[0].size()>0)  // make sure it is not empty
+		if(last_RR.size()<1 || last_RR[0].size()<1)  // make sure it is not empty, // if the last RR root is a del_node
 		{
-			mRR.emplace_back(std::move(last_RR));
-			mRR_size=min_tree+1;
+			mRR.resize(min_tree);  // remove the last RR
+			mRR_size=min_tree;
 		}
 		else
-		{			
-			mRR_size=min_tree;  // if the last RR root is a del_node
+		{
+			mRR_size=min_tree+1;
 		}
-		mRR.resize(mRR_size);  // keep unpolluted mRRs and the last RR
         ulint num_new_roots=roots.size();
         mRR.resize(mRR_size+num_new_roots);
         for(ulint i=0;i<num_new_roots;i++)
@@ -545,14 +573,15 @@ class mRRcollection
             auto &RR=mRR[mRR_size+i];
             RR.push_back({roots[i]});
 			int layer=0;
-			while(RR.size()>layer)
+			while(true)
 			{
-				vint &layer_nodes= RR[layer], new_layer_nodes;
-				for(const auto &node:layer_nodes)
+				RR.resize(layer+2);
+				vint &cur_layer_nodes= RR[layer], &new_layer_nodes= RR[layer+1];
+				for(const auto &node:cur_layer_nodes)
 				{
 					for(const auto &nbrId : (R_graph)[node])
 					{
-						if(__Activated[nbrId] || (__vecTree[nbrId]>-1 && __vecTree[nbrId]<min_tree) || __vecNewTree[nbrId]>-1)
+						if(__Activated[nbrId] || (__vecTree[nbrId]>-1 && __vecTree[nbrId]<=min_tree) || __vecNewTree[nbrId]>-1)
 							continue;
 						if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
 							continue;
@@ -573,11 +602,11 @@ class mRRcollection
 				}
 				if(new_layer_nodes.size()>0)
 				{
-					RR.emplace_back(std::move(new_layer_nodes));
 					layer++;
 				}
 				else
 				{
+					RR.pop_back();
 					break;
 				}
 			}
@@ -594,7 +623,7 @@ class mRRcollection
 						auto it=lower_bound(frset.begin(), frset.end(), mRRid);
 						if (it != frset.end() && *it == mRRid) 
 						{
-							frset.erase(it); 
+							frset.erase(it);
 						}
 					}
 					__vecTree[node] =-1;
@@ -608,7 +637,7 @@ class mRRcollection
             exit(1);
         }
 		#endif
-        for(int i=0;i<min_tree;i++)
+        for(int i=0;i<=min_tree;i++)
         {
             auto &RR=mRR[i];
             for(const auto &layer:RR)
@@ -618,10 +647,6 @@ class mRRcollection
                 	__vecTree[node] = -1;  // reset the tree id
 				}
             }
-        }
-        for(const auto &root:roots)
-        {
-            __vecTree[root] = -1;
         }
         
         mRR_size=mRR.size();
@@ -636,6 +661,10 @@ class mRRcollection
 				}
             }
         }
+		for(const auto &root : v_roots)  // reset the v_roots
+		{
+			__vecNewTree[root] = -1;  // reset the tree id
+		}
         vecRoot_num[mRRid]=mRR_size+v_roots.size();
 		#ifndef NDEBUG
         if(synthetic_check(mRRid, string(__func__)+" end", 1,1,1,1,1,1))
@@ -676,11 +705,15 @@ class mRRcollection
 		#endif
 		for (int j = 0; j < num; j++)  // generate new roots
 		{
+			#ifdef _NDEBUG
 			int root = dsfmt_gv_genrand_uint32_range(__numV);
 			while (__Activated[root] || __vecTree[root]>0)
 			{
 				root = dsfmt_gv_genrand_uint32_range(__numV);
 			}
+			#else
+				int root=23;
+			#endif
 			__vecTree[root] = 1024;
 			new_roots.push_back(root);
 		}
@@ -703,15 +736,16 @@ class mRRcollection
 				auto it=lower_bound(frset.begin(), frset.end(), mRRid);
                 if(it!=frset.end() && *it==mRRid)
                 {
-                    cout<<"Error: mRRid="<<mRRid<<", nbrId="<<root<<" already in _FRsets."<<endl;
+                    cout<<__LINE__<<": Error: mRRid="<<mRRid<<", nbrId="<<root<<" already in _FRsets."<<endl;
                     exit(1);
                 }
 				frset.insert(it, mRRid);
 
 				int layer=0;
-				while(RR.size()>layer)
+				while(true)
 				{
-					vint &layer_nodes= RR[layer], new_layer_nodes;
+					RR.resize(layer+2);
+					vint &layer_nodes= RR[layer], &new_layer_nodes= RR[layer+1];					
 					for(const auto &node:layer_nodes)
 					{
 						for(const auto &nbrId : (R_graph)[node])
@@ -726,18 +760,18 @@ class mRRcollection
 							auto it=lower_bound(frset.begin(), frset.end(), mRRid);
 							if(it!=frset.end() && *it==mRRid)
 							{
-								cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
+								cout<<__LINE__<<": Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
 								exit(1);
 							}
 						}
 					}
 					if(new_layer_nodes.size()>0)
 					{
-						RR.emplace_back(std::move(new_layer_nodes));
 						layer++;
 					}
 					else
 					{
+						RR.pop_back();
 						break;
 					}
 				}
@@ -766,6 +800,11 @@ class mRRcollection
 		for (const auto &root : new_roots)
 		{
 			__vecTree[root] = -1;
+		}
+		
+        for(auto root:v_roots)
+		{
+			__vecTree[root]=-1;
 		}
 		#ifndef NDEBUG
         if(synthetic_check(mRRid, string(__func__)+" end",0,1,1,0,1,1))
