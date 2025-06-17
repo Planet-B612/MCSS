@@ -60,7 +60,7 @@ int main(int argn, char **argv)
         // result_bk<< "Running MINE_Alg at eta = " << arg.eta_0 + i * 0.01 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<<", time = "<<arg.time<< ", real_time_pw = "<<arg.real_time_pw <<", q_ratio = "<<arg.q_ratio << endl;
         TAlg Alg(arg);
 
-        Alg.RR.test_mRR();
+        // Alg.RR.test_mRR();
         // Alg.RR.vecRoot_num.resize(1,0);
         // Alg.RR._mRRsets.resize(1);
         // Alg.RR.build_one_mRRset_tree(0,2,0.0);

@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <set>
 
 
 
@@ -33,6 +34,8 @@ typedef std::vector<vvint> mRRset;
 // typedef std::vector<int_vec_patchmap> mRRset;
 typedef std::vector<mRRset> mRRsets;
 
+typedef std::set<int> sint;
+typedef std::vector<sint> vsint;
 
 // /// Define the way of storing results
 // typedef std::tuple<double, double, double, double> Res;

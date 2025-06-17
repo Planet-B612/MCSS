@@ -4,7 +4,7 @@ run: *.cpp *.h
 		g++ run.cpp -Wall -DNDEBUG -std=c++11 -O3 ../dSFMT/dSFMT.c -o run
 
 rundebug: *.cpp *.h
-		g++ run.cpp -Wall -g -DNDEBUG -std=c++11 -O0 ../dSFMT/dSFMT.c -o rundebug
+		g++ run.cpp -Wall -g -std=c++11 -O3 ../dSFMT/dSFMT.c -o rundebug
 
 test: *.cpp *.h
 		g++ test.cpp -Wall -g -DNDEBUG -std=c++11 -O3 ../dSFMT/dSFMT.c -o test

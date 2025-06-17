@@ -4,13 +4,13 @@
 void test_mRR()
 {
 	gene_syn_mRR();
-	vint del_nodes={5};
+	vint del_nodes={20};
 	for(const auto &node:del_nodes)
 	{
 		__Activated[node]=true;
 	}
-	vv_virtual_roots[0]={6,12}; vecRoot_num[0]=4;
-	add_root(0, 1);
+	vv_virtual_roots[0]={6}; vecRoot_num[0]=4;
+	// add_root(0, 1);
 	// delete_root(0, 1);
 	mRR_update(0,del_nodes);
 	add_root(0, 1);
@@ -45,8 +45,8 @@ bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool
 	if(tree) b=vec_value_check(__vecTree, -1, 1, str + " __vecTree includes non -1 values.");
 	if(visitBool) c=vec_value_check(__vecVisitBool, false, 1, str + " __vecVisitBool includes TRUE values.");
 	if(seq) d=vec_value_check(__vecSeq, -1, 1, str + " __vecSeq includes non -1 values.");
-	if(fr) e=FR_check(mRRid, str+" FR_check");
-	if(reverse) f=FR_reverse_check(str+" FR_reverse_check");
+	if(fr) e=FR_check_hash(mRRid, str+" FR_check");
+	// if(reverse) f=FR_reverse_check(str+" FR_reverse_check");
 	if(a || b || c || d || e || f)
 	{
 		cout<<"Error in synthetic_check of "<<str<<endl;
@@ -80,30 +80,16 @@ bool v_roots_check(int mRRid, string str)
 	return false;
 }
 
-bool del_nodes_check(int mRRid, vint &del_nodes)
+bool del_nodes_check(int mRRid, vint &del_nodes, int first_del_node)
 {
 	for(const auto &node:del_nodes)
 	{
-		__vecVisitBool[node]=true;
-	}
-	for(const auto &RR:_mRRsets[mRRid])
-	{
-		for(const auto &layer:RR)
+		if(__vecTree[node]<0 && node!=first_del_node)
 		{
-			for(const auto &node:layer)
-			{
-				if(__vecVisitBool[node])
-				{
-					__vecVisitBool[node]=false;
-				}
-			}
+			cout<<"Error in del_nodes_check of mRR "<<mRRid<<", "<< node<<" is not in mRR or new mRR."<<endl;
+			vec_out(del_nodes, "del_nodes: ");
+			return true;
 		}
-	}
-	if(count(__vecVisitBool.begin(), __vecVisitBool.end(),true)>0)
-	{
-		cout<<"Error in del_nodes_check of mRR "<<mRRid<<", at least one del_node is not in mRR or new mRR."<<endl;
-		vec_out(del_nodes, "del_nodes: ");
-		return true;
 	}
 	return false;
 }
@@ -185,6 +171,34 @@ bool vec_value_check(T &vec, T1 val, int equality, string str)  // equality: 1: 
 	return false;
 }
 
+bool FR_reverse_check_hash(int rid, mRRset &mRR_copy, string str)
+{
+	sint &mRR_hash=vec_hash_mRR[rid];
+	for(const auto & node: mRR_hash)
+	{
+		if(vec_hash_FR[node].find(rid)==vec_hash_FR[node].end())
+		{
+			cout<<"FR_check error: "<<rid<<" is not in the FR of "<<node<<endl;
+			return true;
+		}
+	}
+	for(const auto &RR:mRR_copy)
+	{
+		for(const auto &layer:RR)
+		{
+			for(const auto & node: mRR_hash)
+			{
+				if(vec_hash_FR[node].find(rid)==vec_hash_FR[node].end() && __vecNewTree[node]>-1)
+				{
+					cout<<"FR_check error: "<<rid<<" is not in the FR of "<<node<<endl;
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 bool FR_reverse_check(string str)
 {
 	for(int i=0;i<__numV;i++)
@@ -216,6 +230,18 @@ bool FR_reverse_check(string str)
 		}
 	}
 	return false;
+}
+
+bool FR_check_hash(int rid, string str)
+{
+	sint &mRR_hash=vec_hash_mRR[rid];
+	for(const auto &node:mRR_hash)
+	{
+		if(vec_hash_FR[node].find(rid)==vec_hash_FR[node].end())
+		{
+			cout<<"FR_check error: "<<rid<<" is not in the FR of "<<node<<endl;
+		}
+	}
 }
 
 bool FR_check(int rid, string str)

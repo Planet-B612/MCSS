@@ -21,6 +21,7 @@ double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
 float deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
+const int window_size=0;  // sample:2, facebook: 3, dblp: 5
 
 // #define debug
 // #define debugroots
@@ -31,7 +32,7 @@ float deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easie
 
 class Argument{
 public:
-    float eta_0 = 0.05;
+    float eta_0 = 0.01;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
@@ -64,11 +65,11 @@ public:
     
     Argument()
     {
-        #ifndef _NDEBUG
-        dataset_No=0;
-        real_time_pw = true;
-        deg_amplifier=1.2;
-        #endif
+        // #ifndef _NDEBUG
+        dataset_No=5;
+        real_time_pw = false;
+        deg_amplifier=1.0;
+        // #endif
     }
     void arg_update(int argn, char** argv)
     {
