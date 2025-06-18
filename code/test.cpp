@@ -14,9 +14,9 @@
 #include <cstring>
 #include "Timer.h"
 #include "Memory.h"
-#include "MemoryUsage.h"
+// #include "MemoryUsage.h"
 #include <queue>
-#include "test_ic.h"
+// #include "test_ic.h"
 
 
 // #include <unordered_map>
@@ -44,19 +44,19 @@ int main(int argn, char **argv)
     mRRcollection RR(arg);
     root_num = 3;
     // RR[0] = {}
-    RR.build_n_mRRsets_tree(10);
-    RR.output_info(0);
+    RR.build_n_mRRsets_tree(1);
+    // RR.output_info(0);
     RR.add_root(0,2);
-    // RR.add_root(0,2);
-    // RR.output_info(0);
-    // RR.delete_root(0,1);
-    // RR.output_info(0);
-    __Activated[1] = true;
-    __Activated[2] = true;
-    vector<int> del_nodes = {1, 2};
-    RR.mRR_update(0,del_nodes);
-    __Activated[3] = true;
-    __Activated[4] = true;
+    RR.add_root(0,2);
+    // // RR.output_info(0);
+    // // RR.delete_root(0,1);
+    // // RR.output_info(0);
+    // __Activated[1] = true;
+    // __Activated[2] = true;
+    // vector<int> del_nodes = {1, 2};
+    // RR.mRR_update(0,del_nodes);
+    // __Activated[3] = true;
+    // __Activated[4] = true;
     return 0;
 }
 
