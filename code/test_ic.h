@@ -11,7 +11,7 @@ void test_mRR()
 	}
 	vv_virtual_roots[0] = {6};
 	vecRoot_num[0] = 4;
-	// add_root(0, 1);
+	add_root(0, 1);
 	// delete_root(0, 1);
 	mRR_update(0, del_nodes);
 	add_root(0, 1);
@@ -21,16 +21,16 @@ void gene_syn_mRR()
 {
 	__Activated[17] = true;
 	mRRset mRR;
-	mRR.push_back({{5}, {4, 21}, {0, 6, 22}, {18, 15, 13}});
-	mRR.push_back({{20}, {12, 19}, {10, 14, 1}, {16, 3}, {7}});
+	mRRset mRR_layer;
+	mRR.push_back({5, 4, 21, 0, 6, 22, 18, 15, 13});
+	mRR_layer.push_back({0,1,3,6});
+	mRR.push_back({20, 12, 19, 10, 14, 1, 16, 3, 7});
+	mRR_layer.push_back({0,1,3,6,8});
 	for (const auto &RR : mRR)
 	{
-		for (const auto &layer : RR)
+		for (const auto &node : RR)
 		{
-			for (const auto &node : layer)
-			{
-				_FRsets[node].push_back(0);
-			}
+			_FRsets[node].push_back(0);
 		}
 	}
 	_mRRsets.push_back(mRR);
@@ -195,15 +195,12 @@ bool FR_reverse_check_hash(int rid, mRRset &mRR_copy, string str)
 	}
 	for (const auto &RR : mRR_copy)
 	{
-		for (const auto &layer : RR)
+		for (const auto &node : RR)
 		{
-			for (const auto &node : mRR_hash)
+			if (vec_hash_FR[node].find(rid) == vec_hash_FR[node].end() && __vecNewTree[node] > -1)
 			{
-				if (vec_hash_FR[node].find(rid) == vec_hash_FR[node].end() && __vecNewTree[node] > -1)
-				{
-					cout << "FR_check error: " << rid << " is not in the FR of " << node << endl;
-					return true;
-				}
+				cout << "FR_check error: " << rid << " is not in the FR of " << node << endl;
+				return true;
 			}
 		}
 	}
@@ -222,15 +219,12 @@ bool FR_reverse_check(string str)
 		{
 			for (const auto &RR : _mRRsets[rid])
 			{
-				for (const auto &layer : RR)
+				for (const auto &node : RR)
 				{
-					for (const auto &node : layer)
+					if (node == i)
 					{
-						if (node == i)
-						{
-							find_it = true;
-							break;
-						}
+						find_it = true;
+						break;
 					}
 				}
 			}
@@ -261,22 +255,17 @@ bool FR_check(int rid, string str)
 	mRRset &mRR = _mRRsets[rid];
 	for (auto &RR : mRR)
 	{
-		for (auto &layer : RR)
+		for (auto &node : RR)
 		{
-			for (const auto &node : layer)
+			auto &frset = _FRsets[node];
+			auto it = lower_bound(frset.begin(), frset.end(), rid);
+			if (it == frset.end())
 			{
-				// auto node=entry.first;
-				// if(_FRsets[node].find(rid)==_FRsets[node].end())
-				auto &frset = _FRsets[node];
-				auto it = lower_bound(frset.begin(), frset.end(), rid);
-				if (it == frset.end())
-				{
-					set_out({node});
-					output_info(rid, false);
-					cout << str + " Error in FR_full_check, mRR " << rid << " contains the node " << node << "; but the mRRid is not in node's _FRsets" << endl;
-					// output_info(rid);
-					return true;
-				}
+				set_out({node});
+				output_info(rid, false);
+				cout << str + " Error in FR_full_check, mRR " << rid << " contains the node " << node << "; but the mRRid is not in node's _FRsets" << endl;
+				// output_info(rid);
+				return true;
 			}
 		}
 	}
@@ -373,9 +362,9 @@ void mRR_out(int mRRid, string str = "")
 	for (auto i = 0; i < mRR.size(); i++)
 	{
 		result_bk << i << "-th RR: ";
-		for (auto &layer : mRR[i])
+		for (auto &RR : mRR[i])
 		{
-			for (auto j : layer)
+			for (auto j : RR)
 			{
 				result_bk << j << ", ";
 			}

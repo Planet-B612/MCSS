@@ -34,7 +34,6 @@ class mRRcollection
 	FRsets _FRsets;
 	mRRsets _mRRsets;
 	mRRsets vec_mRR_layer;
-	mRRsets vec_mRR_layer;
 	// #ifndef NDEBUG
 	vsint vec_hash_FR;
 	vsint vec_hash_mRR;
@@ -168,7 +167,6 @@ class mRRcollection
 			vv_virtual_roots.resize(numSamples);
 			_mRRsets.resize(numSamples);
 			vec_mRR_layer.resize(numSamples);
-			vec_mRR_layer.resize(numSamples);
 			#ifndef NDEBUG
 			vec_hash_mRR.resize(numSamples);
 			#endif // !NDEBUG
@@ -183,7 +181,7 @@ class mRRcollection
             vint &polluted_nodes=vv_polluted_nodes[i];
             if(polluted_nodes.size()>0)
             {
-                // mRR_update(i, polluted_nodes);
+                mRR_update(i, polluted_nodes);
                 polluted_nodes.clear();
 				num_update++;
             }
@@ -224,7 +222,7 @@ class mRRcollection
 					root_diff=vecRoot_num[i]-root_num;
 					if(root_diff>0)
 					{
-						// delete_root(i,root_diff);
+						delete_root(i,root_diff);
 						num_delete_root++;
 					}
 					else
@@ -242,7 +240,7 @@ class mRRcollection
 					if(root_diff>0)
 					{
 						// output_info(i,true);
-						// delete_root(i,root_diff);
+						delete_root(i,root_diff);
 						// output_info(i,false);
 						num_delete_root++;
 					}
@@ -689,7 +687,7 @@ class mRRcollection
     }
 
 
-	void mRR_update_new(int mRRid, Nodelist &del_nodes){
+	// void mRR_update_new(int mRRid, Nodelist &del_nodes){
 
 	// 	mRRset &mRR=_mRRsets[mRRid];
 	// 	vint &v_roots=vv_virtual_roots[mRRid];
@@ -911,48 +909,48 @@ class mRRcollection
 		return;
 	}
 
-	// void delete_root(int mRRid, int num_del_roots)
-	// {
-    //     vecRoot_num[mRRid] -= num_del_roots;
-	// 	mRRset &mRR=_mRRsets[mRRid];
-	// 	ulint mRR_size=mRR.size();
-	// 	vint &v_roots=vv_virtual_roots[mRRid], roots;
-	// 	ulint v_roots_size=v_roots.size();
-    //     if(v_roots_size>= num_del_roots)  
-    //     {
-    //         v_roots.resize(v_roots_size-num_del_roots);
-    //         num_del_roots=0;
-    //     }
-    //     else
-    //     {
-    //         v_roots.clear();
-    //         num_del_roots -= v_roots_size;
-    //     }
-    //     for(int i=0;i<num_del_roots;i++)
-    //     {
-    //         auto &RR=mRR[mRR_size-1-i];
-    //         for(const auto &layer:RR)
-    //         {
-	// 			for(const auto &node:layer)
-	// 			{
-	// 				auto &frset = _FRsets[node];
-	// 				auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-	// 				if (it != frset.end() && *it == mRRid) 
-	// 				{
-	// 					frset.erase(it);
-	// 					#ifndef NDEBUG
-	// 					vec_hash_FR[node].erase(mRRid);
-	// 					#endif // !NDEBUG
-	// 				}
-	// 				else
-	// 				{
-	// 					cout<<__LINE__<<", Error: "<<node<<" is not in "<<mRRid<<", when deleting it."<<endl;
-	// 				}
-	// 			}
-    //         }
-    //     }
-    //     mRR.resize(mRR_size-num_del_roots);
-	// }
+	void delete_root(int mRRid, int num_del_roots)
+	{
+        vecRoot_num[mRRid] -= num_del_roots;
+		mRRset &mRR=_mRRsets[mRRid];
+		ulint mRR_size=mRR.size();
+		vint &v_roots=vv_virtual_roots[mRRid], roots;
+		ulint v_roots_size=v_roots.size();
+        if(v_roots_size>= num_del_roots)  
+        {
+            v_roots.resize(v_roots_size-num_del_roots);
+            num_del_roots=0;
+        }
+        else
+        {
+            v_roots.clear();
+            num_del_roots -= v_roots_size;
+        }
+        for(int i=0;i<num_del_roots;i++)
+        {
+            auto &RR=mRR[mRR_size-1-i];
+            for(const auto &layer:RR)
+            {
+				for(const auto &node:layer)
+				{
+					auto &frset = _FRsets[node];
+					auto it=lower_bound(frset.begin(), frset.end(), mRRid);
+					if (it != frset.end() && *it == mRRid) 
+					{
+						frset.erase(it);
+						#ifndef NDEBUG
+						vec_hash_FR[node].erase(mRRid);
+						#endif // !NDEBUG
+					}
+					else
+					{
+						cout<<__LINE__<<", Error: "<<node<<" is not in "<<mRRid<<", when deleting it."<<endl;
+					}
+				}
+            }
+        }
+        mRR.resize(mRR_size-num_del_roots);
+	}
 
 	/// Refresh the RRsets
 	void refresh_RRsets()
