@@ -20,8 +20,7 @@ int RR_thr=3000000;
 double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
-float deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
-const int window_size=0;  // sample:2, facebook: 3, dblp: 5
+int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 // #define debug
 // #define debugroots
@@ -32,23 +31,23 @@ const int window_size=0;  // sample:2, facebook: 3, dblp: 5
 
 class Argument{
 public:
-    float eta_0 = 0.01;
+    float eta_0 = 0.05;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
     string model = "IC";
     bool Rnd_cost = true;
     //int simRnd = 100;
-    float eps = 0.8;
+    float eps = 0.5;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
-    vector<string> dataset = {"sample", "facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar"};
+    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
     // vector<int> data={4};
     int dataset_No = 5;
     int cur_data;//=data[0];
-    string graph_path="/data/fc/graphInfo/";
-    string pw_path="/data/fc/realization/";
+    string graph_path="/data/gongyao/graphInfo/";
+    string pw_path="/data/gongyao/realization/";
     string result_dir = "../results/backup.txt";
     int run_times=1;
     int times=0;
@@ -65,10 +64,10 @@ public:
     
     Argument()
     {
-        // #ifndef _NDEBUG
-        dataset_No=5;
-        real_time_pw = false;
-        deg_amplifier=1.0;
+        // #ifndef NDEBUG
+        // dataset_No=5;
+        // real_time_pw = false;
+        // deg_amplifier=1.0;
         // #endif
     }
     void arg_update(int argn, char** argv)
@@ -104,12 +103,14 @@ public:
             if (argv[i] == string("-over_pnodes"))
                 over_pnodes = stof(argv[i + 1]);
         }      
-    }
+    }   
     void Initialization()
     {
+        __Activated.clear();
         activated_nodes.clear();
         activated_nodes.push_back({});
         seed_set.clear();
+        cost.clear();
         // if (format_graph != 0)
         // {
         //     for(auto k:data)
@@ -232,7 +233,7 @@ public:
     
     void seed_record(vector<int> seeds,int k,int i)
     {
-        ofstream out_seeds("../results/newseeds/MINE_" + dataset[k] + "_" + to_string(eta_0) + +"_" + to_string(i) + ".txt", ios::out);
+        ofstream out_seeds("../results/seed/MINE_" + dataset[k] + "_" + to_string(eta_0*numV) + "_" + to_string(batch) + "_" + to_string(i) + ".txt", ios::out);
         assert((!out_seeds.fail()));
         for (auto node : seeds)
         {

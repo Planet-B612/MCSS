@@ -1,9 +1,3 @@
-
-#if !defined(DSFMT_MEXP)
-#ifdef __GNUC__
-#define DSFMT_MEXP 19937
-#endif
-#endif
 #include "../dSFMT/dSFMT.h"
 #include "graph.h"
 #include <iostream>
@@ -24,18 +18,15 @@ int main(int argn, char **argv)
     
     Argument arg;  // claimed in Argument.h
     R_graph.clear(), O_graph.clear();  // global variables
-    __Activated.clear();
-    activated_nodes.clear();
-    activated_nodes.push_back({});
-    seed_set.clear();
-    cost.clear();
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));  // the type must be uint32_t, to be accord with the function definition
     arg.arg_update(argn, argv);
-    // arg.Initialization();
     // std::fstream result_bk("../results/backup", ios::app);
     // assert(!result_bk.fail());
-    // for (auto k : arg.data)
-    // {
+    double avg_cost = 0.0;
+    double avg_time = 0.0;
+    while(arg.times < arg.run_times)
+    {
+        arg.Initialization();
         auto k = arg.dataset_No;
         arg.load_cost_graph(k);
         #ifndef NDEBUG
@@ -61,9 +52,7 @@ int main(int argn, char **argv)
         TAlg Alg(arg);
 
         // Alg.RR.test_mRR();
-        // Alg.RR.vecRoot_num.resize(1,0);
-        // Alg.RR._mRRsets.resize(1);
-        // Alg.RR.build_one_mRRset_tree(0,2,0.0);
+
 
         vector<int> seeds;
         auto RR_info = Alg.AdaptiveSelect();
@@ -73,6 +62,8 @@ int main(int argn, char **argv)
         {
             total_cost += cost[node];
         }
+        avg_cost += total_cost;
+        avg_time += get<4>(RR_info);
         string results;
         results = "(" + arg.dataset[k] + ", eta = " + to_string(arg.eta_0) + ", Alg = " + "MINE, cost = " + to_string(total_cost) + ", prob = " + to_string(1.0) + ", time = " + to_string(get<4>(RR_info))  + ", memory = " + to_string(memory) + ", total_mRR = " + to_string(get<0>(RR_info)) +", mRR_update = " + to_string(get<1>(RR_info)) + +", mRR_add_back = " + to_string(get<2>(RR_info)) +", mRR_delete = " + to_string(get<3>(RR_info)) +  ")";
         // result_bk << results << endl;
@@ -84,7 +75,9 @@ int main(int argn, char **argv)
             arg.seed_record(seeds,k,arg.times);
         }
         Alg.release_memory();
-        // }
-    // }
+        arg.times++;
+    }
+    cout << "Average cost: " << avg_cost / arg.run_times << endl;
+    cout << "Average time: " << avg_time / arg.run_times << endl;
     return 0;
 }
