@@ -33,6 +33,7 @@ class mRRcollection
 	vector<vector<int>> PO;
 	FRsets _FRsets;
 	mRRsets _mRRsets;
+	mRRsets mRR_layer;
 	// #ifndef NDEBUG
 	vsint vec_hash_FR;
 	vsint vec_hash_mRR;
@@ -165,6 +166,7 @@ class mRRcollection
 		{
 			vv_virtual_roots.resize(numSamples);
 			_mRRsets.resize(numSamples);
+			mRR_layer.resize(numSamples);
 			#ifndef NDEBUG
 			vec_hash_mRR.resize(numSamples);
 			#endif // !NDEBUG
