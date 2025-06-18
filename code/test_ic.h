@@ -4,7 +4,7 @@
 void test_mRR()
 {
 	gene_syn_mRR();
-	vint del_nodes = {20};
+	vint del_nodes = {20,23};
 	for (const auto &node : del_nodes)
 	{
 		__Activated[node] = true;
@@ -36,6 +36,7 @@ void gene_syn_mRR()
 	_mRRsets.push_back(mRR);
 	vv_virtual_roots.resize(1);
 	vv_polluted_nodes.resize(1);
+	vec_mRR_layer.push_back(mRR_layer);
 	vecRoot_num = {2};
 }
 
@@ -362,12 +363,9 @@ void mRR_out(int mRRid, string str = "")
 	for (auto i = 0; i < mRR.size(); i++)
 	{
 		result_bk << i << "-th RR: ";
-		for (auto &RR : mRR[i])
+		for (auto &j : mRR[i])
 		{
-			for (auto j : RR)
-			{
-				result_bk << j << ", ";
-			}
+			result_bk << j << ", ";
 		}
 		result_bk << endl;
 	}
@@ -428,12 +426,9 @@ bool output_info(int mRRid, bool erase = false, Nodelist p_nodes = {})
 	{
 		// if(k==0) 		continue;
 		(*__arg).result_bk << k << "-th tree is: " << endl;
-		for (auto &layer : RR)
+		for (auto &node : RR)
 		{
-			for (auto node : layer)
-			{
-				(*__arg).result_bk << node << ", ";
-			}
+			(*__arg).result_bk << node << ", ";
 			(*__arg).result_bk << endl;
 		}
 		k++;

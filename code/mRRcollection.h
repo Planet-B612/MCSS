@@ -34,7 +34,7 @@ class mRRcollection
 	FRsets _FRsets;
 	mRRsets _mRRsets;
 	mRRsets vec_mRR_layer;
-	// #ifndef NDEBUG
+	// #ifdef DEBUG
 	vsint vec_hash_FR;
 	vsint vec_hash_mRR;
 	// #endif // !NDEBUG
@@ -63,7 +63,7 @@ class mRRcollection
 		__Inv_inDeg=arg.Inv_inDeg;
 		__numV = arg.numV;
 		_FRsets = FRsets(__numV);
-		#ifndef NDEBUG
+		#ifdef DEBUG
 		vec_hash_FR.resize(__numV);
 		#endif 
 
@@ -149,7 +149,7 @@ class mRRcollection
 		return counter_real;
 	}
 
-//  #include "test_ic.h"
+ #include "test_ic.h"
 
 
 	/// Generate a set of n mRR sets
@@ -167,7 +167,7 @@ class mRRcollection
 			vv_virtual_roots.resize(numSamples);
 			_mRRsets.resize(numSamples);
 			vec_mRR_layer.resize(numSamples);
-			#ifndef NDEBUG
+			#ifdef DEBUG
 			vec_hash_mRR.resize(numSamples);
 			#endif // !NDEBUG
             vv_polluted_nodes.resize(numSamples);
@@ -272,7 +272,7 @@ class mRRcollection
 		root_num += (dsfmt_gv_genrand_open_close() <= residual);
         vecRoot_num[mRRid]=root_num;
 		mRRset &mRR=_mRRsets[mRRid];
-		#ifndef NDEBUG
+		#ifdef DEBUG
 		sint &mRR_hash= vec_hash_mRR[mRRid];
 		#endif // !NDEBUG
 		mRR.resize(root_num);
@@ -289,7 +289,7 @@ class mRRcollection
 			__vecVisitBool[root] = true; // only record the state of roots, but do not push the root into the queue, since we are not going to diffuse here.
 			_FRsets[root].push_back(mRRid);
 			mRR[i].push_back(root);
-			#ifndef NDEBUG
+			#ifdef DEBUG
 			mRR_hash.insert(root);
 			vec_hash_FR[root].insert(mRRid);
 			#endif // !NDEBUG
@@ -396,7 +396,7 @@ class mRRcollection
 	{
 		mRRset &mRR=_mRRsets[mRRid];
 		mRRset &mRR_layer=vec_mRR_layer[mRRid];
-		#ifndef NDEBUG
+		#ifdef DEBUG
 		sint &mRR_hash=vec_hash_mRR[mRRid];
 		#endif // !NDEBUG
 		int mRR_size=static_cast<int>(mRR.size());
@@ -404,17 +404,17 @@ class mRRcollection
 		ulint v_roots_size=v_roots.size();
         vint roots, del_roots; roots.reserve(v_roots_size+mRR_size); del_roots.reserve(mRR_size);
 
-	// 	for(int i=static_cast<int>(v_roots_size-1);i>-1;i--)  // I did not record the idx of v_roots here like before
-	// 	{
-	// 		int root=v_roots[i];
-	// 		if(__Activated[root])  // is a del_node
-	// 		{
-	// 			v_roots.erase(v_roots.begin()+i);
-	// 			continue;
-	// 		}
-    //         __vecNewTree[root] = mRR_size; // mark realized v_roots
-	// 	}
-	// 	v_roots_size=v_roots.size();
+		for(int i=static_cast<int>(v_roots_size-1);i>-1;i--)
+		{
+			int root=v_roots[i];
+			if(__Activated[root])  // is a del_node
+			{
+				v_roots.erase(v_roots.begin()+i);
+				continue;
+			}
+            __vecNewTree[root] = mRR_size; // mark realized v_roots
+		}
+		v_roots_size=v_roots.size();
 
 		int min_tree=__numV, affected_layer_idx=__numV, first_del_idx=__numV, min_tree_RR_size;
         bool find_del=false;
@@ -442,19 +442,27 @@ class mRRcollection
 			}         
 		}
 		auto &min_tree_layer=mRR_layer[min_tree];
-		affected_layer_idx=lower_bound(min_tree_layer.begin(), min_tree_layer.end(), first_del_idx)-min_tree_layer.begin();
+		affected_layer_idx=upper_bound(min_tree_layer.begin(), min_tree_layer.end(), first_del_idx)-min_tree_layer.begin()-1;
 		vint &min_tree_RR=mRR[min_tree];
 		for(int i=first_del_idx; i<min_tree_RR_size; i++)
 		{
-			__vecTree[min_tree_RR[i]]=min_tree;
+			__vecTree[min_tree_RR[i]]=__numV;
 		}
         mRRset mRR_copy(mRR_size-min_tree);
 		mRR_copy[0].reserve(min_tree_RR_size-first_del_idx);
 		mRR_copy[0]=vector<int>(std::make_move_iterator(min_tree_RR.begin()+first_del_idx), std::make_move_iterator(min_tree_RR.end()));
 		int affected_layer_beg=min_tree_layer[affected_layer_idx];
-		int affected_next_layer_beg=min_tree_layer[affected_layer_idx+1];
+		int affected_next_layer_beg, min_tree_layer_size=static_cast<int>(min_tree_layer.size());
+		if(affected_layer_idx==min_tree_layer_size-1)
+		{
+			affected_next_layer_beg=min_tree_RR_size;
+		}
+		else
+		{
+			affected_next_layer_beg=min_tree_layer[affected_layer_idx+1];
+		}
 		min_tree_RR.resize(affected_next_layer_beg);
-		min_tree_layer.resize(affected_layer_idx+1);
+		min_tree_layer.resize(affected_layer_idx);
 
 		for(int i=min_tree+1;i<mRR_size;i++)
 		{
@@ -466,7 +474,7 @@ class mRRcollection
 			}
 			for(const auto &node:RR)
 			{
-				#ifndef NDEBUG
+				#ifdef DEBUG
 				mRR_hash.erase(node);
 				#endif // !NDEBUG
 				__vecTree[node] = i;
@@ -484,7 +492,7 @@ class mRRcollection
 				v_roots.erase(v_roots.begin()+i);
 			}
 		}
-		#ifndef NDEBUG
+		#ifdef DEBUG
 			if(del_nodes_check(mRRid, del_nodes))
 			{
 				cout<<__LINE__<<": Error: del_nodes_check failed in mRR_update, mRRid="<<mRRid<<endl;
@@ -502,17 +510,17 @@ class mRRcollection
                 exit(1);
             }
         #endif
-		for(int i=affected_next_layer_beg;i>=affected_layer_beg;i--)
+		for(int i=affected_next_layer_beg-1;i>=affected_layer_beg;i--)
 		{
 			int node=min_tree_RR[i];
 			if(__Activated[node]) // only consider the activated nodes in this layer now
 			{
-				__vecTree[node]=-1;
+				__vecTree[node]=-1;  // necessary to make __vecTree all -1
 				min_tree_RR.erase(min_tree_RR.begin()+i);  // remove del_nodes
-				#ifndef NDEBUG
+				#ifdef DEBUG
 				mRR_hash.erase(node);
 				#endif // !NDEBUG
-				
+				affected_next_layer_beg--;
 			}
 			else
 			{
@@ -520,7 +528,7 @@ class mRRcollection
 			}
 		}
 		int layer_start = affected_layer_beg, layer_end=affected_next_layer_beg, expand;
-		min_tree_layer.pop_back();
+		// min_tree_layer.pop_back();
 		while(layer_start < layer_end)
 		{
 			min_tree_layer.push_back(layer_start);
@@ -534,7 +542,7 @@ class mRRcollection
 					if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[expand])
 						continue;
 					min_tree_RR.push_back(nbrId);
-					#ifndef NDEBUG
+					#ifdef DEBUG
 					mRR_hash.insert(nbrId);
 					#endif // !NDEBUG
 					__vecNewTree[nbrId] = min_tree;  // mark the node as in the new mRR
@@ -548,18 +556,19 @@ class mRRcollection
 							exit(1);
 						}
 						frset.insert(it, mRRid);
-						#ifndef NDEBUG
+						#ifdef DEBUG
 						vec_hash_FR[nbrId].insert(mRRid);
 						#endif // !NDEBUG
 					}
 				}
-				layer_start = layer_end; // update the start index of the next layer
-				layer_end = min_tree_RR.size();
 			}
+			layer_start = layer_end; // update the start index of the next layer
+			layer_end = min_tree_RR.size();
 		}
 		if(min_tree_RR.size()<1)  // make sure it is not empty, // if the last RR root is a del_node
 		{
 			mRR.resize(min_tree);  // remove the last RR
+			mRR_layer.resize(min_tree);
 			mRR_size=min_tree;
 		}
 		else
@@ -574,7 +583,7 @@ class mRRcollection
             auto &RR=mRR[mRR_size+i];
 			auto &RR_layer=mRR_layer[mRR_size+i];
             RR.push_back(roots[i]);
-			#ifndef NDEBUG
+			#ifdef DEBUG
 			mRR_hash.insert(roots[i]);
 			#endif // !NDEBUG
 			int layer_start = 0, layer_end = 1, node;
@@ -602,7 +611,7 @@ class mRRcollection
 								exit(1);
 							}
 							frset.insert(it, mRRid);
-							#ifndef NDEBUG
+							#ifdef DEBUG
 							vec_hash_FR[nbrId].insert(mRRid);
 							#endif // !NDEBUG
 						}
@@ -612,7 +621,7 @@ class mRRcollection
 				layer_end = RR.size();
 			}
 		}
-		#ifndef NDEBUG
+		#ifdef DEBUG
 		if(FR_reverse_check_hash(mRRid, mRR_copy, "mRR_update end"))
 		{
 			cout<<__LINE__<<", Error: FR_reverse_check_hash"<<endl;
@@ -631,7 +640,7 @@ class mRRcollection
 					if (it != frset.end() && *it == mRRid) 
 					{
 						frset.erase(it);
-						#ifndef NDEBUG
+						#ifdef DEBUG
 						vec_hash_FR[node].erase(mRRid);
 						#endif // !NDEBUG
 					}
@@ -644,7 +653,7 @@ class mRRcollection
             }
         }
         // reset all static variables
-		#ifndef NDEBUG
+		#ifdef DEBUG
         if(v_roots_check(mRRid, string(__func__)+" end"))
         {
             exit(1);
@@ -678,7 +687,7 @@ class mRRcollection
 			__vecNewTree[root] = -1;  // reset the tree id
 		}
         vecRoot_num[mRRid]=mRR_size+v_roots.size();
-		#ifndef NDEBUG
+		#ifdef DEBUG
         if(synthetic_check(mRRid, string(__func__)+" end", 1,1,1,0,1,1))
         {
             exit(1);
@@ -782,7 +791,7 @@ class mRRcollection
         vecRoot_num[mRRid] += num;
 		mRRset &mRR=_mRRsets[mRRid];
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];
-		#ifndef NDEBUG
+		#ifdef DEBUG
 		sint &mRR_hash=vec_hash_mRR[mRRid];
 		#endif // !NDEBUG
 		vint roots, new_roots; roots.reserve(root_num); new_roots.reserve(num); mRR.reserve(root_num+num);
@@ -801,7 +810,7 @@ class mRRcollection
 		{
 			__vecTree[root]=1024; // a root
 		}
-		#ifndef NDEBUG
+		#ifdef DEBUG
         if(v_roots_check(mRRid, string(__func__)+" end"))
         {
             exit(1);
@@ -809,11 +818,15 @@ class mRRcollection
 		#endif
 		for (int j = 0; j < num; j++)  // generate new roots
 		{
+			#ifdef DEBUG_add_root
+			int root=23;
+			#else
 			int root = dsfmt_gv_genrand_uint32_range(__numV);
 			while (__Activated[root] || __vecTree[root]>0)
 			{
 				root = dsfmt_gv_genrand_uint32_range(__numV);
 			}
+			#endif
 			__vecTree[root] = 1024;
 			new_roots.push_back(root);
 		}
@@ -840,7 +853,7 @@ class mRRcollection
                     exit(1);
                 }
 				frset.insert(it, mRRid);
-				#ifndef NDEBUG
+				#ifdef DEBUG
 				mRR_hash.insert(root);
 				vec_hash_FR[root].insert(mRRid);
 				#endif // !NDEBUG
@@ -868,7 +881,7 @@ class mRRcollection
 				}
 			}
 		}
-		#ifndef NDEBUG
+		#ifdef DEBUG
         if(v_roots_check(mRRid, string(__func__)+" end"))
         {
             exit(1);
@@ -900,7 +913,7 @@ class mRRcollection
 		{
 			__vecTree[root] = -1;
 		}
-		#ifndef NDEBUG
+		#ifdef DEBUG
         if(synthetic_check(mRRid, string(__func__)+" end",0,1,1,0,1,1))
         {
             exit(1);
@@ -929,23 +942,20 @@ class mRRcollection
         for(int i=0;i<num_del_roots;i++)
         {
             auto &RR=mRR[mRR_size-1-i];
-            for(const auto &layer:RR)
+            for(const auto &node:RR)
             {
-				for(const auto &node:layer)
+				auto &frset = _FRsets[node];
+				auto it=lower_bound(frset.begin(), frset.end(), mRRid);
+				if (it != frset.end() && *it == mRRid) 
 				{
-					auto &frset = _FRsets[node];
-					auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-					if (it != frset.end() && *it == mRRid) 
-					{
-						frset.erase(it);
-						#ifndef NDEBUG
-						vec_hash_FR[node].erase(mRRid);
-						#endif // !NDEBUG
-					}
-					else
-					{
-						cout<<__LINE__<<", Error: "<<node<<" is not in "<<mRRid<<", when deleting it."<<endl;
-					}
+					frset.erase(it);
+					#ifdef DEBUG
+					vec_hash_FR[node].erase(mRRid);
+					#endif // !NDEBUG
+				}
+				else
+				{
+					cout<<__LINE__<<", Error: "<<node<<" is not in "<<mRRid<<", when deleting it."<<endl;
 				}
             }
         }
@@ -989,7 +999,7 @@ class mRRcollection
 			mRRset().swap(_mRRsets[i]);
 		}
 		_mRRsets.resize(max_size);
-		#ifndef NDEBUG
+		#ifdef DEBUG
 		vec_hash_mRR.resize(max_size);
 		#endif // !NDEBUG
 		for (ulint i =max_size; i< _num_mRRsets; i++)

@@ -44,10 +44,10 @@ public:
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
     // vector<int> data={4};
-    int dataset_No = 5;
+    int dataset_No = 17;
     int cur_data;//=data[0];
-    string graph_path="/data/gongyao/graphInfo/";
-    string pw_path="/data/gongyao/realization/";
+    string graph_path="/data/fc/graphInfo/";
+    string pw_path="/data/fc/realization/";
     string result_dir = "../results/backup.txt";
     int run_times=1;
     int times=0;
@@ -64,11 +64,11 @@ public:
     
     Argument()
     {
-        // #ifndef NDEBUG
+        #ifdef DEBUG_add_root
         // dataset_No=5;
-        // real_time_pw = false;
-        // deg_amplifier=1.0;
-        // #endif
+        real_time_pw = true;
+        deg_amplifier=1.3;
+        #endif
     }
     void arg_update(int argn, char** argv)
     {

@@ -29,7 +29,7 @@ int main(int argn, char **argv)
         arg.Initialization();
         auto k = arg.dataset_No;
         arg.load_cost_graph(k);
-        #ifndef NDEBUG
+        #ifdef DEBUG
         if(arg.graph_sort_check(O_graph)==false)
         {
             cout << "O_Graph sort check failed!" << endl;
@@ -51,7 +51,8 @@ int main(int argn, char **argv)
         // result_bk<< "Running MINE_Alg at eta = " << arg.eta_0 + i * 0.01 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<<", time = "<<arg.time<< ", real_time_pw = "<<arg.real_time_pw <<", q_ratio = "<<arg.q_ratio << endl;
         TAlg Alg(arg);
 
-        // Alg.RR.test_mRR();
+        Alg.RR.test_mRR();
+        exit(1);
 
 
         vector<int> seeds;
