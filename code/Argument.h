@@ -31,14 +31,14 @@ int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 class Argument{
 public:
-    float eta_0 = 0.05;
+    float eta_0 = 10000;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
     string model = "IC";
     bool Rnd_cost = true;
     //int simRnd = 100;
-    float eps = 0.8;
+    float eps = 0.5;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.

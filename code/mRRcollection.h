@@ -793,7 +793,6 @@ class mRRcollection
 							RR.push_back(nbrId);
 							#ifdef DEBUG
 							mRR_hash.insert(root);
-							vec_hash_FR[nbrId].insert(mRRid);
 							#endif
 							__vecVisitBool[nbrId] = true;
 							auto &frset=_FRsets[nbrId];
@@ -805,6 +804,9 @@ class mRRcollection
 							else
 							{
 								frset.insert(it,mRRid);
+								#ifdef DEBUG
+								vec_hash_FR[nbrId].insert(mRRid);
+								#endif
 							}
 						}
 					}
