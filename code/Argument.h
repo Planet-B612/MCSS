@@ -64,7 +64,7 @@ public:
     
     Argument()
     {
-        #ifdef DEBUG_add_root
+        #ifdef xxx
         // dataset_No=5;
         real_time_pw = true;
         deg_amplifier=1.3;

@@ -311,6 +311,10 @@ class mRRcollection
 						if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
 							continue;
 						RR.push_back(nbrId);
+						#ifdef DEBUG
+						mRR_hash.insert(nbrId);
+						vec_hash_FR[nbrId].insert(mRRid);
+						#endif
 						__vecVisitBool[nbrId] = true;
 						_FRsets[nbrId].push_back(mRRid);
 					}
@@ -447,6 +451,9 @@ class mRRcollection
 		for(int i=first_del_idx; i<min_tree_RR_size; i++)
 		{
 			__vecTree[min_tree_RR[i]]=__numV;
+			#ifdef DEBUG
+			mRR_hash.erase(min_tree_RR[i]);
+			#endif
 		}
         mRRset mRR_copy(mRR_size-min_tree);
 		mRR_copy[0].reserve(min_tree_RR_size-first_del_idx);
@@ -600,7 +607,9 @@ class mRRcollection
 						if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
 							continue;
 						RR.push_back(nbrId);
+						#ifdef DEBUG
 						__vecNewTree[nbrId] = mRR_size+i;
+						#endif
 						if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
 						{
 							auto &frset = _FRsets[nbrId];
@@ -818,15 +827,11 @@ class mRRcollection
 		#endif
 		for (int j = 0; j < num; j++)  // generate new roots
 		{
-			#ifdef DEBUG_add_root
-			int root=23;
-			#else
 			int root = dsfmt_gv_genrand_uint32_range(__numV);
 			while (__Activated[root] || __vecTree[root]>0)
 			{
 				root = dsfmt_gv_genrand_uint32_range(__numV);
 			}
-			#endif
 			__vecTree[root] = 1024;
 			new_roots.push_back(root);
 		}
@@ -844,6 +849,9 @@ class mRRcollection
 				vec_RR_layer.resize(mRR_size_1);
 				auto &RR=mRR[mRR_size_1-1];
 				RR.push_back(root);
+				#ifdef DEBUG
+				mRR_hash.insert(root);
+				#endif
 				__vecVisitBool[root] = true;
 				auto &frset = _FRsets[root];
 				auto it=lower_bound(frset.begin(), frset.end(), mRRid);
@@ -872,6 +880,10 @@ class mRRcollection
 							if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
 								continue;
 							RR.push_back(nbrId);
+							#ifdef DEBUG
+							mRR_hash.insert(root);
+							vec_hash_FR[nbrId].insert(mRRid);
+							#endif
 							__vecVisitBool[nbrId] = true;
 							_FRsets[nbrId].push_back(mRRid);
 						}
@@ -950,6 +962,7 @@ class mRRcollection
 				{
 					frset.erase(it);
 					#ifdef DEBUG
+					vec_hash_mRR[mRRid].erase(node);
 					vec_hash_FR[node].erase(mRRid);
 					#endif // !NDEBUG
 				}
