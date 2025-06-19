@@ -102,7 +102,7 @@ bool identical_element_check(int rid, string str)
 		{
 			if(idx<=pre_idx)
 			{
-				cout<<"pre_idx "<<pre_idx<<" == idx "<<idx<<endl;
+				cout<<"pre_idx "<<pre_idx<<" <= idx "<<idx<<endl;
 				return true;
 			}
 			pre_idx=idx;
