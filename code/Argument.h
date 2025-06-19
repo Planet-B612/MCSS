@@ -38,13 +38,13 @@ public:
     string model = "IC";
     bool Rnd_cost = true;
     //int simRnd = 100;
-    float eps = 0.5;
+    float eps = 0.8;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
     // vector<int> data={4};
-    int dataset_No = 17;
+    int dataset_No = 4;  // 17: sample
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";

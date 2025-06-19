@@ -37,7 +37,7 @@ private:
 	int theta=0;
 	int ending_rnd=3000000;  // not needed, if q_ratio is properly set. sample: 4, facebook: 80, dblp: 3000. Let it be a large value, so that it will never enter the ending round to generate fresh mRRsets.
 	const int root_num_bound=250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
-	const int window_size=5;  // sample:2, facebook: 3, dblp: 5
+	const int window_size=0;  // sample:2, facebook: 3, dblp: 5
 	bool in_ending_rnd=false;
 	bool delete_extra_mRR=false;
 	vector<int> vec_mRR_num;

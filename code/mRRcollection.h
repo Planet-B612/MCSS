@@ -401,6 +401,7 @@ class mRRcollection
 		mRRset &mRR=_mRRsets[mRRid];
 		mRRset &mRR_layer=vec_mRR_layer[mRRid];
 		#ifdef DEBUG
+		mRRset pre_mRR=mRR;
 		sint &mRR_hash=vec_hash_mRR[mRRid];
 		#endif // !NDEBUG
 		int mRR_size=static_cast<int>(mRR.size());
@@ -607,8 +608,9 @@ class mRRcollection
 						if (dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
 							continue;
 						RR.push_back(nbrId);
-						#ifdef DEBUG
 						__vecNewTree[nbrId] = mRR_size+i;
+						#ifdef DEBUG
+						mRR_hash.insert(nbrId);
 						#endif
 						if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
 						{
@@ -704,97 +706,6 @@ class mRRcollection
 		#endif
     }
 
-
-	// void mRR_update_new(int mRRid, Nodelist &del_nodes){
-
-	// 	mRRset &mRR=_mRRsets[mRRid];
-	// 	vint &v_roots=vv_virtual_roots[mRRid];
-	// 	int seq_num_layer=0; 
-	// 	bool find_del=false;
-	// 	int min_tree=__numV, affected_layer=__numV, affected_seq=__numV;
-	// 	vint instantiated_root;
-	// 	set<int> pre_exist_node;
-	// 	set<int> new_add_node;
-
-	// 	for(int i=0;i<mRR.size();i++)  // mark previous roots, and traverse the mRRset. Traversing from the end is not necessary, since we need to know whether a node us already in the mRR if regenerating.
-	// 	{
-	// 		auto &RR= mRR[i];
-	// 		for(int j=0;j<RR.size();j++)
-	// 		{
-	// 			auto &layer=RR[j];
-	// 			for(const auto &node:layer)
-	// 			{
-	// 				__vecSeq[node] = seq_num_layer;
-	// 				if(!find_del && __Activated[node])
-	// 				{
-	// 					min_tree=i;
-	// 					affected_layer=j;
-	// 					affected_seq= seq_num_layer;
-	// 					find_del=true;
-	// 				}
-	// 				__vecTree[node] = i;  // mark the node as in the mRR
-	// 			}
-	// 			seq_num_layer++;
-	// 		}			    
-	// 	}
-
-	// 	for (auto root : v_roots)  // mark the v_roots
-	// 	{
-	// 		if((__vecSeq[root] > affected_seq) && !__Activated[root])  // if the v_root is not activated, and its seq_num is larger than affected_seq
-	// 		{
-	// 			instantiated_root.push_back(root);
-	// 		}
-	// 	}
-	// 	mRRset mRR_copy(mRR.size()-min_tree);
-	// 	for(int i = affected_layer + 1; i < mRR[min_tree].size(); i++)  
-	// 	{
-	// 		mRR_copy[0].push_back(mRR[min_tree][i]);  // copy the layers after affected_layer
-	// 	}
-	// 	for(int i = min_tree+1; i < mRR.size(); i++)  // copy the mRRs after min_tree
-	// 	{
-	// 		mRR_copy[i-min_tree] = std::move(mRR[i]);
-	// 	}
-	// 	mRR.erase(mRR.begin()+min_tree, mRR.end());  // remove the mRRs after min_tree
-	// 	mRR[min_tree].erase(mRR[min_tree].begin()+affected_layer+1, mRR[min_tree].end());  // remove the layers after affected_layer
-	// 	auto &layer_nodes=mRR[min_tree][affected_layer];
-	// 	for(int i=layer_nodes.size();i>-1;i--)
-	// 	{
-	// 		int node=layer_nodes[i];
-	// 		if(__Activated[node]) // only consider the activated nodes in this layer now
-	// 		{
-	// 			layer_nodes.erase(layer_nodes.begin()+i); // remove del_nodes
-	// 		}
-	// 	}
-	// 	while(!layer_nodes.empty())
-	// 	{
-	// 		vint new_layer_nodes;
-	// 		for(const auto &node:layer_nodes)
-	// 		{
-	// 			for(const auto &nbrId : (R_graph)[node])
-	// 			{
-	// 				if(__Activated[nbrId] || __vecSeq[nbrId]>-1 || __vecNewTree[nbrId]>-1)
-	// 					continue;
-	// 				if(dsfmt_gv_genrand_open_close() > __Inv_inDeg[node])
-	// 					continue;
-	// 				new_layer_nodes.push_back(nbrId);
-	// 				__vecNewTree[nbrId] = min_tree;  // mark the node as in the new mRR
-	// 				if(__vecTree[nbrId]<0)  // nbrId was not in this mRR previously
-	// 				{
-	// 					auto &frset = _FRsets[nbrId];
-	// 					auto it=lower_bound(frset.begin(), frset.end(), mRRid);
-	// 					if(it!=frset.end() && *it==mRRid)
-	// 					{
-	// 						cout<<"Error: mRRid="<<mRRid<<", nbrId="<<nbrId<<" already in _FRsets."<<endl;
-	// 						exit(1);
-	// 					}
-	// 					frset.insert(it, mRRid);
-	// 				}
-	// 			}
-	// 		}
-	// 		layer_nodes = std::move(new_layer_nodes);
-	// 	}
-	// }
-
 	void add_root(int mRRid, int num)
 	{
         vecRoot_num[mRRid] += num;
@@ -885,7 +796,16 @@ class mRRcollection
 							vec_hash_FR[nbrId].insert(mRRid);
 							#endif
 							__vecVisitBool[nbrId] = true;
-							_FRsets[nbrId].push_back(mRRid);
+							auto &frset=_FRsets[nbrId];
+							auto it=lower_bound(frset.begin(), frset.end(),mRRid);
+							if(it!=frset.end() && *it==mRRid)
+							{
+								cout<<__LINE__<<", Error: mRRid "<< mRRid<<" already in the FRset of node "<<node<<endl;
+							}
+							else
+							{
+								frset.insert(it,mRRid);
+							}
 						}
 					}
 					layer_start = layer_end;  // update the start index of the next layer
