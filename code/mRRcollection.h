@@ -448,17 +448,7 @@ class mRRcollection
 		}
 		auto &min_tree_layer=mRR_layer[min_tree];
 		affected_layer_idx=upper_bound(min_tree_layer.begin(), min_tree_layer.end(), first_del_idx)-min_tree_layer.begin()-1;
-		vint &min_tree_RR=mRR[min_tree];
-		for(int i=first_del_idx; i<min_tree_RR_size; i++)
-		{
-			__vecTree[min_tree_RR[i]]=__numV;
-			#ifdef DEBUG
-			mRR_hash.erase(min_tree_RR[i]);
-			#endif
-		}
-        mRRset mRR_copy(mRR_size-min_tree);
-		mRR_copy[0].reserve(min_tree_RR_size-first_del_idx);
-		mRR_copy[0]=vector<int>(std::make_move_iterator(min_tree_RR.begin()+first_del_idx), std::make_move_iterator(min_tree_RR.end()));
+		vint &min_tree_RR=mRR[min_tree];	
 		int affected_layer_beg=min_tree_layer[affected_layer_idx];
 		int affected_next_layer_beg, min_tree_layer_size=static_cast<int>(min_tree_layer.size());
 		if(affected_layer_idx==min_tree_layer_size-1)
@@ -468,7 +458,23 @@ class mRRcollection
 		else
 		{
 			affected_next_layer_beg=min_tree_layer[affected_layer_idx+1];
+		}	
+		for(int i=affected_next_layer_beg; i<min_tree_RR_size; i++)
+		{
+			__vecTree[min_tree_RR[i]]=__numV;
+			#ifdef DEBUG
+			mRR_hash.erase(min_tree_RR[i]);
+			#endif
 		}
+        mRRset mRR_copy(mRR_size-min_tree);
+		if(affected_next_layer_beg > min_tree_RR_size)
+		{
+			cout << "Error: affected_next_layer_beg > min_tree_RR_size in mRR_update, mRRid=" << mRRid << ", affected_next_layer_beg=" << affected_next_layer_beg << ", min_tree_RR_size=" << min_tree_RR_size << endl;
+			exit(1);
+		}
+		mRR_copy[0].reserve(min_tree_RR_size-affected_next_layer_beg);
+		mRR_copy[0]=vector<int>(std::make_move_iterator(min_tree_RR.begin()+affected_next_layer_beg), std::make_move_iterator(min_tree_RR.end()));
+		
 		min_tree_RR.resize(affected_next_layer_beg);
 		min_tree_layer.resize(affected_layer_idx);
 
@@ -532,6 +538,7 @@ class mRRcollection
 			}
 			else
 			{
+				__vecTree[node] = min_tree;
 				__vecNewTree[node] = min_tree;
 			}
 		}
@@ -800,6 +807,7 @@ class mRRcollection
 							if(it!=frset.end() && *it==mRRid)
 							{
 								cout<<__LINE__<<", Error: mRRid "<< mRRid<<" already in the FRset of node "<<node<<endl;
+								exit(1);
 							}
 							else
 							{
