@@ -1,0 +1,394 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls   s/call   s/call  name    
+ 43.95     84.62    84.62  1127827     0.00     0.00  mRRcollection::add_root(int, int)
+ 35.45    152.88    68.26   540320     0.00     0.00  mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&)
+  8.08    168.43    15.55      550     0.03     0.33  mRRcollection::build_n_mRRsets_tree(unsigned long)
+  5.86    179.73    11.29 26519121     0.00     0.00  dsfmt_gen_rand_all
+  4.29    187.99     8.26      550     0.02     0.02  Algorithm::build_seedset(int, double)
+  0.65    189.25     1.26 245770919     0.00     0.00  void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&)
+  0.65    190.51     1.26 92776615     0.00     0.00  std::vector<int, std::allocator<int> >::insert(__gnu_cxx::__normal_iterator<int const*, std::vector<int, std::allocator<int> > >, int const&)
+  0.56    191.58     1.07 82945532     0.00     0.00  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long)
+  0.39    192.33     0.75                             Algorithm::AdaptiveSelect()
+  0.05    192.42     0.09        1     0.09     0.09  std::vector<float, std::allocator<float> >::_M_default_append(unsigned long)
+  0.04    192.50     0.08        1     0.08     0.09  GraphBase::load_graph_directly_nbr_sorted(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&)
+  0.02    192.53     0.03                             dsfmt_get_min_array_size
+  0.01    192.54     0.01  1361742     0.00     0.00  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::resize(unsigned long)
+  0.01    192.55     0.01   540322     0.00     0.00  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector()
+  0.01    192.56     0.01   431277     0.00     0.00  void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&)
+  0.01    192.57     0.01       24     0.00     0.00  std::vector<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, std::allocator<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > > >::_M_default_append(unsigned long)
+  0.01    192.58     0.01                             mRRcollection::mRRcollection(Argument&)
+  0.00    192.58     0.00  3877714     0.00     0.00  std::vector<int, std::allocator<int> >::reserve(unsigned long)
+  0.00    192.58     0.00      550     0.00     0.00  std::binomial_distribution<int>::param_type::_M_initialize()
+  0.00    192.58     0.00      550     0.00     0.00  int std::binomial_distribution<int>::operator()<std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&, std::binomial_distribution<int>::param_type const&)
+  0.00    192.58     0.00      549     0.00     0.00  double std::generate_canonical<double, 53ul, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&)
+  0.00    192.58     0.00      468     0.00     0.00  std::vector<bool, std::allocator<bool> >::_M_fill_insert(std::_Bit_iterator, unsigned long, bool)
+  0.00    192.58     0.00       85     0.00     0.00  process_mem_usage(double&, double&)
+  0.00    192.58     0.00       85     0.00     0.00  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&)
+  0.00    192.58     0.00       84     0.00     2.28  Algorithm::OneRoundSelect()
+  0.00    192.58     0.00       84     0.00     0.00  void std::vector<int, std::allocator<int> >::_M_range_insert<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > > >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, std::forward_iterator_tag)
+  0.00    192.58     0.00       28     0.00     0.00  frame_dummy
+  0.00    192.58     0.00       19     0.00     0.00  void std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > >::_M_realloc_insert<std::tuple<int, int, double, int> >(__gnu_cxx::__normal_iterator<std::tuple<int, int, double, int>*, std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > > >, std::tuple<int, int, double, int>&&)
+  0.00    192.58     0.00       13     0.00     0.00  std::vector<int, std::allocator<int> >::_M_default_append(unsigned long)
+  0.00    192.58     0.00       12     0.00     0.00  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, char const*)
+  0.00    192.58     0.00        8     0.00     0.00  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)
+  0.00    192.58     0.00        7     0.00     0.00  void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > const&>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&)
+  0.00    192.58     0.00        3     0.00     0.00  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+  0.00    192.58     0.00        1     0.00     0.00  _GLOBAL__sub_I__Z13getProcMemoryv
+  0.00    192.58     0.00        1     0.00     0.00  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, unsigned long, std::vector<int, std::allocator<int> > const&)
+  0.00    192.58     0.00        1     0.00     0.00  std::vector<double, std::allocator<double> >::_M_default_append(unsigned long)
+  0.00    192.58     0.00        1     0.00     0.00  std::vector<double, std::allocator<double> >::operator=(std::vector<double, std::allocator<double> > const&)
+  0.00    192.58     0.00        1     0.00     0.00  void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char*>(char*, char*, std::forward_iterator_tag)
+  0.00    192.58     0.00        1     0.00     0.00  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.01% of 192.58 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.9    0.75  191.61                 Algorithm::AdaptiveSelect() [1]
+                0.00  191.59      84/84          Algorithm::OneRoundSelect() [2]
+                0.01    0.00 2652464/245770919     void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+                0.00    0.00      85/85          std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&) [40]
+                0.00    0.00      85/85          process_mem_usage(double&, double&) [39]
+                0.00    0.00       6/28          frame_dummy [20]
+                0.00    0.00       5/12          std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, char const*) [44]
+                0.00    0.00       4/8           std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [45]
+                0.00    0.00       1/13          std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [43]
+-----------------------------------------------
+                0.00  191.59      84/84          Algorithm::AdaptiveSelect() [1]
+[2]     99.5    0.00  191.59      84         Algorithm::OneRoundSelect() [2]
+               15.55  167.78     550/550         mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+                8.26    0.00     550/550         Algorithm::build_seedset(int, double) [7]
+                0.00    0.00      84/84          void std::vector<int, std::allocator<int> >::_M_range_insert<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > > >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, std::forward_iterator_tag) [41]
+-----------------------------------------------
+               15.55  167.78     550/550         Algorithm::OneRoundSelect() [2]
+[3]     95.2   15.55  167.78     550         mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+               84.62    6.36 1127827/1127827     mRRcollection::add_root(int, int) [4]
+               68.26    3.86  540320/540320      mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+                4.44    0.00 10434563/26519121     dsfmt_gen_rand_all [6]
+                0.21    0.00 41097625/245770919     void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+                0.02    0.00 1425432/82945532     std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [10]
+                0.01    0.00      24/24          std::vector<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, std::allocator<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > > >::_M_default_append(unsigned long) [19]
+                0.00    0.00      24/1361742     std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::resize(unsigned long) [16]
+                0.00    0.00    1100/3877714     std::vector<int, std::allocator<int> >::reserve(unsigned long) [34]
+                0.00    0.00     550/550         std::binomial_distribution<int>::param_type::_M_initialize() [35]
+                0.00    0.00     550/550         int std::binomial_distribution<int>::operator()<std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&, std::binomial_distribution<int>::param_type const&) [36]
+                0.00    0.00      12/13          std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [43]
+-----------------------------------------------
+               84.62    6.36 1127827/1127827     mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+[4]     47.2   84.62    6.36 1127827         mRRcollection::add_root(int, int) [4]
+                3.41    0.00 8001367/26519121     dsfmt_gen_rand_all [6]
+                1.21    0.00 89054236/92776615     std::vector<int, std::allocator<int> >::insert(__gnu_cxx::__normal_iterator<int const*, std::vector<int, std::allocator<int> > >, int const&) [8]
+                1.05    0.00 81231598/82945532     std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [10]
+                0.69    0.00 135226966/245770919     void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+                0.00    0.00 2255654/3877714     std::vector<int, std::allocator<int> >::reserve(unsigned long) [34]
+-----------------------------------------------
+               68.26    3.86  540320/540320      mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+[5]     37.4   68.26    3.86  540320         mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+                3.44    0.00 8083191/26519121     dsfmt_gen_rand_all [6]
+                0.34    0.00 66611950/245770919     void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+                0.05    0.00 3722379/92776615     std::vector<int, std::allocator<int> >::insert(__gnu_cxx::__normal_iterator<int const*, std::vector<int, std::allocator<int> > >, int const&) [8]
+                0.01    0.00  540320/540322      std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector() [17]
+                0.01    0.00 1361718/1361742     std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::resize(unsigned long) [16]
+                0.00    0.00  288500/82945532     std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [10]
+                0.00    0.00 1620960/3877714     std::vector<int, std::allocator<int> >::reserve(unsigned long) [34]
+-----------------------------------------------
+                3.41    0.00 8001367/26519121     mRRcollection::add_root(int, int) [4]
+                3.44    0.00 8083191/26519121     mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+                4.44    0.00 10434563/26519121     mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+[6]      5.9   11.29    0.00 26519121         dsfmt_gen_rand_all [6]
+-----------------------------------------------
+                8.26    0.00     550/550         Algorithm::OneRoundSelect() [2]
+[7]      4.3    8.26    0.00     550         Algorithm::build_seedset(int, double) [7]
+                0.00    0.00       3/245770919     void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+                0.00    0.00     467/468         std::vector<bool, std::allocator<bool> >::_M_fill_insert(std::_Bit_iterator, unsigned long, bool) [38]
+                0.00    0.00      19/19          void std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > >::_M_realloc_insert<std::tuple<int, int, double, int> >(__gnu_cxx::__normal_iterator<std::tuple<int, int, double, int>*, std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > > >, std::tuple<int, int, double, int>&&) [42]
+-----------------------------------------------
+                0.05    0.00 3722379/92776615     mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+                1.21    0.00 89054236/92776615     mRRcollection::add_root(int, int) [4]
+[8]      0.7    1.26    0.00 92776615         std::vector<int, std::allocator<int> >::insert(__gnu_cxx::__normal_iterator<int const*, std::vector<int, std::allocator<int> > >, int const&) [8]
+                0.00    0.00  126679/245770919     void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+-----------------------------------------------
+                0.00    0.00       3/245770919     Algorithm::build_seedset(int, double) [7]
+                0.00    0.00   55232/245770919     mRRcollection::mRRcollection(Argument&) [15]
+                0.00    0.00  126679/245770919     std::vector<int, std::allocator<int> >::insert(__gnu_cxx::__normal_iterator<int const*, std::vector<int, std::allocator<int> > >, int const&) [8]
+                0.01    0.00 2652464/245770919     Algorithm::AdaptiveSelect() [1]
+                0.21    0.00 41097625/245770919     mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+                0.34    0.00 66611950/245770919     mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+                0.69    0.00 135226966/245770919     mRRcollection::add_root(int, int) [4]
+[9]      0.7    1.26    0.00 245770919         void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+-----------------------------------------------
+                0.00    0.00       2/82945532     GraphBase::load_graph_directly_nbr_sorted(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&) [12]
+                0.00    0.00  288500/82945532     mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+                0.02    0.00 1425432/82945532     mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+                1.05    0.00 81231598/82945532     mRRcollection::add_root(int, int) [4]
+[10]     0.6    1.07    0.00 82945532         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [10]
+-----------------------------------------------
+                                                 <spontaneous>
+[11]     0.1    0.00    0.18                 Argument::load_cost_graph(int) [11]
+                0.08    0.01       1/1           GraphBase::load_graph_directly_nbr_sorted(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&) [12]
+                0.09    0.00       1/1           std::vector<float, std::allocator<float> >::_M_default_append(unsigned long) [13]
+                0.00    0.00       2/3           std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [47]
+                0.00    0.00       1/1           void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char*>(char*, char*, std::forward_iterator_tag) [52]
+                0.00    0.00       1/12          std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, char const*) [44]
+                0.00    0.00       1/1           std::vector<double, std::allocator<double> >::_M_default_append(unsigned long) [50]
+                0.00    0.00       1/468         std::vector<bool, std::allocator<bool> >::_M_fill_insert(std::_Bit_iterator, unsigned long, bool) [38]
+-----------------------------------------------
+                0.08    0.01       1/1           Argument::load_cost_graph(int) [11]
+[12]     0.0    0.08    0.01       1         GraphBase::load_graph_directly_nbr_sorted(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&) [12]
+                0.01    0.00  431277/431277      void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&) [18]
+                0.00    0.00       2/82945532     std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [10]
+-----------------------------------------------
+                0.09    0.00       1/1           Argument::load_cost_graph(int) [11]
+[13]     0.0    0.09    0.00       1         std::vector<float, std::allocator<float> >::_M_default_append(unsigned long) [13]
+-----------------------------------------------
+                                                 <spontaneous>
+[14]     0.0    0.03    0.00                 dsfmt_get_min_array_size [14]
+-----------------------------------------------
+                                                 <spontaneous>
+[15]     0.0    0.01    0.00                 mRRcollection::mRRcollection(Argument&) [15]
+                0.00    0.00   55232/245770919     void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&) [9]
+                0.00    0.00       2/540322      std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector() [17]
+                0.00    0.00       2/28          frame_dummy [20]
+                0.00    0.00       2/12          std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, char const*) [44]
+                0.00    0.00       1/1           std::vector<double, std::allocator<double> >::operator=(std::vector<double, std::allocator<double> > const&) [51]
+                0.00    0.00       1/3           std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [47]
+                0.00    0.00       1/8           std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [45]
+                0.00    0.00       1/1           std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [53]
+                0.00    0.00       1/1           std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, unsigned long, std::vector<int, std::allocator<int> > const&) [49]
+-----------------------------------------------
+                0.00    0.00      24/1361742     mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+                0.01    0.00 1361718/1361742     mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+[16]     0.0    0.01    0.00 1361742         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::resize(unsigned long) [16]
+-----------------------------------------------
+                0.00    0.00       2/540322      mRRcollection::mRRcollection(Argument&) [15]
+                0.01    0.00  540320/540322      mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+[17]     0.0    0.01    0.00  540322         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector() [17]
+-----------------------------------------------
+                0.01    0.00  431277/431277      GraphBase::load_graph_directly_nbr_sorted(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&) [12]
+[18]     0.0    0.01    0.00  431277         void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&) [18]
+-----------------------------------------------
+                0.01    0.00      24/24          mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+[19]     0.0    0.01    0.00      24         std::vector<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, std::allocator<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > > >::_M_default_append(unsigned long) [19]
+-----------------------------------------------
+                0.00    0.00       1/28          Argument::arg_update(int, char**) [59]
+                0.00    0.00       2/28          mRRcollection::mRRcollection(Argument&) [15]
+                0.00    0.00       3/28          Argument::seed_record(std::vector<int, std::allocator<int> >, int, int) [60]
+                0.00    0.00       6/28          Algorithm::AdaptiveSelect() [1]
+                0.00    0.00      16/28          Argument::Argument() [61]
+[20]     0.0    0.00    0.00      28         frame_dummy [20]
+-----------------------------------------------
+                0.00    0.00    1100/3877714     mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+                0.00    0.00 1620960/3877714     mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [5]
+                0.00    0.00 2255654/3877714     mRRcollection::add_root(int, int) [4]
+[34]     0.0    0.00    0.00 3877714         std::vector<int, std::allocator<int> >::reserve(unsigned long) [34]
+-----------------------------------------------
+                0.00    0.00     550/550         mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+[35]     0.0    0.00    0.00     550         std::binomial_distribution<int>::param_type::_M_initialize() [35]
+-----------------------------------------------
+                0.00    0.00     550/550         mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+[36]     0.0    0.00    0.00     550         int std::binomial_distribution<int>::operator()<std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&, std::binomial_distribution<int>::param_type const&) [36]
+                0.00    0.00     549/549         double std::generate_canonical<double, 53ul, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&) [37]
+-----------------------------------------------
+                0.00    0.00     549/549         int std::binomial_distribution<int>::operator()<std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&, std::binomial_distribution<int>::param_type const&) [36]
+[37]     0.0    0.00    0.00     549         double std::generate_canonical<double, 53ul, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&) [37]
+-----------------------------------------------
+                0.00    0.00       1/468         Argument::load_cost_graph(int) [11]
+                0.00    0.00     467/468         Algorithm::build_seedset(int, double) [7]
+[38]     0.0    0.00    0.00     468         std::vector<bool, std::allocator<bool> >::_M_fill_insert(std::_Bit_iterator, unsigned long, bool) [38]
+-----------------------------------------------
+                0.00    0.00      85/85          Algorithm::AdaptiveSelect() [1]
+[39]     0.0    0.00    0.00      85         process_mem_usage(double&, double&) [39]
+-----------------------------------------------
+                0.00    0.00      85/85          Algorithm::AdaptiveSelect() [1]
+[40]     0.0    0.00    0.00      85         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&) [40]
+                0.00    0.00       7/7           void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > const&>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&) [46]
+-----------------------------------------------
+                0.00    0.00      84/84          Algorithm::OneRoundSelect() [2]
+[41]     0.0    0.00    0.00      84         void std::vector<int, std::allocator<int> >::_M_range_insert<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > > >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, std::forward_iterator_tag) [41]
+-----------------------------------------------
+                0.00    0.00      19/19          Algorithm::build_seedset(int, double) [7]
+[42]     0.0    0.00    0.00      19         void std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > >::_M_realloc_insert<std::tuple<int, int, double, int> >(__gnu_cxx::__normal_iterator<std::tuple<int, int, double, int>*, std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > > >, std::tuple<int, int, double, int>&&) [42]
+-----------------------------------------------
+                0.00    0.00       1/13          Algorithm::AdaptiveSelect() [1]
+                0.00    0.00      12/13          mRRcollection::build_n_mRRsets_tree(unsigned long) [3]
+[43]     0.0    0.00    0.00      13         std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [43]
+-----------------------------------------------
+                0.00    0.00       1/12          Argument::load_cost_graph(int) [11]
+                0.00    0.00       2/12          mRRcollection::mRRcollection(Argument&) [15]
+                0.00    0.00       4/12          Argument::seed_record(std::vector<int, std::allocator<int> >, int, int) [60]
+                0.00    0.00       5/12          Algorithm::AdaptiveSelect() [1]
+[44]     0.0    0.00    0.00      12         std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, char const*) [44]
+-----------------------------------------------
+                0.00    0.00       1/8           mRRcollection::mRRcollection(Argument&) [15]
+                0.00    0.00       3/8           Argument::seed_record(std::vector<int, std::allocator<int> >, int, int) [60]
+                0.00    0.00       4/8           Algorithm::AdaptiveSelect() [1]
+[45]     0.0    0.00    0.00       8         std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&) [45]
+-----------------------------------------------
+                0.00    0.00       7/7           std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&) [40]
+[46]     0.0    0.00    0.00       7         void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > const&>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&) [46]
+-----------------------------------------------
+                0.00    0.00       1/3           mRRcollection::mRRcollection(Argument&) [15]
+                0.00    0.00       2/3           Argument::load_cost_graph(int) [11]
+[47]     0.0    0.00    0.00       3         std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [47]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [80]
+[48]     0.0    0.00    0.00       1         _GLOBAL__sub_I__Z13getProcMemoryv [48]
+-----------------------------------------------
+                0.00    0.00       1/1           mRRcollection::mRRcollection(Argument&) [15]
+[49]     0.0    0.00    0.00       1         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, unsigned long, std::vector<int, std::allocator<int> > const&) [49]
+-----------------------------------------------
+                0.00    0.00       1/1           Argument::load_cost_graph(int) [11]
+[50]     0.0    0.00    0.00       1         std::vector<double, std::allocator<double> >::_M_default_append(unsigned long) [50]
+-----------------------------------------------
+                0.00    0.00       1/1           mRRcollection::mRRcollection(Argument&) [15]
+[51]     0.0    0.00    0.00       1         std::vector<double, std::allocator<double> >::operator=(std::vector<double, std::allocator<double> > const&) [51]
+-----------------------------------------------
+                0.00    0.00       1/1           Argument::load_cost_graph(int) [11]
+[52]     0.0    0.00    0.00       1         void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char*>(char*, char*, std::forward_iterator_tag) [52]
+-----------------------------------------------
+                0.00    0.00       1/1           mRRcollection::mRRcollection(Argument&) [15]
+[53]     0.0    0.00    0.00       1         std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) [53]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [48] _GLOBAL__sub_I__Z13getProcMemoryv [49] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, unsigned long, std::vector<int, std::allocator<int> > const&) [9] void std::vector<int, std::allocator<int> >::_M_realloc_insert<int const&>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int const&)
+  [39] process_mem_usage(double&, double&) [10] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_default_append(unsigned long) [18] void std::vector<int, std::allocator<int> >::_M_realloc_insert<int>(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, int&&)
+   [5] mRRcollection::mRR_update(int, std::vector<int, std::allocator<int> >&) [46] void std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_realloc_insert<std::vector<int, std::allocator<int> > const&>(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> >*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&) [8] std::vector<int, std::allocator<int> >::insert(__gnu_cxx::__normal_iterator<int const*, std::vector<int, std::allocator<int> > >, int const&)
+   [3] mRRcollection::build_n_mRRsets_tree(unsigned long) [40] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::insert(__gnu_cxx::__normal_iterator<std::vector<int, std::allocator<int> > const*, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > >, std::vector<int, std::allocator<int> > const&) [34] std::vector<int, std::allocator<int> >::reserve(unsigned long)
+   [4] mRRcollection::add_root(int, int) [16] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::resize(unsigned long) [52] void std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_construct<char*>(char*, char*, std::forward_iterator_tag)
+  [15] mRRcollection::mRRcollection(Argument&) [17] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::~vector() [37] double std::generate_canonical<double, 53ul, std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&)
+   [7] Algorithm::build_seedset(int, double) [42] void std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > >::_M_realloc_insert<std::tuple<int, int, double, int> >(__gnu_cxx::__normal_iterator<std::tuple<int, int, double, int>*, std::vector<std::tuple<int, int, double, int>, std::allocator<std::tuple<int, int, double, int> > > >, std::tuple<int, int, double, int>&&) [44] std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, char const*)
+   [1] Algorithm::AdaptiveSelect() [38] std::vector<bool, std::allocator<bool> >::_M_fill_insert(std::_Bit_iterator, unsigned long, bool) [45] std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)
+   [2] Algorithm::OneRoundSelect() [50] std::vector<double, std::allocator<double> >::_M_default_append(unsigned long) [53] std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+  [12] GraphBase::load_graph_directly_nbr_sorted(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&) [51] std::vector<double, std::allocator<double> >::operator=(std::vector<double, std::allocator<double> > const&) [47] std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+  [35] std::binomial_distribution<int>::param_type::_M_initialize() [13] std::vector<float, std::allocator<float> >::_M_default_append(unsigned long) [6] dsfmt_gen_rand_all
+  [36] int std::binomial_distribution<int>::operator()<std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul> >(std::mersenne_twister_engine<unsigned long, 32ul, 624ul, 397ul, 31ul, 2567483615ul, 11ul, 4294967295ul, 7ul, 2636928640ul, 15ul, 4022730752ul, 18ul, 1812433253ul>&, std::binomial_distribution<int>::param_type const&) [41] void std::vector<int, std::allocator<int> >::_M_range_insert<__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > > >(__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, __gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int> > >, std::forward_iterator_tag) [14] dsfmt_get_min_array_size
+  [19] std::vector<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, std::allocator<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > > >::_M_default_append(unsigned long) [43] std::vector<int, std::allocator<int> >::_M_default_append(unsigned long) [20] frame_dummy

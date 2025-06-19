@@ -176,6 +176,9 @@ class mRRcollection
         std::mt19937 gen(rd());
         std::binomial_distribution<int> dist(num_revise_RR, residual);
         ceil_root_RR=dist(gen);
+		#ifdef DEBUG
+		int original_ceil_root_RR=ceil_root_RR;
+		#endif
 		for(ulint i=0;i<num_revise_RR;i++)  // build the basic information of previous mRR-sets, and update these mRR-sets
 		{
             vint &polluted_nodes=vv_polluted_nodes[i];
@@ -255,6 +258,12 @@ class mRRcollection
 				}
 			}
 		}
+		// #ifdef DEBUG
+		// if(num_add_root>residual*numSamples*3)
+		// {
+		// 	cout<<__LINE__<<", Extra large number of add roots."<<endl;
+		// }
+		// #endif
 		for (auto i = prevSize; i < numSamples; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
 		{
 			build_one_mRRset_tree(i, root_num, residual);
@@ -402,6 +411,7 @@ class mRRcollection
 		mRRset &mRR_layer=vec_mRR_layer[mRRid];
 		#ifdef DEBUG
 		mRRset pre_mRR=mRR;
+		mRRset pre_mRR_layer=mRR_layer;
 		sint &mRR_hash=vec_hash_mRR[mRRid];
 		#endif // !NDEBUG
 		int mRR_size=static_cast<int>(mRR.size());
@@ -468,6 +478,10 @@ class mRRcollection
 		else
 		{
 			affected_next_layer_beg=min_tree_layer[affected_layer_idx+1];
+		}
+		if(affected_next_layer_beg>min_tree_RR_size)
+		{
+			cout<<"Abnormal resize in Line: "<<__LINE__<<endl;
 		}
 		min_tree_RR.resize(affected_next_layer_beg);
 		min_tree_layer.resize(affected_layer_idx);
@@ -575,15 +589,19 @@ class mRRcollection
 		}
 		if(min_tree_RR.size()<1)  // make sure it is not empty, // if the last RR root is a del_node
 		{
-			mRR.resize(min_tree);  // remove the last RR
-			mRR_layer.resize(min_tree);
 			mRR_size=min_tree;
 		}
 		else
 		{
 			mRR_size=min_tree+1;
 		}
+		mRR.resize(mRR_size);  // remove the last RR
+		mRR_layer.resize(mRR_size);
         ulint num_new_roots=roots.size();
+		if(mRR_size+num_new_roots<mRR.size())
+		{
+			cout<<"Abnormal resize in Line: "<<__LINE__<<endl;
+		}
         mRR.resize(mRR_size+num_new_roots);
 		mRR_layer.resize(mRR_size+num_new_roots);
         for(ulint i=0;i<num_new_roots;i++)
@@ -699,7 +717,7 @@ class mRRcollection
 		}
         vecRoot_num[mRRid]=mRR_size+v_roots.size();
 		#ifdef DEBUG
-        if(synthetic_check(mRRid, string(__func__)+" end", 1,1,1,0,1,1))
+        if(synthetic_check(mRRid, string(__func__)+" end", 1,1,1,0,1,1,1))
         {
             exit(1);
         }
@@ -710,7 +728,7 @@ class mRRcollection
 	{
         vecRoot_num[mRRid] += num;
 		mRRset &mRR=_mRRsets[mRRid];
-		auto &vec_RR_layer = vec_mRR_layer[mRRid];
+		auto &mRR_layer = vec_mRR_layer[mRRid];
 		#ifdef DEBUG
 		sint &mRR_hash=vec_hash_mRR[mRRid];
 		#endif // !NDEBUG
@@ -757,7 +775,7 @@ class mRRcollection
 			{
 				auto mRR_size_1 = mRR.size()+1;
 				mRR.resize(mRR_size_1);
-				vec_RR_layer.resize(mRR_size_1);
+				mRR_layer.resize(mRR_size_1);
 				auto &RR=mRR[mRR_size_1-1];
 				RR.push_back(root);
 				#ifdef DEBUG
@@ -779,8 +797,8 @@ class mRRcollection
 
 				int layer_start = 0, layer_end = 1;
 				while(layer_start < layer_end) 
-				{ 
-					vec_RR_layer[mRR_size_1-1].push_back(layer_start);
+				{
+					mRR_layer[mRR_size_1-1].push_back(layer_start);
 					for (int j = layer_start; j < layer_end; j++)
 					{
 						int node = RR[j];
@@ -848,7 +866,7 @@ class mRRcollection
 			__vecTree[root] = -1;
 		}
 		#ifdef DEBUG
-        if(synthetic_check(mRRid, string(__func__)+" end",0,1,1,0,1,1))
+        if(synthetic_check(mRRid, string(__func__)+" end",0,1,1,0,1,1,1))
         {
             exit(1);
         }
