@@ -10,6 +10,7 @@ Graph R_graph, O_graph;
 int __numV_left;
 double __eta_left;
 int root_num;
+double residual=0.0, decimal=1.0;
 vector<bool> __Activated;
 vector<vector<int>> activated_nodes;
 vector<int> seed_set;
@@ -20,6 +21,7 @@ int RR_thr=3000000;
 double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
+double regen_threshold=0.2;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 // #define debug

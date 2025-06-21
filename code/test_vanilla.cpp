@@ -83,16 +83,16 @@ static bool comp(pair<int, double> a, pair<int, double> b)
 
 int main(int argn, char **argv)
 {
-    vint vec;
-    auto it=lower_bound(vec.begin(), vec.end(), 2);
-    if(it!=vec.end())
-    {
-        cout<<"it is 2"<<endl;
-    }
-    else
-    {
-        cout<<"it is not 2"<<endl;
-    }
+    // vint vec;
+    // auto it=lower_bound(vec.begin(), vec.end(), 2);
+    // if(it!=vec.end())
+    // {
+    //     cout<<"it is 2"<<endl;
+    // }
+    // else
+    // {
+    //     cout<<"it is not 2"<<endl;
+    // }
     // vector<tuple<int,int,int,int>> vec;
     // int a[4]={1,2,3,4};
     // vec.emplace_back(a[0], a[1], a[2], a[3]);
@@ -122,10 +122,10 @@ int main(int argn, char **argv)
     //         break;
     //     }
     // }
-    for(int i=0;i<vec.size();i++)
-    {
-        cout<<vec[i]<<", ";
-    }
+    // for(int i=0;i<vec.size();i++)
+    // {
+    //     cout<<vec[i]<<", ";
+    // }
     // cout<<endl;
     // int num=1e6;
     // vector<int> vec(num);
@@ -199,8 +199,25 @@ int main(int argn, char **argv)
     // {
     //     vec_1.push_back(i);
     // }
-    // std::random_device rd;
-    // std::mt19937 gen(rd());
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::binomial_distribution<int> dist(100, 0.5);
+    double avg=0.0, var=0.0, rand=0.0, num=10000;
+    vector<double> rands;
+    for(int i=0;i<num;i++)
+    {
+        rands.push_back(dist(gen));
+        avg+=rands[i];
+        // cout<<rands[i]<<", ";
+    }
+    // cout<<endl;
+    avg=avg/num;
+    for(auto rd:rands)
+    {
+        var+=(rd-avg)*(rd-avg);
+    }
+    var/=(num-1);
+    cout<<"The avg = "<< avg<<", the var = "<<var<<endl;
     // std::shuffle(vec_1.begin(), vec_1.end(), gen);
     // auto start = std::chrono::high_resolution_clock::now();
     // make_min_heap(vec_1);
