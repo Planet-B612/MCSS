@@ -24,8 +24,8 @@ private:
 	double total_theta=0;
 	string  _cascadeModel;
 	vector<tuple<int, int, double, int>> ratio_plain, ratio_UB;
-	vector<double> vec_UB; // store the upper bound of coverage for each node
-	vector<double> vec_LB;
+	// vector<double> vec_UB; // store the upper bound of coverage for each node
+	// vector<double> vec_LB;
 	vint vec_deg;
 	
 	int counter=0;  // record the number of nodes being affected in total
@@ -37,7 +37,7 @@ private:
 	int theta=0;
 	int ending_rnd=3000000;  // not needed, if q_ratio is properly set. sample: 4, facebook: 80, dblp: 3000. Let it be a large value, so that it will never enter the ending round to generate fresh mRRsets.
 	const int root_num_bound=250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
-	const int window_size=0;  // sample:2, facebook: 3, dblp: 5
+	const int window_size=5;  // sample:2, facebook: 3, dblp: 5
 	bool in_ending_rnd=false;
 	bool delete_extra_mRR=false;
 	vector<int> vec_mRR_num;
@@ -68,8 +68,8 @@ public:
 		__dataset_No = arg.dataset_No;
 		__left_num = arg.left_num;
 		__over_pnodes = arg.over_pnodes;
-		vec_UB= vector<double>(__numV, 0.0);
-		vec_LB= vector<double>(__numV, 0.0);
+		// vec_UB= vector<double>(__numV, 0.0);
+		// vec_LB= vector<double>(__numV, 0.0);
 		vec_deg= vector<int>(__numV, 0);
 	}
 	
@@ -244,7 +244,7 @@ public:
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 		std::ofstream result;
-		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps) + "_" + std::to_string(eps) + ".txt";
+		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps) + ".txt";
 		result.open(file_name, ios::app);
 		assert(!result.fail());
 		auto single_start = std::chrono::high_resolution_clock::now();
