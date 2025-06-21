@@ -7,6 +7,7 @@ using namespace std;
 
 // global variables
 Graph R_graph, O_graph;  
+vector<double> Inv_inDeg;
 int __numV_left;
 double __eta_left;
 int root_num;
@@ -61,7 +62,6 @@ public:
     int numV=1;
     float left_num = 100.0;
     float over_pnodes = 10.0;
-    vector<double> Inv_inDeg;
     std::ofstream result_bk;
     
     Argument()

@@ -346,6 +346,7 @@ public:
 			RR.num_update=0;
 			RR.num_add_root=0;
 			RR.num_delete_root=0;
+			RR.num_update_this_round=0;
 		}
 		auto single_end = std::chrono::high_resolution_clock::now();
 		std::chrono::duration <double> single_elapsed = single_end - single_start;
