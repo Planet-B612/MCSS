@@ -58,7 +58,7 @@ bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool
 	{
 		g=identical_element_check(mRRid, str);
 	}
-	if (a || b || c || d || e || f)
+	if (a || b || c || d || e || f || g)
 	{
 		cout << "Error in synthetic_check of " << str << endl;
 		return true;

@@ -203,6 +203,7 @@ public:
 		a_2 = log(3 * i_max / delta);
 
 		double ratio=(1-eps_hat)*approx;
+		int pre_theta=0;
 		//===================================
 		bool select=false;
 		while(theta<theta_max)
@@ -213,7 +214,7 @@ public:
 			}
 			else
 			{
-				RR.build_n_mRRsets_tree(theta);
+				RR.build_n_mRRsets_tree(theta, pre_theta);
 			}		
 			if (batch_size > 1) select=build_seedset(theta, ratio);
 			else  select=build_max_single_seed(theta, ratio);
@@ -231,6 +232,7 @@ public:
 			{
 				theta*=2;
 			}
+			pre_theta=theta;
 		}
 		// build_seedset(theta);
 		if (batch_size > 1) build_seedset(theta);

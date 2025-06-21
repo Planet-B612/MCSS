@@ -153,7 +153,7 @@ class mRRcollection
 
 
 	/// Generate a set of n mRR sets
-	void build_n_mRRsets_tree(const ulint numSamples)
+	void build_n_mRRsets_tree(const ulint numSamples, const int pre_theta)
 	{
 		int floor_root_RR=0;
 		int ceil_root_RR=0;  // the number mRR-sets with root number root_num+1 in the previous revisable mRR-sets
@@ -179,7 +179,7 @@ class mRRcollection
 		#ifdef DEBUG
 		int original_ceil_root_RR=ceil_root_RR;
 		#endif
-		for(ulint i=0;i<num_revise_RR;i++)  // build the basic information of previous mRR-sets, and update these mRR-sets
+		for(ulint i=pre_theta;i<num_revise_RR;i++)  // build the basic information of previous mRR-sets, and update these mRR-sets
 		{
             vint &polluted_nodes=vv_polluted_nodes[i];
             if(polluted_nodes.size()>0)
@@ -216,7 +216,7 @@ class mRRcollection
 			}
 		}
 		int root_diff=0;
-		for(ulint i=0;i<num_revise_RR;i++)
+		for(ulint i=pre_theta;i<num_revise_RR;i++)
 		{
 			if(mRR_mark[i]==false)  // for mRR-sets that have not been directly reused
 			{
@@ -258,12 +258,6 @@ class mRRcollection
 				}
 			}
 		}
-		// #ifdef DEBUG
-		// if(num_add_root>residual*numSamples*3)
-		// {
-		// 	cout<<__LINE__<<", Extra large number of add roots."<<endl;
-		// }
-		// #endif
 		for (auto i = prevSize; i < numSamples; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
 		{
 			build_one_mRRset_tree(i, root_num, residual);
@@ -932,9 +926,15 @@ class mRRcollection
 			{
 				RR.clear();
 			}
+			for(auto &layer:vec_mRR_layer[i])
+			{
+				layer.clear();
+			}
+			mRRset().swap(vec_mRR_layer[i]);
 			mRRset().swap(_mRRsets[i]);
 		}
 		mRRsets().swap(_mRRsets);
+		mRRsets().swap(vec_mRR_layer);
 		for (auto i = __numV; i--;)
 		{
 			FRset().swap(_FRsets[i]);
@@ -958,8 +958,10 @@ class mRRcollection
 		for (ulint i =max_size; i< _num_mRRsets; i++)
 		{
 			mRRset().swap(_mRRsets[i]);
+			mRRset().swap(vec_mRR_layer[i]);
 		}
 		_mRRsets.resize(max_size);
+		vec_mRR_layer.resize(max_size);
 		#ifdef DEBUG
 		vec_hash_mRR.resize(max_size);
 		#endif // !NDEBUG
