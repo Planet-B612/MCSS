@@ -104,10 +104,9 @@ public:
 			for (int i = (__numV); i--;) 
 			{
 				if((__Activated)[i]) continue;  // activated nodes should not be considered
-				deg = RR._FRsets[i].size();  //The number of RR-sets covered by i.
-				vec_deg[i] = deg;
-				double deg_UB=deg+a_2+sqrt(2.0*a_2*deg+1.0*a_2*a_2);
-				ratio_UB.push_back(make_tuple(i,deg,1.0*deg_UB/cost[i],0));  // do not push back, otherwise this vector will be very long
+				vec_deg[i] = RR._FRsets[i].size();  //The number of RR-sets covered by i.
+				// double deg_UB=deg+a_2+sqrt(2.0*a_2*deg+1.0*a_2*a_2);
+				ratio_plain.push_back(make_tuple(i,deg,1.0*vec_deg[i]/cost[i],0));  // do not push back, otherwise this vector will be very long
 			}
 		}
 		else
@@ -223,6 +222,7 @@ public:
 				total_theta+=theta;
 				return;
 			}
+			pre_theta=theta;
 			if(theta>=RR_thr)  // modify the increase of mRR-sets from double to linear
 			{
 				theta+=RR_step;
@@ -231,7 +231,6 @@ public:
 			{
 				theta*=2;
 			}
-			pre_theta=theta;
 		}
 		// build_seedset(theta);
 		if (batch_size > 1) build_seedset(theta);
@@ -256,21 +255,13 @@ public:
 			root_num=floor(decimal);
 			residual = decimal - root_num;  // in (0,1)
 			
-			// if(in_ending_rnd==false)
-			// {
-			// 	if((__eta_left)<((__numV)/ending_rnd))
-			// 	{
-			// 		in_ending_rnd=true;
-			// 		cout<<"Entering the ending round"<<endl;
-			// 		RR.refresh_RRsets();
-			// 		// cout<<"Refreshed the RR-sets complete"<<endl;
-			// 	}
-			// }
-			// else  // in an ending round, refresh mRR and FR-sets
-			// {
-			// 	RR.refresh_mRRFRsets();
-			// 	// cout<<"Refreshed mRRFR-sets in ending rounds success at round: "<<(round_num)<<endl;
-			// }
+			if(__eta_left<eta_left_threshold)
+			{
+				in_ending_rnd=true;
+				// cout<<"Entering the ending round"<<endl;
+				RR.refresh_RRsets();
+					// cout<<"Refreshed the RR-sets complete"<<endl;
+			}
 
 			if((__eta_left)<=batch_size)
 			{
@@ -296,7 +287,14 @@ public:
 			{
 				OneRoundSelect();
 			}
-			counter=RR.realization(seed_batch);
+			if(in_ending_rnd)
+			{
+				counter=RR.realization_fresh_vec(seed_batch);
+			}
+			else
+			{
+				counter=RR.realization(seed_batch);
+			}
 			auto now = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed = now - start;
 
@@ -323,16 +321,9 @@ public:
 			// 		RR.refresh_FRmRRsets(max_size_within_window);
 			// 	}
 			// }
-			if(decimal>root_num_bound)
+			if(decimal>root_num_bound && round_num > window_size && in_ending_rnd==false)
 			{
-				if (round_num < window_size)
-				{
-					window_beg = 0;
-				}
-				else
-				{
-					window_beg = round_num - window_size;
-				}
+				window_beg = round_num - window_size;
 				max_size_within_window = *(max_element(vec_mRR_num.begin()+window_beg, vec_mRR_num.begin()+round_num));
 				if(RR._num_mRRsets> max_size_within_window)
 				{

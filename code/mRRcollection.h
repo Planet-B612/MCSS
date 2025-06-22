@@ -142,8 +142,31 @@ public:
 				}
 			}
 		}
-		Nodelist temp(__vecVisitNode.begin(), __vecVisitNode.begin() + numVisitNode);
-		activated_nodes.insert((activated_nodes).end(), temp);
+		return counter_real;
+	}
+
+	int realization_fresh_vec(Nodelist seeds)
+	{
+		int curr_Node = 0, numVisitNode = 0;
+		int counter_real = 0; // local counter not used
+		for (auto seed : seeds)
+		{
+			++counter_real;
+			(__Activated)[seed] = true;
+			__vecVisitNode[numVisitNode++] = seed;
+		}
+		while (curr_Node < numVisitNode)
+		{
+			int expand = __vecVisitNode[curr_Node++];
+			for (auto v : PO[expand])
+			{
+				if ((__Activated)[v])
+					continue;
+				__vecVisitNode[numVisitNode++] = v;
+				++counter_real;
+				(__Activated)[v] = true;
+			}
+		}
 		return counter_real;
 	}
 
@@ -168,7 +191,7 @@ public:
 		#endif
 		int num_polluted=0, root_num_1=root_num+1;
 		for(ulint i=pre_theta;i<num_revise_RR;i++) 
-		{		
+		{
 			mRR_mark[i]=vv_polluted_nodes[i].size();
 			if(mRR_mark[i]>0)
 			{
@@ -176,7 +199,7 @@ public:
 			}
 		}
 		num_update_this_round+=num_polluted;
-		if(1.0*(num_update_this_round)/numSamples>regen_threshold && pre_theta>200)  // brute regen is needed
+		if(pre_theta>100 && (1.0*(num_polluted)/pre_theta>regen_threshold))  // brute regen is needed
 		{
 			refresh_FRmRRsets(pre_theta);
 			num_revise_RR=0;
@@ -291,10 +314,8 @@ public:
 #ifdef DEBUG
 		sint &mRR_hash = vec_hash_mRR[mRRid];
 #endif // !NDEBUG
-		mRR.reserve(root_num);
 		mRR.resize(root_num);
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];
-		vec_RR_layer.reserve(root_num);
 		vec_RR_layer.resize(root_num);
 		for (int i = 0; i < root_num; i++) // roots should be independent, and thus are selected in advance, while the diffusion from them is dependent
 		{
@@ -366,10 +387,9 @@ public:
 	int build_one_mRRset_fresh_vec(int mRRid, int root_num, double residual)
 	// Each adj_list in in the form of adjacency list, so that the first node of each entry automatically constitutes the original __vecVisitNode
 	{
-		int numVisitNode = 0, currNode = 0;
-		int root;
+		int numVisitNode = 0, currNode = 0, root;
 		root_num += (dsfmt_gv_genrand_open_close() <= residual);
-		vector<int> rnd_roots;
+		vint roots;
 		for (int i = 0; i < root_num; i++) // roots should be independent, and thus are selected in advance, while the diffusion from them is dependent
 		{
 			root = dsfmt_gv_genrand_uint32_range(__numV);
@@ -379,24 +399,21 @@ public:
 			}
 			__vecVisitBool[root] = true;
 			_FRsets[root].push_back(mRRid);
-			rnd_roots.push_back(root);
+			roots.push_back(root);
 		}
 		for (int i = 0; i < root_num; i++) // skip the round element
 		{
-			root = rnd_roots[i]; // Take out a root
+			root = roots[i]; // Take out a root
 			__vecVisitNode[numVisitNode++] = root;
 			while (currNode < numVisitNode)
 			{
 				const auto expand = __vecVisitNode[currNode];
 				currNode++;
-
 				for (auto &nbrId : (R_graph)[expand])
 				{
 					if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
 						continue;
-					double randDouble;
-					randDouble = dsfmt_gv_genrand_open_close();
-					if (randDouble > Inv_inDeg[expand])
+					if (dsfmt_gv_genrand_open_close() > Inv_inDeg[expand])
 						continue;
 					__vecVisitNode[numVisitNode++] = nbrId;
 					__vecVisitBool[nbrId] = true;
@@ -526,11 +543,11 @@ public:
 			}
 		}
 #ifdef DEBUG
-		if (del_nodes_check(mRRid, del_nodes))
-		{
-			cout << __LINE__ << ": Error: del_nodes_check failed in mRR_update, mRRid=" << mRRid << endl;
-			exit(1);
-		}
+		// if (del_nodes_check(mRRid, del_nodes))
+		// {
+		// 	cout << __LINE__ << ": Error: del_nodes_check failed in mRR_update, mRRid=" << mRRid << endl;
+		// 	exit(1);
+		// }
 		if (v_roots_check(mRRid, string(__func__) + " end"))
 		{
 			cout << __LINE__ << ": Error: v_roots_check failed in mRR_update, mRRid=" << mRRid << endl;

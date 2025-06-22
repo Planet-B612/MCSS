@@ -13,7 +13,7 @@ double __eta_left;
 int root_num;
 double residual=0.0, decimal=1.0;
 vector<bool> __Activated;
-vector<vector<int>> activated_nodes;
+// vector<vector<int>> activated_nodes;
 vector<int> seed_set;
 vector<float> cost;
 int round_num=0;
@@ -22,7 +22,8 @@ int RR_thr=3000000;
 double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
-double regen_threshold=0.2;
+double regen_threshold=0.15;
+int eta_left_threshold=30;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 // #define debug
@@ -41,13 +42,13 @@ public:
     string model = "IC";
     bool Rnd_cost = true;
     //int simRnd = 100;
-    float eps = 0.9;
+    float eps = 0.5;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
     // vector<int> data={4};
-    int dataset_No = 10;  // 17: sample
+    int dataset_No = 4;  // 17: sample, 10: DBLP_sym, 4: epinions
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
@@ -109,8 +110,8 @@ public:
     void Initialization()
     {
         __Activated.clear();
-        activated_nodes.clear();
-        activated_nodes.push_back({});
+        // activated_nodes.clear();
+        // activated_nodes.push_back({});
         seed_set.clear();
         cost.clear();
         // if (format_graph != 0)
