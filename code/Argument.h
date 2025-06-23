@@ -26,6 +26,12 @@ double regen_threshold=0.15;
 int eta_left_threshold=30;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
+
+bool verify_accuracy = false;
+vint pol_node_num_for_accuracy_verification = {10000,2000,30000,40000,50000};
+int seed_num_for_accuracy_verification = 100;
+int MC_round=1000;
+
 // #define debug
 // #define debugroots
 // vector<bool> revised;  // for debug
@@ -114,6 +120,11 @@ public:
         // activated_nodes.push_back({});
         seed_set.clear();
         cost.clear();
+        if(batch<1)
+        {
+            cout << "The batch size should be larger than 0, please check the input." << endl;
+            exit(1);
+        }
         // if (format_graph != 0)
         // {
         //     for(auto k:data)

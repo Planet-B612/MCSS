@@ -27,6 +27,7 @@ private:
 	// vector<double> vec_UB; // store the upper bound of coverage for each node
 	// vector<double> vec_LB;
 	vint vec_deg;
+	string model="IC";
 	
 	int counter=0;  // record the number of nodes being affected in total
 	Nodelist seed_batch;
@@ -70,6 +71,7 @@ public:
 		// vec_UB= vector<double>(__numV, 0.0);
 		// vec_LB= vector<double>(__numV, 0.0);
 		vec_deg= vector<int>(__numV, 0);
+		model=arg.model;
 	}
 	
 	~Algorithm()
@@ -96,11 +98,11 @@ public:
 		vec_deg.assign(__numV,0);
 		seed_batch.clear();
 		ratio_plain.clear();
-		ratio_UB.clear(); 
+		// ratio_UB.clear(); 
 		RR_Mark.assign(theta,false);
 		if(in_ending_rnd)
 		{
-			ratio_UB.reserve(__numV);
+			// ratio_UB.reserve(__numV);
 			for (int i = (__numV); i--;) 
 			{
 				if((__Activated)[i]) continue;  // activated nodes should not be considered
@@ -111,14 +113,12 @@ public:
 		}
 		else
 		{
-			int this_deg=0;
 			for(auto i=0;i<__numV;i++)  // in the same round, only newly updated mRR-sets will contribute to vec_deg
 			{
 				if((__Activated)[i]) continue;
 				auto &frset= RR._FRsets[i];
-				this_deg= lower_bound(frset.begin(), frset.end(), theta)-frset.begin();
-				vec_deg[i] =this_deg;
-				ratio_plain.push_back(make_tuple(i,this_deg,1.0*this_deg/(cost)[i],0));
+				vec_deg[i]= lower_bound(frset.begin(), frset.end(), theta)-frset.begin();
+				ratio_plain.push_back(make_tuple(i,vec_deg[i],1.0*vec_deg[i]/(cost)[i],0));
 			}
 		}
 
@@ -187,21 +187,40 @@ public:
 	void OneRoundSelect()
 	{
 		//===================================
-		delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
-		double eps_hat=99.0*eps/(100.0-eps);
-		const double alpha = sqrt(log(6.0 / delta));
-		const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
-
-		theta = 2 * (alpha + beta)* (alpha + beta);
-		const double theta_max = 2 * __numV_left*(alpha + beta)*(alpha + beta) / eps_hat / eps_hat / 1.0 * (batch_size);
-
-		const double i_max = ceil(log(__numV_left / batch_size / eps_hat / eps_hat) / log(2)) + 1;
-
-		a_1 = log(3 * i_max / delta) + logcnk(__numV_left, batch_size);
-		a_2 = log(3 * i_max / delta);
-
-		double ratio=(1-eps_hat)*approx;
+		double theta_max, i_max, ratio;
 		int pre_theta=0;
+		if(batch_size>1)
+		{			
+			delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+			double eps_hat=99.0*eps/(100.0-eps);
+			const double alpha = sqrt(log(6.0 / delta));
+			const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
+
+			theta = 2 * (alpha + beta)* (alpha + beta);
+			theta_max = 2 * __numV_left*(alpha + beta)*(alpha + beta) / eps_hat / eps_hat / 1.0 * (batch_size);
+
+			i_max = ceil(log(__numV_left / batch_size / eps_hat / eps_hat) / log(2)) + 1;
+
+			a_1 = log(3 * i_max / delta) + logcnk(__numV_left, batch_size);
+			a_2 = log(3 * i_max / delta);
+
+			ratio=(1-eps_hat)*approx;
+		}
+		else
+		{
+			delta=1.0/__numV_left;
+			double eps_hat=(eps-delta)/(1-delta);
+			double eps_prime=(1-eps_hat)/(1+eps_hat);
+			theta_max=2*(1+eps_hat/3.0)*__numV_left*log(6.0/delta)/(eps_prime*eps_prime*(1-1/2.71828));
+			theta=ceil(theta_max* eps_hat*eps_hat/(2*__numV_left));
+			i_max=ceil(log(__numV_left / (eps_hat*eps_hat)) / log(2));
+
+			a_1 = log(3 * i_max / delta) + log(__numV_left);
+			a_2 = log(3 * i_max / delta);
+			ratio=(1-eps_hat)*approx;
+		}
+
+
 		//===================================
 		bool select=false;
 		while(theta<theta_max)
@@ -347,6 +366,128 @@ public:
 		cout << "Single time " << single_elapsed.count() << " s" << endl;
 		cout << "Single spread " << (-(__eta_left))+ __eta*__numV <<endl;
 		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
+	}
+
+	void accuracy_verification()
+	{
+		std::sort(pol_node_num_for_accuracy_verification.begin(), pol_node_num_for_accuracy_verification.end());
+		int max_pol_node_num = pol_node_num_for_accuracy_verification.back();
+		if(max_pol_node_num+__eta_left>__numV || pol_node_num_for_accuracy_verification[0]<0)
+		{
+			cout<<"The number of polluted nodes for accuracy verification is not valid, please check the input."<<endl;
+			return;
+		}
+		if(__eta_left<seed_num_for_accuracy_verification)
+		{
+			cout<<"The number of seeds for accuracy verification is larger than the number of nodes left, please check the input."<<endl;
+			return;
+		}
+		vector<bool> selected(__numV, false);
+		vint pol_nodes, seeds; pol_nodes.reserve(max_pol_node_num); seeds.reserve(seed_num_for_accuracy_verification);
+		for(int i=0;i<max_pol_node_num;i++)
+		{
+			int node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
+			while(selected[node])
+			{
+				node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
+			}
+			selected[node] = true;
+			pol_nodes.push_back(node);
+		}
+		for(int i=0;i<seed_num_for_accuracy_verification;i++)
+		{
+			int node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
+			while(selected[node])
+			{
+				node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
+			}
+			selected[node] = true;
+			seeds.push_back(node);
+		}
+
+		for(int pol_node_num:pol_node_num_for_accuracy_verification)
+		{
+			for(int i=0;i<pol_node_num;i++)
+			{
+				__Activated[pol_nodes[i]] = true;  // activate the polluted nodes
+			}
+		}
+
+	}
+
+	double spread_simulation(vint &vec_seed, int MC_round=1000)
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+		uint32_t nodeId, num_truncate=0;
+		queue<uint32_t> Que;
+		double spread=0.0;
+		uint32_t* visited = (uint32_t *)calloc(__numV, sizeof(uint32_t)); 
+		vector<double> vecThr(__numV);  // Threshold of LT
+		vector<double> vecActivateWeight(__numV, 0.0);  // total weight of active neighbors in LT
+		for (uint32_t i = 0; i < MC_round; i++)
+		{
+			__Activated.assign(__numV, false);  // reset the activated nodes
+			for (auto seed : vec_seed)
+			{
+				Que.push(seed);
+				__Activated[seed] = true;
+			}
+
+			if (model == "IC")
+			{
+				while (!Que.empty())
+				{
+					nodeId = Que.front();
+					Que.pop();
+					for (auto& nbr : O_graph[nodeId])
+					{
+						if (__Activated[nbr]) continue;
+						if (dsfmt_gv_genrand_open_close() <= Inv_inDeg[nbr])
+						{
+							__Activated[nbr] = true;
+							Que.push(nbr);
+						}
+					}
+				}
+			}
+			else 
+			{
+				while (!Que.empty())
+				{
+					nodeId = Que.front();
+					Que.pop();
+					for (auto& nbr : O_graph[nodeId])
+					{
+						if (__Activated[nbr]) continue;
+						if (visited[nbr] < i + 1)
+						{
+							visited[nbr] = i + 1;
+							vecThr[nbr] = dsfmt_gv_genrand_open_close();
+							vecActivateWeight[nbr] = 0.0;
+						}
+						vecActivateWeight[nbr] += Inv_inDeg[nbr];
+						if (vecActivateWeight[nbr] >= vecThr[nbr])
+						{
+							__Activated[nbr] = true;
+							Que.push(nbr);
+						}
+					}
+				}
+			}
+			int active = count(__Activated.begin(), __Activated.end(), true);
+			if(active >__eta_left)
+			{
+				active=__eta_left;
+				num_truncate++;
+			}
+			spread += active;
+		}
+		free(visited);
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration <double> elapsed = end - start;
+		cout<<"The time for simulation is "<<elapsed.count() << " s"<<endl;
+		cout<<"The percentage of truncated rounds is "<<1.0*num_truncate/MC_round<<endl;
+		return 1.0*spread/MC_round;
 	}
 
 	void output_mRR(int mRRid)
