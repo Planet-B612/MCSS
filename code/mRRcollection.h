@@ -48,6 +48,8 @@ public:
 	int num_add_root = 0;
 	int num_delete_root = 0;
 	int num_update_this_round=0;
+	int num_add_root_this_round = 0;
+	int num_delete_root_this_round = 0;
 	vvint vv_polluted_nodes;
 	std::random_device rd; // initialize random number generator
 
@@ -213,6 +215,7 @@ public:
 				{
 					mRR_update(i, vv_polluted_nodes[i]);
 					vv_polluted_nodes[i].clear();
+					num_update_this_round++;
 					num_update++;
 				}
 				// The root info should be recorded after the mRR-sets are updated.
@@ -255,13 +258,13 @@ public:
 					{
 						delete_root(i, root_diff);
 						num_delete_root++;
+						num_delete_root_this_round++;
 					}
 					else
 					{
-						// output_info(i,true);
 						add_root(i, -root_diff);
-						// output_info(i,false);
 						num_add_root++;
+						num_add_root_this_round++;
 					}
 					floor_root_RR--;
 				}
@@ -270,17 +273,15 @@ public:
 					root_diff = vecRoot_num[i] - root_num - 1;
 					if (root_diff > 0)
 					{
-						// output_info(i,true);
 						delete_root(i, root_diff);
-						// output_info(i,false);
 						num_delete_root++;
+						num_delete_root_this_round++;
 					}
 					else
 					{
-						// output_info(i,true);
 						add_root(i, -root_diff);
-						// output_info(i,false);
 						num_add_root++;
+						num_add_root_this_round++;
 					}
 					ceil_root_RR--;
 				}
