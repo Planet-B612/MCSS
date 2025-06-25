@@ -83,6 +83,9 @@ int main(int argn, char **argv)
         auto k = arg.dataset_No;
         arg.load_cost_graph(k);
         TAlg Alg(arg);
+        double approx=1.0-std::exp(-1.0);
+        tuple<double,double,double,double,double> accuracy_info = Alg.accuracy_verification();
+        cout << "Accuracy verification results: inf_UB = "<<get<0>(accuracy_info)<<", MC_estimation = "<<get<1>(accuracy_info)<<", mRR_estimation = "<<get<2>(accuracy_info)<<", update_estimation = "<<get<3>(accuracy_info)<<", (1-1/e)*inf_LB = "<<approx*get<4>(accuracy_info)<<", inf_LB = "<<get<4>(accuracy_info) << endl;
     }
     return 0;
 }

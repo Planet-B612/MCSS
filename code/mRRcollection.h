@@ -26,11 +26,10 @@ private:
 	// vint __vecSeq;
 	vint __vecNewTree;
 	Nodelist __vecVisitNode;
-	vector<vector<int>> vv_virtual_roots;
 	float rand_div = 1.0;
 
 public:
-	vector<vector<int>> PO;
+	vvint PO;
 	FRsets _FRsets;
 	mRRsets _mRRsets;
 	mRRsets vec_mRR_layer;
@@ -38,7 +37,7 @@ public:
 	vsint vec_hash_FR;
 	vsint vec_hash_mRR;
 	// #endif // !NDEBUG
-	vector<int> vecRoot_num;
+	vint vecRoot_num;
 	ulint _num_mRRsets = 0;
 	int pre_root_num = 0;
 	Argument *__arg;
@@ -51,6 +50,7 @@ public:
 	int num_add_root_this_round = 0;
 	int num_delete_root_this_round = 0;
 	vvint vv_polluted_nodes;
+	vvint vv_virtual_roots;
 	std::random_device rd; // initialize random number generator
 
 	double mRR_traversal_time = 0.0;
@@ -329,10 +329,10 @@ public:
 			__vecVisitBool[root] = true; // only record the state of roots, but do not push the root into the queue, since we are not going to diffuse here.
 			_FRsets[root].push_back(mRRid);
 			mRR[i].push_back(root);
-#ifdef DEBUG
-			mRR_hash.insert(root);
-			vec_hash_FR[root].insert(mRRid);
-#endif // !NDEBUG
+// #ifdef DEBUG
+// 			mRR_hash.insert(root);
+// 			vec_hash_FR[root].insert(mRRid);
+// #endif // !NDEBUG
 		}
 		for (int i = 0; i < root_num; i++)
 		{

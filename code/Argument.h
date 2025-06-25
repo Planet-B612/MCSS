@@ -27,10 +27,12 @@ int eta_left_threshold=30;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 
-bool verify_accuracy = false;
-vint pol_node_num_for_accuracy_verification = {10000,2000,30000,40000,50000};
-int seed_num_for_accuracy_verification = 100;
-int MC_round=1000;
+bool verify_accuracy = true;
+vint pol_node_num_for_accuracy_verification = {10000,20000,30000,40000,50000};
+int seed_num_for_accuracy_verification = 10000;
+int MC_round=100000;
+double eps_for_verification=0.1;
+int eta_for_verification=50000;
 
 // #define debug
 // #define debugroots

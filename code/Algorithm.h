@@ -368,19 +368,21 @@ public:
 		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
 	}
 
-	void accuracy_verification()
+	tuple<double,double,double,double,double> accuracy_verification()
 	{
+		double update_estimation, RR_estimation=0.0, MC_estimation=0.0, inf_LB=0.0, inf_UB=0.0;
+
 		std::sort(pol_node_num_for_accuracy_verification.begin(), pol_node_num_for_accuracy_verification.end());
 		int max_pol_node_num = pol_node_num_for_accuracy_verification.back();
-		if(max_pol_node_num+__eta_left>__numV || pol_node_num_for_accuracy_verification[0]<0)
+		if(max_pol_node_num+eta_for_verification>__numV || pol_node_num_for_accuracy_verification[0]<0)
 		{
 			cout<<"The number of polluted nodes for accuracy verification is not valid, please check the input."<<endl;
-			return;
+			return make_tuple(0.0, 0.0, 0.0, 0.0, 0.0);
 		}
-		if(__eta_left<seed_num_for_accuracy_verification)
+		if(eta_for_verification<seed_num_for_accuracy_verification)
 		{
 			cout<<"The number of seeds for accuracy verification is larger than the number of nodes left, please check the input."<<endl;
-			return;
+			return make_tuple(0.0, 0.0, 0.0, 0.0, 0.0);
 		}
 		vector<bool> selected(__numV, false);
 		vint pol_nodes, seeds; pol_nodes.reserve(max_pol_node_num); seeds.reserve(seed_num_for_accuracy_verification);
@@ -405,58 +407,156 @@ public:
 			seeds.push_back(node);
 		}
 
+		int pre_pol_node_num = 0;
 		for(int pol_node_num:pol_node_num_for_accuracy_verification)
 		{
-			for(int i=0;i<pol_node_num;i++)
+			for(int i=pre_pol_node_num;i<pol_node_num;i++)
 			{
 				__Activated[pol_nodes[i]] = true;  // activate the polluted nodes
 			}
-		}
+			__numV_left=__numV-pol_node_num;
+			__eta_left=eta_for_verification;			
+			decimal = 1.0 * (__numV_left) / (__eta_left);
+			root_num=floor(decimal);
+			residual = decimal - root_num;
+			MC_estimation= spread_simulation(seeds, MC_round, pol_node_num);
+			double MC_LB_error=(__eta_left-seed_num_for_accuracy_verification)*sqrt( log(__numV_left)/(2*MC_round) );
+			inf_LB=MC_estimation-MC_LB_error;
+			double MC_UB_error=MC_LB_error/sqrt(log(2));
+			inf_UB=MC_estimation+MC_UB_error;
+			double theta=2*max(2*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification), (2+2*eps_for_verification/3)*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification));
 
+			// estimate with fresh mRR-sets
+			for (auto seed : seeds)
+			{
+				__Activated[seed] = false;
+			}
+			RR.build_n_mRRsets_fresh_vec(theta);
+			double RR_coverage=0;
+			vector<bool> RR_mark(theta, false);
+			for(int seed:seeds)
+			{
+				for(int rid:RR._FRsets[seed])
+				{
+					if(RR_mark[rid]==false)
+					{
+						RR_mark[rid]=true;
+						RR_coverage++;
+					}
+				}
+			}
+			RR_estimation = (RR_coverage/theta)*__eta_left;
+			RR.refresh_RRsets();
+
+			// estimate with updated mRR-sets
+			RR._num_mRRsets = theta;
+			RR.vv_virtual_roots.resize(theta);
+			RR._mRRsets.resize(theta);
+			RR.vec_mRR_layer.resize(theta);
+			RR.vv_polluted_nodes.resize(theta);
+			RR.vecRoot_num.resize(theta);
+			__Activated.assign(__numV, false);  // reset the __Activated states
+			vvint vec_del_nodes(theta);
+			__numV_left=__numV;
+			__eta_left=eta_for_verification+pol_node_num;
+			decimal = 1.0 * (__numV_left) / (__eta_left);
+			root_num=floor(decimal);
+			residual = decimal - root_num;
+			// generate fresh mRR-sets
+			for (auto i = 0; i < theta; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
+			{
+				RR.build_one_mRRset_tree(i, root_num, residual);
+			}
+			// activate the nodes
+			for(int pol_node:pol_nodes)
+			{
+				__Activated[pol_node] = true;  // activate the polluted nodes
+				for(int rid:RR._FRsets[pol_node])
+				{
+					vec_del_nodes[rid].push_back(pol_node);
+				}
+			}
+			__numV_left=__numV-pol_node_num;
+			__eta_left=eta_for_verification;
+			decimal = 1.0 * (__numV_left) / (__eta_left);
+			root_num=floor(decimal);
+			residual = decimal - root_num;
+			// update the mRR-sets
+			for (auto i = 0; i < theta; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
+			{
+				if(!vec_del_nodes[i].empty())
+				{
+					RR.mRR_update(i, vec_del_nodes[i]);
+				}
+				int root_diff=root_num-RR._mRRsets[i].size()+(dsfmt_gv_genrand_open_close() <= residual);
+				if(root_diff>0)
+				{
+					RR.add_root(i, root_diff);
+				}
+				else if(root_diff<0)
+				{
+					RR.delete_root(i, -root_diff);
+				}
+			}
+			RR_coverage=0;
+			RR_mark.assign(theta, false);
+			for(int seed:seeds)
+			{
+				for(auto rid:RR._FRsets[seed])
+				{
+					if(RR_mark[rid]==false)
+					{
+						RR_mark[rid]=true;
+						RR_coverage++;
+					}
+				}
+			}
+			update_estimation = RR_coverage/theta*__eta_left;
+			RR.refresh_RRsets();
+		}
+		return make_tuple(inf_UB, MC_estimation,RR_estimation, update_estimation, inf_LB);
 	}
 
-	double spread_simulation(vint &vec_seed, int MC_round=1000)
+	double spread_simulation(vint &vec_seed, int MC_round=1000, int pol_node_num=0)
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 		uint32_t nodeId, num_truncate=0;
-		queue<uint32_t> Que;
 		double spread=0.0;
+		vint vec_visitNode; vec_visitNode.reserve(__numV);  
 		uint32_t* visited = (uint32_t *)calloc(__numV, sizeof(uint32_t)); 
 		vector<double> vecThr(__numV);  // Threshold of LT
 		vector<double> vecActivateWeight(__numV, 0.0);  // total weight of active neighbors in LT
+		for (auto seed : vec_seed)
+		{
+			__Activated[seed] = true;
+		}
+		vec_visitNode= vec_seed;  
 		for (uint32_t i = 0; i < MC_round; i++)
 		{
-			__Activated.assign(__numV, false);  // reset the activated nodes
-			for (auto seed : vec_seed)
-			{
-				Que.push(seed);
-				__Activated[seed] = true;
-			}
-
+			vec_visitNode.resize(seed_num_for_accuracy_verification);
+			int curIdx=0, numVisit=seed_num_for_accuracy_verification;
 			if (model == "IC")
 			{
-				while (!Que.empty())
+				while (curIdx<numVisit)
 				{
-					nodeId = Que.front();
-					Que.pop();
-					for (auto& nbr : O_graph[nodeId])
+					nodeId = vec_visitNode[curIdx++];
+					for (const auto& nbr : O_graph[nodeId])
 					{
 						if (__Activated[nbr]) continue;
 						if (dsfmt_gv_genrand_open_close() <= Inv_inDeg[nbr])
 						{
 							__Activated[nbr] = true;
-							Que.push(nbr);
+							vec_visitNode.push_back(nbr);
 						}
 					}
 				}
 			}
 			else 
 			{
-				while (!Que.empty())
+				while (curIdx<numVisit)
 				{
-					nodeId = Que.front();
-					Que.pop();
-					for (auto& nbr : O_graph[nodeId])
+					nodeId = vec_visitNode[curIdx++];
+					for (const auto& nbr : O_graph[nodeId])
 					{
 						if (__Activated[nbr]) continue;
 						if (visited[nbr] < i + 1)
@@ -469,18 +569,22 @@ public:
 						if (vecActivateWeight[nbr] >= vecThr[nbr])
 						{
 							__Activated[nbr] = true;
-							Que.push(nbr);
+							vec_visitNode.push_back(nbr);
 						}
 					}
 				}
 			}
-			int active = count(__Activated.begin(), __Activated.end(), true);
+			int active = count(__Activated.begin(), __Activated.end(), true)-pol_node_num;
 			if(active >__eta_left)
 			{
 				active=__eta_left;
 				num_truncate++;
 			}
 			spread += active;
+			for(int i=seed_num_for_accuracy_verification; i<vec_visitNode.size(); i++)
+			{
+				__Activated[vec_visitNode[i]] = false;  // reset the activated nodes
+			}
 		}
 		free(visited);
 		auto end = std::chrono::high_resolution_clock::now();
