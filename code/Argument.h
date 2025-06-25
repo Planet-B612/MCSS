@@ -113,6 +113,14 @@ public:
                 left_num = stof(argv[i + 1]);
             if (argv[i] == string("-over_pnodes"))
                 over_pnodes = stof(argv[i + 1]);
+            if (argv[i] == string("-pol_node_num"))
+                pol_node_num_for_accuracy_verification= stoi(argv[i + 1]);
+            if (argv[i] == string("-seed_num_for_verify"))
+                seed_num_for_accuracy_verification= stoi(argv[i + 1]);
+
+                int MC_round=10000;
+double eps_for_verification=0.1;
+int eta_for_verification=10000;
         }      
     }   
     void Initialization()
