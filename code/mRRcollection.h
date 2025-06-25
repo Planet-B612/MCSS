@@ -351,10 +351,10 @@ public:
 						if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
 							continue;
 						RR.push_back(nbrId);
-#ifdef DEBUG
-						mRR_hash.insert(nbrId);
-						vec_hash_FR[nbrId].insert(mRRid);
-#endif
+// #ifdef DEBUG
+// 						mRR_hash.insert(nbrId);
+// 						vec_hash_FR[nbrId].insert(mRRid);
+// #endif
 						__vecVisitBool[nbrId] = true;
 						_FRsets[nbrId].push_back(mRRid);
 					}

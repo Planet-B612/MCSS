@@ -372,9 +372,9 @@ public:
 	{
 		double update_estimation, RR_estimation=0.0, MC_estimation=0.0, inf_LB=0.0, inf_UB=0.0;
 
-		std::sort(pol_node_num_for_accuracy_verification.begin(), pol_node_num_for_accuracy_verification.end());
-		int max_pol_node_num = pol_node_num_for_accuracy_verification.back();
-		if(max_pol_node_num+eta_for_verification>__numV || pol_node_num_for_accuracy_verification[0]<0)
+		// std::sort(pol_node_num_for_accuracy_verification.begin(), pol_node_num_for_accuracy_verification.end());
+		// int max_pol_node_num = pol_node_num_for_accuracy_verification.back();
+		if(pol_node_num_for_accuracy_verification+eta_for_verification>__numV || pol_node_num_for_accuracy_verification<0)
 		{
 			cout<<"The number of polluted nodes for accuracy verification is not valid, please check the input."<<endl;
 			return make_tuple(0.0, 0.0, 0.0, 0.0, 0.0);
@@ -385,8 +385,8 @@ public:
 			return make_tuple(0.0, 0.0, 0.0, 0.0, 0.0);
 		}
 		vector<bool> selected(__numV, false);
-		vint pol_nodes, seeds; pol_nodes.reserve(max_pol_node_num); seeds.reserve(seed_num_for_accuracy_verification);
-		for(int i=0;i<max_pol_node_num;i++)
+		vint pol_nodes, seeds; pol_nodes.reserve(pol_node_num_for_accuracy_verification); seeds.reserve(seed_num_for_accuracy_verification);
+		for(int i=0;i<pol_node_num_for_accuracy_verification;i++)
 		{
 			int node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
 			while(selected[node])
@@ -407,30 +407,30 @@ public:
 			seeds.push_back(node);
 		}
 
-		int pre_pol_node_num = 0;
-		for(int pol_node_num:pol_node_num_for_accuracy_verification)
-		{
-			for(int i=pre_pol_node_num;i<pol_node_num;i++)
+		// for(int pol_node_num:pol_node_num_for_accuracy_verification)
+		// {
+			for(int i=0;i<pol_node_num_for_accuracy_verification;i++)
 			{
 				__Activated[pol_nodes[i]] = true;  // activate the polluted nodes
 			}
-			__numV_left=__numV-pol_node_num;
+			__numV_left=__numV-pol_node_num_for_accuracy_verification;
 			__eta_left=eta_for_verification;			
 			decimal = 1.0 * (__numV_left) / (__eta_left);
 			root_num=floor(decimal);
 			residual = decimal - root_num;
-			MC_estimation= spread_simulation(seeds, MC_round, pol_node_num);
+			MC_estimation= spread_simulation(seeds, MC_round, pol_node_num_for_accuracy_verification);
 			double MC_LB_error=(__eta_left-seed_num_for_accuracy_verification)*sqrt( log(__numV_left)/(2*MC_round) );
 			inf_LB=MC_estimation-MC_LB_error;
 			double MC_UB_error=MC_LB_error/sqrt(log(2));
 			inf_UB=MC_estimation+MC_UB_error;
-			double theta=2*max(2*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification), (2+2*eps_for_verification/3)*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification));
+			double theta=max(2*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification), (2+2*eps_for_verification/3)*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification));
 
 			// estimate with fresh mRR-sets
 			for (auto seed : seeds)
 			{
 				__Activated[seed] = false;
 			}
+			cout<<__LINE__<<": building fresh mRR-sets on residual graph for theta = "<<theta<<endl;
 			RR.build_n_mRRsets_fresh_vec(theta);
 			double RR_coverage=0;
 			vector<bool> RR_mark(theta, false);
@@ -449,6 +449,7 @@ public:
 			RR.refresh_RRsets();
 
 			// estimate with updated mRR-sets
+			theta=ceil(theta);
 			RR._num_mRRsets = theta;
 			RR.vv_virtual_roots.resize(theta);
 			RR._mRRsets.resize(theta);
@@ -458,15 +459,17 @@ public:
 			__Activated.assign(__numV, false);  // reset the __Activated states
 			vvint vec_del_nodes(theta);
 			__numV_left=__numV;
-			__eta_left=eta_for_verification+pol_node_num;
+			__eta_left=eta_for_verification+pol_node_num_for_accuracy_verification;
 			decimal = 1.0 * (__numV_left) / (__eta_left);
 			root_num=floor(decimal);
 			residual = decimal - root_num;
 			// generate fresh mRR-sets
+			cout<<__LINE__<<": building tree mRR-sets on original graph"<<endl;
 			for (auto i = 0; i < theta; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
 			{
 				RR.build_one_mRRset_tree(i, root_num, residual);
 			}
+			cout<<"Reach here: "<<__LINE__<<endl;
 			// activate the nodes
 			for(int pol_node:pol_nodes)
 			{
@@ -476,12 +479,13 @@ public:
 					vec_del_nodes[rid].push_back(pol_node);
 				}
 			}
-			__numV_left=__numV-pol_node_num;
+			__numV_left=__numV-pol_node_num_for_accuracy_verification;
 			__eta_left=eta_for_verification;
 			decimal = 1.0 * (__numV_left) / (__eta_left);
 			root_num=floor(decimal);
 			residual = decimal - root_num;
 			// update the mRR-sets
+			cout<<__LINE__<<": updating the tree mRR-sets"<<endl;
 			for (auto i = 0; i < theta; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
 			{
 				if(!vec_del_nodes[i].empty())
@@ -513,7 +517,9 @@ public:
 			}
 			update_estimation = RR_coverage/theta*__eta_left;
 			RR.refresh_RRsets();
-		}
+			double approx=1.0-std::exp(-1.0);
+			cout << "Accuracy verification results: inf_UB = "<<inf_UB<<", MC_estimation = "<<MC_estimation<<", fresh mRR_estimation = "<<RR_estimation<<", update_estimation = "<<update_estimation<<", (1-1/e)*inf_LB = "<<approx*inf_LB<<", inf_LB = "<<inf_LB << endl;
+		// }
 		return make_tuple(inf_UB, MC_estimation,RR_estimation, update_estimation, inf_LB);
 	}
 
@@ -530,7 +536,7 @@ public:
 		{
 			__Activated[seed] = true;
 		}
-		vec_visitNode= vec_seed;  
+		vec_visitNode= vec_seed;
 		for (uint32_t i = 0; i < MC_round; i++)
 		{
 			vec_visitNode.resize(seed_num_for_accuracy_verification);
@@ -547,6 +553,7 @@ public:
 						{
 							__Activated[nbr] = true;
 							vec_visitNode.push_back(nbr);
+							numVisit++;
 						}
 					}
 				}
@@ -570,6 +577,7 @@ public:
 						{
 							__Activated[nbr] = true;
 							vec_visitNode.push_back(nbr);
+							numVisit++;
 						}
 					}
 				}
