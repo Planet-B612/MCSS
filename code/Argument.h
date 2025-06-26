@@ -27,12 +27,12 @@ int eta_left_threshold=30;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 
-bool verify_accuracy = true;
-int pol_node_num_for_accuracy_verification = 2000;
-int seed_num_for_accuracy_verification = 200;
+bool do_verify = true;
+int pol_node_num_for_accuracy_verification = 20000;
+int seed_num_for_accuracy_verification = 500;
 int MC_round=10000;
 double eps_for_verification=0.1;
-int eta_for_verification=10000;
+int eta_for_verification=20000;
 
 // #define debug
 // #define debugroots
@@ -56,7 +56,7 @@ public:
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
     // vector<int> data={4};
-    int dataset_No = 4;  // 17: sample, 10: DBLP_sym, 4: epinions
+    int dataset_No = 10;  // 17: sample, 10: DBLP_sym, 11: Youtube_sym, 4: epinions
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
@@ -113,14 +113,18 @@ public:
                 left_num = stof(argv[i + 1]);
             if (argv[i] == string("-over_pnodes"))
                 over_pnodes = stof(argv[i + 1]);
-            if (argv[i] == string("-pol_node_num"))
+            if (argv[i] == string("-del_num"))
                 pol_node_num_for_accuracy_verification= stoi(argv[i + 1]);
-            if (argv[i] == string("-seed_num_for_verify"))
+            if (argv[i] == string("-seed_num"))
                 seed_num_for_accuracy_verification= stoi(argv[i + 1]);
-
-                int MC_round=10000;
-double eps_for_verification=0.1;
-int eta_for_verification=10000;
+            if (argv[i] == string("-do_verify"))
+                do_verify = stoi(argv[i + 1]);
+            if (argv[i] == string("-MC_round"))
+                MC_round = stoi(argv[i + 1]);
+            if (argv[i] == string("-eps_for_verification"))
+                eps_for_verification = stof(argv[i + 1]);
+            if (argv[i] == string("-eta_for_verification"))
+                eta_for_verification = stof(argv[i + 1]);
         }      
     }   
     void Initialization()
@@ -134,6 +138,10 @@ int eta_for_verification=10000;
         {
             cout << "The batch size should be larger than 0, please check the input." << endl;
             exit(1);
+        }
+        if(do_verify)
+        {
+            cout<< "The accuracy verification is enabled, the number of polluted nodes is " << pol_node_num_for_accuracy_verification << ", the number of seeds is " << seed_num_for_accuracy_verification << ", the MC_round is "<<MC_round<<", the eta_for_verification is "<<eta_for_verification<<", eps_for_verification is "<<eps_for_verification<<endl;
         }
         // if (format_graph != 0)
         // {

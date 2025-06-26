@@ -24,7 +24,7 @@ int main(int argn, char **argv)
     // assert(!result_bk.fail());
     double avg_cost = 0.0;
     double avg_time = 0.0;
-    while(arg.times < arg.run_times && verify_accuracy==false)
+    while(arg.times < arg.run_times && do_verify==false)
     {
         arg.Initialization();
         auto k = arg.dataset_No;
@@ -77,7 +77,7 @@ int main(int argn, char **argv)
     cout << "Average cost: " << avg_cost / arg.run_times << endl;
     cout << "Average time: " << avg_time / arg.run_times << endl;
 
-    if(verify_accuracy)
+    if(do_verify)
     {
         arg.Initialization();
         auto k = arg.dataset_No;
