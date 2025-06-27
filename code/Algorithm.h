@@ -374,28 +374,19 @@ public:
 
 		// std::sort(pol_node_num_for_accuracy_verification.begin(), pol_node_num_for_accuracy_verification.end());
 		// int max_pol_node_num = pol_node_num_for_accuracy_verification.back();
-		if(pol_node_num_for_accuracy_verification+eta_for_verification>__numV || pol_node_num_for_accuracy_verification<0)
-		{
-			cout<<"The number of polluted nodes for accuracy verification is not valid, please check the input."<<endl;
-			return make_tuple(0.0, 0.0, 0.0, 0.0, 0.0);
-		}
+		// if(pol_node_num_for_accuracy_verification+eta_for_verification>__numV || pol_node_num_for_accuracy_verification<0)
+		// {
+		// 	cout<<"The number of polluted nodes for accuracy verification is not valid, please check the input."<<endl;
+		// 	return make_tuple(0.0, 0.0, 0.0, 0.0, 0.0);
+		// }
 		if(eta_for_verification<seed_num_for_accuracy_verification)
 		{
 			cout<<"The number of seeds for accuracy verification is larger than the number of nodes left, please check the input."<<endl;
 			return make_tuple(0.0, 0.0, 0.0, 0.0, 0.0);
 		}
 		vector<bool> selected(__numV, false);
-		vint pol_nodes, seeds; pol_nodes.reserve(pol_node_num_for_accuracy_verification); seeds.reserve(seed_num_for_accuracy_verification);
-		for(int i=0;i<pol_node_num_for_accuracy_verification;i++)
-		{
-			int node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
-			while(selected[node])
-			{
-				node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
-			}
-			selected[node] = true;
-			pol_nodes.push_back(node);
-		}
+		vint seeds;  
+		seeds.reserve(seed_num_for_accuracy_verification);
 		for(int i=0;i<seed_num_for_accuracy_verification;i++)
 		{
 			int node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
@@ -407,11 +398,24 @@ public:
 			seeds.push_back(node);
 		}
 
-		// for(int pol_node_num:pol_node_num_for_accuracy_verification)
-		// {
+		for(int pol_node_num_for_accuracy_verification:pol_node_num_for_accuracy_verification_list)
+		{
+			cout << "pol_nodes: " << pol_node_num_for_accuracy_verification <<endl;
+			vint pol_nodes;
+			pol_nodes.reserve(pol_node_num_for_accuracy_verification);
 			for(int i=0;i<pol_node_num_for_accuracy_verification;i++)
 			{
-				__Activated[pol_nodes[i]] = true;  // activate the polluted nodes
+				int node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
+				while(selected[node])
+				{
+					node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
+				}
+				selected[node] = true;
+				pol_nodes.push_back(node);
+			}
+			__Activated.assign(__numV, false);
+			for(auto pol_node: pol_nodes){
+				__Activated[pol_node] = true;
 			}
 			__numV_left=__numV-pol_node_num_for_accuracy_verification;
 			__eta_left=eta_for_verification;			
@@ -426,9 +430,9 @@ public:
 			double theta=max(2*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification), (2+2*eps_for_verification/3)*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification));
 
 			// estimate with fresh mRR-sets
-			for (auto seed : seeds)
-			{
-				__Activated[seed] = false;
+			__Activated.assign(__numV, false);
+			for(auto pol_node: pol_nodes){
+				__Activated[pol_node] = true;
 			}
 			cout<<__LINE__<<": building fresh mRR-sets on residual graph for theta = "<<theta<<endl;
 			RR.build_n_mRRsets_fresh_vec(theta);
@@ -518,8 +522,8 @@ public:
 			update_estimation = RR_coverage/theta*__eta_left;
 			RR.refresh_RRsets();
 			double approx=1.0-std::exp(-1.0);
-			cout << "Accuracy verification results: inf_UB = "<<inf_UB<<", MC_estimation = "<<MC_estimation<<", fresh mRR_estimation = "<<RR_estimation<<", update_estimation = "<<update_estimation<<", (1-1/e)*inf_LB = "<<approx*inf_LB<<", inf_LB = "<<inf_LB << endl;
-		// }
+			cout << "Accuracy verification results: inf_UB = " << inf_UB << " (1+eps)*inf_UB = "<<(1.0+eps_for_verification)*inf_UB<<", MC_estimation = "<<MC_estimation<<", fresh mRR_estimation = "<<RR_estimation<<", update_estimation = "<<update_estimation<<", (1-1/e)(1-eps)*inf_LB = "<<approx*(1.0-eps_for_verification)*inf_LB<<", inf_LB = "<<inf_LB << endl;
+		}
 		return make_tuple(inf_UB, MC_estimation,RR_estimation, update_estimation, inf_LB);
 	}
 

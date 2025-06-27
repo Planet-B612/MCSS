@@ -1,7 +1,7 @@
 all: run rundebug test
 
 run: *.cpp *.h
-		g++ run.cpp -Wall -pg -std=c++11 -O3 ../dSFMT/dSFMT.c -o run
+		g++ run.cpp -Wall -g -std=c++11 -O3 ../dSFMT/dSFMT.c -o run
 
 rundebug: *.cpp *.h
 		g++ run.cpp -Wall -g -DDEBUG -std=c++11 -O3 ../dSFMT/dSFMT.c -o rundebug
