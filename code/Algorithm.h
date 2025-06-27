@@ -398,12 +398,13 @@ public:
 			seeds.push_back(node);
 		}
 
+		int pre_pol_node_num=0;		
+		vint pol_nodes;
 		for(int pol_node_num_for_accuracy_verification:pol_node_num_for_accuracy_verification_list)
 		{
 			cout << "pol_nodes: " << pol_node_num_for_accuracy_verification <<endl;
-			vint pol_nodes;
 			pol_nodes.reserve(pol_node_num_for_accuracy_verification);
-			for(int i=0;i<pol_node_num_for_accuracy_verification;i++)
+			for(int i=pre_pol_node_num;i<pol_node_num_for_accuracy_verification;i++)
 			{
 				int node = dsfmt_gv_genrand_uint32_range(__numV);  // generate a random node
 				while(selected[node])
@@ -422,6 +423,7 @@ public:
 			decimal = 1.0 * (__numV_left) / (__eta_left);
 			root_num=floor(decimal);
 			residual = decimal - root_num;
+			cout<<__LINE__<<endl;
 			MC_estimation= spread_simulation(seeds, MC_round, pol_node_num_for_accuracy_verification);
 			double MC_LB_error=(__eta_left-seed_num_for_accuracy_verification)*sqrt( log(__numV_left)/(2*MC_round) );
 			inf_LB=MC_estimation-MC_LB_error;
@@ -523,6 +525,7 @@ public:
 			RR.refresh_RRsets();
 			double approx=1.0-std::exp(-1.0);
 			cout << "Accuracy verification results: inf_UB = " << inf_UB << " (1+eps)*inf_UB = "<<(1.0+eps_for_verification)*inf_UB<<", MC_estimation = "<<MC_estimation<<", fresh mRR_estimation = "<<RR_estimation<<", update_estimation = "<<update_estimation<<", (1-1/e)(1-eps)*inf_LB = "<<approx*(1.0-eps_for_verification)*inf_LB<<", inf_LB = "<<inf_LB << endl;
+			pre_pol_node_num=pol_node_num_for_accuracy_verification;
 		}
 		return make_tuple(inf_UB, MC_estimation,RR_estimation, update_estimation, inf_LB);
 	}
@@ -543,6 +546,10 @@ public:
 		vec_visitNode= vec_seed;
 		for (uint32_t i = 0; i < MC_round; i++)
 		{
+			if(std::fmod(i+1, 1000) == 0)
+			{
+				cout << "Round " << i+1 << " is running..." << endl;
+			}
 			vec_visitNode.resize(seed_num_for_accuracy_verification);
 			int curIdx=0, numVisit=seed_num_for_accuracy_verification;
 			if (model == "IC")

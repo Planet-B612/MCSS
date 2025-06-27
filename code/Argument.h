@@ -58,7 +58,7 @@ public:
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
     // vector<int> data={4};
-    int dataset_No = 10;  // 17: sample, 10: DBLP_sym, 11: Youtube_sym, 4: epinions
+    int dataset_No = 4;  // 17: sample, 10: DBLP_sym, 11: Youtube_sym, 4: epinions
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
