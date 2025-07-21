@@ -546,10 +546,10 @@ public:
 		vec_visitNode= vec_seed;
 		for (uint32_t i = 0; i < MC_round; i++)
 		{
-			if(std::fmod(i+1, 1000) == 0)
-			{
-				cout << "Round " << i+1 << " is running..." << endl;
-			}
+			// if(std::fmod(i+1, 1000) == 0)
+			// {
+			// 	cout << "Round " << i+1 << " is running..." << endl;
+			// }
 			vec_visitNode.resize(seed_num_for_accuracy_verification);
 			int curIdx=0, numVisit=seed_num_for_accuracy_verification;
 			if (model == "IC")
