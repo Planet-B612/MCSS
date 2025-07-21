@@ -21,7 +21,7 @@ private:
 	float eps = 0.1;
 	vector<vector<bool>> __vecCover; // record whether an FRset_real is covered by some see
 	int __numV;
-	double total_theta=0;
+	int total_theta = 0;
 	string  _cascadeModel;
 	vector<tuple<int, int, double, int>> ratio_plain, ratio_UB;
 	// vector<double> vec_UB; // store the upper bound of coverage for each node
@@ -37,7 +37,7 @@ private:
 	double approx=1.0;
 	int theta=0;
 	int ending_rnd=3000000;  // not needed, if q_ratio is properly set. sample: 4, facebook: 80, dblp: 3000. Let it be a large value, so that it will never enter the ending round to generate fresh mRRsets.
-	const int root_num_bound=250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
+	int root_num_bound=250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
 	const int window_size=5;  // sample:2, facebook: 3, dblp: 5
 	bool in_ending_rnd=false;
 	bool delete_extra_mRR=false;
@@ -48,7 +48,12 @@ private:
 	vector<bool> RR_Mark;
 	double a_1=0.0, a_2=0.0;
 	int __dataset_No = 0;
-	// double total_build_seedset_time = 0;
+	int __eta_left_threshold = 5;  // the threshold of eta_left, below which the algorithm will stop
+	int __regen_threshold = 0.2;  // the threshold of the ratio of polluted mRR-sets, below which the algorithm will regenerate mRR-sets
+	
+	double total_round_time = 0.0;
+	double total_realizaiton_time = 0.0;
+	double total_seed_selection_time = 0.0;
 	float __left_num = 600.0;
 	float __over_pnodes = 10.0;
 
@@ -66,8 +71,11 @@ public:
 		round_num=0;
 		vec_mRR_num.resize(1e4,0);
 		__dataset_No = arg.dataset_No;
-		__left_num = arg.left_num;
-		__over_pnodes = arg.over_pnodes;
+		__eta_left_threshold = arg.eta_left_threshold;
+		__regen_threshold = arg.regen_threshold;
+		root_num_bound = arg.root_num_bound;
+		// __left_num = arg.left_num;
+		// __over_pnodes = arg.over_pnodes;
 		// vec_UB= vector<double>(__numV, 0.0);
 		// vec_LB= vector<double>(__numV, 0.0);
 		vec_deg= vector<int>(__numV, 0);
@@ -232,9 +240,12 @@ public:
 			else
 			{
 				RR.build_n_mRRsets_tree(theta, pre_theta);
-			}		
+			}
+			auto seed_slection_start = std::chrono::high_resolution_clock::now();
 			if (batch_size > 1) select=build_seedset(theta, ratio);
 			else  select=build_max_single_seed(theta, ratio);
+			auto seed_slection_end = std::chrono::high_resolution_clock::now();
+			total_seed_selection_time += std::chrono::duration<double>(seed_slection_end - seed_slection_start).count();
 			if(select) 
 			{
 				(seed_set).insert((seed_set).end(),seed_batch.begin(),seed_batch.end());
@@ -252,8 +263,11 @@ public:
 			}
 		}
 		// build_seedset(theta);
+		auto seed_slection_start = std::chrono::high_resolution_clock::now();
 		if (batch_size > 1) build_seedset(theta);
 		else  build_max_single_seed(theta);
+		auto seed_slection_end = std::chrono::high_resolution_clock::now();
+		total_seed_selection_time += std::chrono::duration<double>(seed_slection_end - seed_slection_start).count();
 		(seed_set).insert((seed_set).end(),seed_batch.begin(),seed_batch.end());
 		total_theta+=theta;
 		return;
@@ -262,10 +276,13 @@ public:
 	tuple<int,int,int,int,double,double> AdaptiveSelect()
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
+#ifdef LOG
 		std::ofstream result;
 		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps) + ".txt";
 		result.open(file_name, ios::app);
 		assert(!result.fail());
+		// result << "start recording at " << std::chrono::system_clock::now() << std::endl;
+#endif
 		auto single_start = std::chrono::high_resolution_clock::now();
 		while((__eta_left)>0)
 		{
@@ -274,14 +291,15 @@ public:
 			root_num=floor(decimal);
 			residual = decimal - root_num;  // in (0,1)
 			
-			if(__eta_left<eta_left_threshold)
-			{
-				in_ending_rnd=true;
-				// cout<<"Entering the ending round"<<endl;
-				RR.refresh_RRsets();
-					// cout<<"Refreshed the RR-sets complete"<<endl;
-			}
-
+			// if(root_num > 30000)
+			// {
+			// 	in_ending_rnd=true;
+			// 	// cout<<"Entering the ending round"<<endl;
+			// 	RR.refresh_RRsets();
+			// 	// cout<<"Refreshed the RR-sets complete"<<endl;
+			// }
+			
+			auto round_start = std::chrono::high_resolution_clock::now();
 			if((__eta_left)<=batch_size)
 			{
 				seed_batch.clear();
@@ -306,6 +324,11 @@ public:
 			{
 				OneRoundSelect();
 			}
+			auto round_end = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> round_elapsed = round_end - round_start;
+			total_round_time+=round_elapsed.count();
+
+			auto realization_start = std::chrono::high_resolution_clock::now();
 			if(in_ending_rnd)
 			{
 				counter=RR.realization_fresh_vec(seed_batch);
@@ -314,8 +337,10 @@ public:
 			{
 				counter=RR.realization(seed_batch);
 			}
-			auto now = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed = now - start;
+
+			auto realization_end = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> realization_elapsed = realization_end - realization_start;
+			total_realizaiton_time+=realization_elapsed.count();
 
 			(__numV_left)-= counter;  // mRR-sets need to be updated;
 			(__eta_left)-=counter;
@@ -352,19 +377,29 @@ public:
 			}
 	
 			round_num++;
-			result<<(round_num)<<", \t"<<counter<<", \t"<<(__eta_left)<<", \t"<<1.0*(__numV_left)/(__eta_left)<<", \t theta = "<<theta<<"; \t update: "<< RR.num_update <<"\t add root: "<< RR.num_add_root<<" \t delete root: "<<RR.num_delete_root<<", \t"<< disp_mem_usage()<<" MB, \t"<<elapsed.count() << " 秒"<<endl;  // the round that is currently running
-			RR.num_update=0;
-			RR.num_add_root=0;
-			RR.num_delete_root=0;
+#ifdef LOG
+			result<<(round_num)<<", \t"<<counter<<", \t"<<(__eta_left)<<", \t"<<1.0*(__numV_left)/(__eta_left)<<", \t theta = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add root: "<< RR.num_add_root_this_round<<" \t delete root: "<<RR.num_delete_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<elapsed.count() << " 秒"<<endl;  // the round that is currently running
+#endif
 			RR.num_update_this_round=0;
+			RR.num_add_root_this_round = 0;
+			RR.num_delete_root_this_round = 0;
+
 		}
 		auto single_end = std::chrono::high_resolution_clock::now();
 		std::chrono::duration <double> single_elapsed = single_end - single_start;
+#ifdef LOG
 		result.close();
+#endif
 		// cout << "build seed set traversal time " << total_build_seedset_time <<endl;
 		// cout << "mRR traversal time " <<RR.mRR_traversal_time <<endl;
 		cout << "Single time " << single_elapsed.count() << " s" << endl;
 		cout << "Single spread " << (-(__eta_left))+ __eta*__numV <<endl;
+		cout << "Single build mRR set time " << RR.build_mRRset_time << endl;
+		cout << "Single revise mRR set time " << RR.revise_mRRset_time << endl;
+		cout << "Single round time " << total_round_time << " s" << endl;
+		cout << "Single realization time " << total_realizaiton_time << " s" << endl;
+		cout << "Single seed selection time " << total_seed_selection_time << " s" << endl;
+
 		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
 	}
 

@@ -22,8 +22,6 @@ int RR_thr=3000000;
 double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
-double regen_threshold=0.15;
-int eta_left_threshold=30;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 
@@ -71,6 +69,9 @@ public:
     bool gene_ini_pw=false;
     bool real_time_pw=false;
     int numV=1;
+    int eta_left_threshold = 5;
+    float regen_threshold=0.15;
+    int root_num_bound = 250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
     float left_num = 100.0;
     float over_pnodes = 10.0;
     std::ofstream result_bk;
@@ -127,6 +128,14 @@ public:
                 eps_for_verification = stof(argv[i + 1]);
             if (argv[i] == string("-eta_for_verification"))
                 eta_for_verification = stof(argv[i + 1]);
+            if (argv[i] == string("-regen"))
+                regen_threshold = stof(argv[i + 1]);
+            if (argv[i] == string("root_nbound"))
+                root_num_bound = stoi(argv[i + 1]);
+            if (argv[i] == string("-Rnd_cost"))
+                Rnd_cost = stoi(argv[i + 1]);
+            // if (argv[i] == string("-over_pnodes"))
+            //     over_pnodes = stof(argv[i + 1]);
         }      
     }   
     void Initialization()
@@ -191,6 +200,7 @@ public:
         else
         {
             cost_file = graph_path + dataset[k] + "_cost_001DEG.txt";
+            cout << "Using the cost file at " << cost_file << endl;
         }
         std::ifstream inFile;
         inFile.open(cost_file);
@@ -203,7 +213,7 @@ public:
         for (int i = 0; i < numV; i++)
         {
             inFile >> cost[i];
-            assert(cost[i] >= 0 && cost[i] <= 1);
+            // assert(cost[i] >= 0 && cost[i] <= 1);
         }
         inFile.close();
         // cout<<"==================Using uniform costs!!!==============="<<endl;
