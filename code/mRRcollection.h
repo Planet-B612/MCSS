@@ -50,6 +50,10 @@ public:
 	int num_update_this_round=0;
 	int num_add_root_this_round = 0;
 	int num_delete_root_this_round = 0;
+	double build_mRRset_time = 0.0;
+	double revise_mRRset_time = 0.0;
+	float __regen_threshold = 0.15; 
+	int __root_num_bound = 250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
 	vvint vv_polluted_nodes;
 	vvint vv_virtual_roots;
 	vvint vv_next_mRRnode;
@@ -62,6 +66,8 @@ public:
 		__arg = &arg;
 		__numV = arg.numV;
 		_FRsets = FRsets(__numV);
+		__regen_threshold = arg.regen_threshold;
+		__root_num_bound = arg.root_num_bound;
 #ifdef DEBUG
 		vec_hash_FR.resize(__numV);
 #endif
@@ -204,6 +210,8 @@ public:
 		int original_ceil_root_RR=ceil_root_RR;
 		#endif
 		int num_polluted=0, root_num_1=root_num+1;
+
+		auto single_start = std::chrono::high_resolution_clock::now();
 		for(ulint i=pre_theta;i<num_revise_RR;i++) 
 		{
 			mRR_mark[i]=vv_polluted_nodes[i].size();
@@ -212,8 +220,8 @@ public:
 				num_polluted++;
 			}
 		}
-		num_update_this_round+=num_polluted;
-		if(pre_theta>100 && (1.0*(num_polluted)/pre_theta>regen_threshold))  // brute regen is needed
+		
+		if(pre_theta>100 && (1.0*(num_polluted)/(numSamples-pre_theta)>__regen_threshold))  // brute regen is needed
 		{
 			refresh_FRmRRsets(pre_theta);
 			num_revise_RR=0;
@@ -283,6 +291,7 @@ public:
 					{
 						if(model=="IC")
 						{
+						auto single_start = std::chrono::high_resolution_clock::now();
 							add_root(i, -root_diff);
 						}
 						else
@@ -320,6 +329,9 @@ public:
 				}
 			}
 		}
+		auto single_end = std::chrono::high_resolution_clock::now();
+		revise_mRRset_time += std::chrono::duration<double>(single_end - single_start).count();
+		
 		if (prevSize < numSamples)
 		{
 			_num_mRRsets = numSamples;
@@ -339,10 +351,14 @@ public:
 			}
 			vecRoot_num.resize(numSamples);
 		}
+
+		single_start = std::chrono::high_resolution_clock::now();
 		for (auto i = prevSize; i < numSamples; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
 		{
 			build_one_mRRset_tree(i, root_num, residual);
 		}
+		single_end = std::chrono::high_resolution_clock::now();
+		build_mRRset_time += std::chrono::duration<double>(single_end - single_start).count();
 	}
 
 	int build_one_mRRset_tree(int mRRid, int root_num, double residual)
@@ -1147,9 +1163,9 @@ public:
 			else
 			{
 				auto mRR_size_1 = mRR.size() + 1;
-				mRR.reserve(mRR_size_1);
+				// mRR.reserve(mRR_size_1);
 				mRR.resize(mRR_size_1);
-				vec_RR_layer.reserve(mRR_size_1);
+				// vec_RR_layer.reserve(mRR_size_1);
 				vec_RR_layer.resize(mRR_size_1);
 				auto &RR = mRR[mRR_size_1 - 1];
 				RR.push_back(root);
@@ -1159,11 +1175,13 @@ public:
 				__vecVisitBool[root] = true;
 				auto &frset = _FRsets[root];
 				auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+#ifdef DEBUG
 				if (it != frset.end() && *it == mRRid)
 				{
 					cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
 					exit(1);
 				}
+#endif
 				frset.insert(it, mRRid);
 #ifdef DEBUG
 				mRR_hash.insert(root);
@@ -1190,18 +1208,17 @@ public:
 							__vecVisitBool[nbrId] = true;
 							auto &frset = _FRsets[nbrId];
 							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+#ifdef DEBUG
 							if (it != frset.end() && *it == mRRid)
 							{
 								cout << __LINE__ << ", Error: mRRid " << mRRid << " already in the FRset of node " << node << endl;
 								exit(1);
 							}
-							else
-							{
-								frset.insert(it, mRRid);
-#ifdef DEBUG
-								vec_hash_FR[nbrId].insert(mRRid);
 #endif
-							}
+							frset.insert(it, mRRid);
+#ifdef DEBUG
+							vec_hash_FR[nbrId].insert(mRRid);
+#endif
 						}
 					}
 					layer_start = layer_end; // update the start index of the next layer
