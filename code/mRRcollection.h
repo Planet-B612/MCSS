@@ -38,6 +38,7 @@ public:
 	vsint vec_hash_mRR;
 	// #endif // !NDEBUG
 	vint vecRoot_num;
+	vint __vecSeq;
 	ulint _num_mRRsets = 0;
 	int pre_root_num = 0;
 	Argument *__arg;
@@ -51,6 +52,7 @@ public:
 	int num_delete_root_this_round = 0;
 	vvint vv_polluted_nodes;
 	vvint vv_virtual_roots;
+	vvint vv_next_mRRnode;
 	std::random_device rd; // initialize random number generator
 
 	double mRR_traversal_time = 0.0;
@@ -63,13 +65,15 @@ public:
 #ifdef DEBUG
 		vec_hash_FR.resize(__numV);
 #endif
-
+		model = arg.model;
 		__vecVisitBool = std::vector<bool>(__numV, false);
 		__vecTree = std::vector<int>(__numV, -1);
-		// __vecSeq = std::vector<int>(__numV, -1);
+		if(model != "IC")
+		{
+			__vecSeq = std::vector<int>(__numV, -1);
+		}
 		__vecNewTree = std::vector<int>(__numV, -1);
 		__vecVisitNode = Nodelist(__numV);
-		model = arg.model;
 		result = arg.result_dir;
 		PO.resize((__numV), vector<int>());
 		if (arg.real_time_pw == true)
@@ -321,11 +325,18 @@ public:
 			_num_mRRsets = numSamples;
 			vv_virtual_roots.resize(numSamples);
 			_mRRsets.resize(numSamples);
-			vec_mRR_layer.resize(numSamples);
 #ifdef DEBUG
 			vec_hash_mRR.resize(numSamples);
 #endif // !NDEBUG
 			vv_polluted_nodes.resize(numSamples);
+			if(model=="IC")
+			{
+				vec_mRR_layer.resize(numSamples);
+			}
+			else
+			{
+				vv_next_mRRnode.resize(numSamples);
+			}
 			vecRoot_num.resize(numSamples);
 		}
 		for (auto i = prevSize; i < numSamples; i++)  // if the number of previous mRR-sets is not enough, new mRR-sets will be generated
@@ -341,6 +352,7 @@ public:
 		root_num += (dsfmt_gv_genrand_open_close() <= residual);
 		vecRoot_num[mRRid] = root_num;
 		mRRset &mRR = _mRRsets[mRRid];
+		vint &vec_next_mRRnode=vv_next_mRRnode[mRRid];
 #ifdef DEBUG
 		sint &mRR_hash = vec_hash_mRR[mRRid];
 #endif // !NDEBUG
@@ -397,6 +409,7 @@ public:
 		}
 		else // LT model
 		{
+			vec_next_mRRnode.reserve(root_num);
 			for (int i = 0; i < root_num; i++)
 			{
 				auto &RR = mRR[i];
@@ -407,11 +420,20 @@ public:
 					ulint nbrs_size = nbrs.size();
 					if (nbrs_size == 0)
 					{
+						vec_next_mRRnode.push_back(-1);
 						break;
 					}
 					int nbrId = nbrs[dsfmt_gv_genrand_uint32_range(nbrs_size)];
-					if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
+					if ((__Activated)[nbrId])
+					{
+						vec_next_mRRnode.push_back(-1);						
 						break;
+					}
+					if (__vecVisitBool[nbrId])
+					{
+						vec_next_mRRnode.push_back(nbrId);
+						break;
+					}
 					__vecVisitBool[nbrId] = true;
 					_FRsets[nbrId].push_back(mRRid);
 					RR.push_back(nbrId);
@@ -836,7 +858,7 @@ public:
 	void mRR_update_lt(int mRRid, Nodelist &del_nodes)
 	{
 		mRRset &mRR = _mRRsets[mRRid];
-		mRRset &mRR_layer = vec_mRR_layer[mRRid];
+		vint &vec_next_mRRnode = vv_next_mRRnode[mRRid];
 #ifdef DEBUG
 		mRRset pre_mRR = mRR;
 		sint &mRR_hash = vec_hash_mRR[mRRid];
@@ -845,6 +867,9 @@ public:
 		vint &v_roots = vv_virtual_roots[mRRid];
 		ulint v_roots_size = v_roots.size();
 		vint roots, del_roots;
+		vvint vv_del_idx(mRR_size);
+		vint extendable_chains;
+		extendable_chains.reserve(mRR_size);
 		roots.reserve(v_roots_size + mRR_size);
 		del_roots.reserve(mRR_size);
 
@@ -856,7 +881,6 @@ public:
 				v_roots.erase(v_roots.begin() + i);
 				continue;
 			}
-			__vecNewTree[root] = mRR_size; // mark realized v_roots
 		}
 		v_roots_size = v_roots.size();
 
@@ -864,27 +888,67 @@ public:
 		bool find_del = false;
 		for (int i = 0; i < mRR_size; i++) 
 		{
-			auto &RR = mRR[i];
+			auto &RR = mRR[i], &del_idx=vv_del_idx[i];
 			min_tree_RR_size = static_cast<int>(RR.size());
 			for (int j = 0; j < min_tree_RR_size; j++)
 			{
-				__vecTree[RR[j]] = i;
-				if (!find_del && __Activated[RR[j]])
+				int node=RR[j];
+				__vecTree[node] = i;
+				__vecSeq[node] = j; 
+				if (__Activated[node])
 				{
-					first_del_idx = j;
-					min_tree = i;
-					find_del = true;
-				}
-				if (find_del)
-				{	
-					break;
+					del_idx.push_back(j);
+					if(find_del == false)
+					{
+						min_tree = i;
+						find_del = true;
+					}
 				}
 			}
-			if (find_del)
+			if(find_del&& del_idx.empty())
 			{
-				break;
+				extendable_chains.push_back(i);
 			}
 		}
+		// move lists from end to begin
+		
+		for(const auto &chain_id:extendable_chains)
+		{
+			int node=vec_next_mRRnode[chain_id];
+			if(node>=0 && !__Activated[node] && __vecTree[node]<chain_id)  // the next node may be -1 due to activated or having no neighbor
+			{
+				__vecNewTree[node] = true; // the next node is usable
+			}
+		}
+
+		for(const auto &node:vec_next_mRRnode)
+		{
+			if(node>=0 && !__Activated[node] && __vecTree[node] > -1)
+			{
+				
+			}
+		}
+		for(int i=mRR_size-1;i>=0;i++)
+		{
+			auto &del_idx = vv_del_idx[i];
+			if (del_idx.empty())
+			{
+				continue;
+			}
+			auto &RR= mRR[i];
+			int RR_size = static_cast<int>(RR.size());
+			for(int j=del_idx[0];j<RR_size;j++)
+			{
+				int node = RR[j];
+				if(__Activated[node])
+					continue; 
+				if(__vecNewTree[node] > -1) 
+			
+		}
+		
+
+
+
 		auto &min_tree_RR=mRR[min_tree];
 		int first_del_idx_1=first_del_idx+1;
 		for (int i =first_del_idx_1; i < min_tree_RR_size; i++)
