@@ -161,6 +161,7 @@ public:
 		double a_1_23 = 2.0 * a_1 / 3.0, a_1_49=4.0* a_1 *a_1 / 9.0, a_2_2=a_2 * a_2;		
 		double seed_ratio_LB = 0.0, max_ratio_UB = 0.0, this_LB_ratio=0.0, this_UB_ratio=0.0, ratio_i=0.0;
 		int seed = 0;
+		seed_batch.clear();
 		for(auto i=0;i<__numV;i++)  // in the same round, only newly updated mRR-sets will contribute to vec_deg
 		{
 			if((__Activated)[i]) continue;
@@ -232,7 +233,7 @@ public:
 			else
 			{
 				RR.build_n_mRRsets_tree(theta, pre_theta);
-			}		
+			}
 			if (batch_size > 1) select=build_seedset(theta, ratio);
 			else  select=build_max_single_seed(theta, ratio);
 			if(select) 

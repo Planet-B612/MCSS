@@ -38,3 +38,18 @@
 # ./run -eta_0 0.18
 
 # done
+
+dataset=("facebook" "dblp" "flickr" "nethept" "epinions" "youtube" "pokec" "orkut" "livejournal" "friendster" "DBLP_sym" "Youtube_sym" "twitter" "citeseer" "Flickr_sym" "wikitalk" "wikitalkar")
+data_No=4 # 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal
+Times=(0 1 2 3 4 5 6 7 8 9)
+set=set1
+ratio=1e-4
+batch=4
+eta=10000
+OUTPUT=../log_Q/our_${dataset[$data_No]}_${eta}_${ratio}_b${batch}
+{
+    for times in ${Times[@]}
+    do
+        sudo cset proc -s $set -e -- ./run -dataset_No $data_No -eta_0 $eta -batch $batch -times $times -q_ratio $ratio
+    done
+}|tee -a $OUTPUT

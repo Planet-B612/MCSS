@@ -27,7 +27,7 @@ int eta_left_threshold=30;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 
 
-bool do_verify = true;
+bool do_verify = false;
 int pol_node_num_for_accuracy_verification = 20000;
 vint pol_node_num_for_accuracy_verification_list = {10000,20000,30000,40000,50000};
 // vint pol_node_num_for_accuracy_verification_list = {50000};
@@ -45,11 +45,11 @@ int eta_for_verification=20000;
 
 class Argument{
 public:
-    float eta_0 = 10000;
+    float eta_0 = 10;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
-    string model = "IC";
+    string model = "LT";
     bool Rnd_cost = true;
     //int simRnd = 100;
     float eps = 0.5;
@@ -58,18 +58,18 @@ public:
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
     vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
     // vector<int> data={4};
-    int dataset_No = 4;  // 17: sample, 10: DBLP_sym, 11: Youtube_sym, 4: epinions
+    int dataset_No = 4;  // 17: sample, 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
     string result_dir = "../results/backup.txt";
     int run_times=1;
     int times=0;
-    int batch=2;
+    int batch=1;
     int linear_search_thr=0;  // recommended 50 for formal running
     bool seed_out=true;
     bool gene_ini_pw=false;
-    bool real_time_pw=false;
+    bool real_time_pw=true;
     int numV=1;
     float left_num = 100.0;
     float over_pnodes = 10.0;

@@ -52,6 +52,10 @@ int main(int argn, char **argv)
         TAlg Alg(arg);
 
         vector<int> seeds;
+        // Alg.RR.build_n_mRRsets_tree(1,0);
+        Alg.RR.test_mRR();
+        exit(0);
+
         auto RR_info = Alg.AdaptiveSelect();
         seeds = seed_set;
         auto memory = getProcMemory();

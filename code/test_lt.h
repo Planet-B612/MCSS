@@ -4,38 +4,25 @@
 void test_mRR()
 {
 	gene_syn_mRR();
-	vint del_nodes = {16,19};
+	vint del_nodes = {20,23};
 	for (const auto &node : del_nodes)
 	{
 		__Activated[node] = true;
 	}
-	vv_virtual_roots[0] = {10};
+	vv_virtual_roots[0] = {6};
 	vecRoot_num[0] = 3;
 	add_root_lt(0, 1);
 	// delete_root(0, 1);
-	mRR_update_lt(0, del_nodes);
+	mRR_update(0, del_nodes);
 	add_root_lt(0, 1);
-	cout<<"test mRR finished."<<endl;
 }
 
 void gene_syn_mRR()
 {
-	// __Activated[17] = true;
+	__Activated[17] = true;
 	mRRset mRR;
-	mRRset mRR_layer;
-	if(model=="IC")
-	{
-		mRR.push_back({5, 4, 21, 0, 6, 22, 18, 15, 13});
-		mRR_layer.push_back({0,1,3,6});
-		mRR.push_back({20, 12, 19, 10, 14, 1, 16, 3, 7});
-		mRR_layer.push_back({0,1,3,6,8});
-		vec_mRR_layer.push_back(mRR_layer);
-	}
-	else
-	{
-		mRR.push_back({11,15,6,0,18,19,2});
-		mRR.push_back({22,23,3,16,9,15,13,12,10});
-	}
+	mRR.push_back({11,15,6,0,18,19,2});
+	mRR.push_back({22,23,3,16,9,15,13,12,10});
 	for (const auto &RR : mRR)
 	{
 		for (const auto &node : RR)
@@ -90,7 +77,6 @@ bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool
 bool identical_element_check(int rid, string str)
 {
 	mRRset &mRR=_mRRsets[rid];
-	mRRset &mRR_layer=vec_mRR_layer[rid];
 	int pre_node=-1;
 	for(const auto &RR:mRR)
 	{
@@ -102,22 +88,6 @@ bool identical_element_check(int rid, string str)
 				return true;
 			}
 			pre_node=node;
-		}
-	}
-	if(model=="IC")
-	{
-		for(const auto &layer:mRR_layer)
-		{
-			int pre_idx=-1;
-			for(const auto &idx:layer)
-			{
-				if(idx<=pre_idx)
-				{
-					cout<<"pre_idx "<<pre_idx<<" <= idx "<<idx<<endl;
-					return true;
-				}
-				pre_idx=idx;
-			}
 		}
 	}
 	return false;

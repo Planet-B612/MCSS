@@ -30,7 +30,7 @@ int main(int argn, char **argv)
     Argument arg;
     arg.dataset_No = 0;
     arg.real_time_pw = true;  // generate possible world in real time
-    string graph_path="/data/gongyao/graphInfo/sample";
+    string graph_path="/data/fc/graphInfo/sample";
     R_graph.clear(), O_graph.clear();  // global variables
     GraphBase::load_graph_directly_nbr_sorted(graph_path, O_graph, R_graph);
     __Activated.clear();
