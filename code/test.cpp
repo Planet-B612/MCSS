@@ -25,29 +25,56 @@ using namespace std;
 
 #define Test_Time 0
 
+static double logcnk(int n, int k) 
+{
+    double ans = 0;
+    for (int i = n - k + 1; i <= n; i++)
+    {
+        ans += log(i);
+    }
+    for (int i = 1; i <= k; i++)
+    {
+        ans -= log(i);
+    }
+    return ans;
+}
+
 int main(int argn, char **argv)
 {
-    Argument arg;
-    arg.dataset_No = 0;
-    arg.real_time_pw = true;  // generate possible world in real time
-    string graph_path="/data/fc/graphInfo/sample";
-    R_graph.clear(), O_graph.clear();  // global variables
-    GraphBase::load_graph_directly_nbr_sorted(graph_path, O_graph, R_graph);
-    __Activated.clear();
-    activated_nodes.clear();
-    activated_nodes.push_back({});
-    seed_set.clear();
-    cost.clear();
-    dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));  // the type must be uint32_t, to be accord with the function definition
-    arg.arg_update(argn, argv);
-    arg.load_cost_graph(0);
-    mRRcollection RR(arg);
-    root_num = 3;
-    // RR[0] = {}
-    RR.build_n_mRRsets_tree(1);
-    // RR.output_info(0);
-    RR.add_root(0,2);
-    RR.add_root(0,2);
+    double eps = 0.7;
+    int __eta_left = 60;
+    int eta = 20000;
+    int __numV_left = 4846609 + __eta_left - eta;
+    double delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+    int batch_size = 8;
+    double approx=1.0-power((1-1.0/batch_size),batch_size);
+    double elta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+    double eps_hat=99.0*eps/(100.0-eps);
+    const double alpha = sqrt(log(6.0 / delta));
+    const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
+    int theta = 2 * (alpha + beta)* (alpha + beta);
+    cout << "alpha: " << alpha << ", beta: " << beta << ", theta: " << theta << endl;
+    // Argument arg;
+    // arg.dataset_No = 0;
+    // arg.real_time_pw = true;  // generate possible world in real time
+    // string graph_path="/data/gongyao/graphInfo/sample";
+    // R_graph.clear(), O_graph.clear();  // global variables
+    // GraphBase::load_graph_directly_nbr_sorted(graph_path, O_graph, R_graph);
+    // __Activated.clear();
+    // activated_nodes.clear();
+    // activated_nodes.push_back({});
+    // seed_set.clear();
+    // cost.clear();
+    // dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));  // the type must be uint32_t, to be accord with the function definition
+    // arg.arg_update(argn, argv);
+    // arg.load_cost_graph(0);
+    // mRRcollection RR(arg);
+    // root_num = 3;
+    // // RR[0] = {}
+    // RR.build_n_mRRsets_tree(1);
+    // // RR.output_info(0);
+    // RR.add_root(0,2);
+    // RR.add_root(0,2);
     // // RR.output_info(0);
     // // RR.delete_root(0,1);
     // // RR.output_info(0);
@@ -638,3 +665,5 @@ int main_2(int argn, char **argv)
 
 }
 */
+
+

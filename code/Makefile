@@ -1,7 +1,10 @@
-all: run rundebug test
+all: run runlog rundebug test
 
 run: *.cpp *.h
-		g++ run.cpp -Wall -g -std=c++11 -O3 ../dSFMT/dSFMT.c -o run
+		g++ run.cpp -Wall -std=c++11 -O3 ../dSFMT/dSFMT.c -o run
+
+runlog: *.cpp *.h
+		g++ run.cpp -Wall -g -DLOG -std=c++11 -O3 ../dSFMT/dSFMT.c -o runlog
 
 rundebug: *.cpp *.h
 		g++ run.cpp -Wall -g -DDEBUG -std=c++11 -O3 ../dSFMT/dSFMT.c -o rundebug
