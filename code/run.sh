@@ -39,17 +39,28 @@
 
 # done
 
-dataset=("facebook" "dblp" "flickr" "nethept" "epinions" "youtube" "pokec" "orkut" "livejournal" "friendster" "DBLP_sym" "Youtube_sym" "twitter" "citeseer" "Flickr_sym" "wikitalk" "wikitalkar")
-data_No=4 # 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal
-Times=(0 1 2 3 4 5 6 7 8 9)
-set=set1
-ratio=1e-4
-batch=4
-eta=10000
-OUTPUT=../log_Q/our_${dataset[$data_No]}_${eta}_${ratio}_b${batch}
-{
-    for times in ${Times[@]}
-    do
-        sudo cset proc -s $set -e -- ./run -dataset_No $data_No -eta_0 $eta -batch $batch -times $times -q_ratio $ratio
-    done
-}|tee -a $OUTPUT
+if [ "$1" -lt 0 ] || [ "$1" -ge ${#dataset[@]} ]; then
+    echo "Error: Invalid dataset index"
+    exit 1
+fi
+
+if ! [[ "$2" =~ ^[0-9]+$ ]]; then
+    echo "Error: eta must be a number"
+    exit 1
+fi
+
+batch=2
+eps=0.7
+cur_date=$( date +"%m-%d")
+eta=$2
+k=$((((eta-3000)/500)+1))
+set="${dataset[$1]}${k}"
+if [ "$1" -eq 10 ]; then
+    set="dblp${k}"
+fi
+if [ "$1" -eq 11 ]; then
+    set="youtube${k}"
+fi
+batch=$3
+OUTPUT="log_mine/mine_${dataset[$1]}_${eta}_b${batch}_eps${eps}_${cur_date}.log"
+sudo cset proc -s "$set" -e -- ./asm -dataset_No "$1" -eta "$2" -batch "$batch" -epsilon "$eps" -start_time "0" -time "10" -Rand_cost "0"| tee -a $OUTPUT

@@ -7,7 +7,7 @@ runlog: *.cpp *.h
 		g++ run.cpp -Wall -g -DLOG -std=c++11 -O3 ../dSFMT/dSFMT.c -o runlog
 
 rundebug: *.cpp *.h
-		g++ run.cpp -Wall -g -DDEBUG -std=c++11 -O3 ../dSFMT/dSFMT.c -o rundebug
+		g++ run.cpp -Wall -g -DDEBUG -DLOG -std=c++11 -O3 ../dSFMT/dSFMT.c -o rundebug
 
 test: *.cpp *.h
 		g++ test_vanilla.cpp -Wall -g -std=c++11 -O3 ../dSFMT/dSFMT.c -o test

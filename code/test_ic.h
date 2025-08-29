@@ -52,17 +52,17 @@ void gene_syn_mRR()
 bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool, int seq, int fr, bool reverse = false, bool identical_ele=false)
 {
 	bool a = false, b = false, c = false, d = false, e = false, f = false, g=false;
-	// if (newtree)
-	// 	a = vec_value_check(__vecNewTree, -1, 1, str + " __vecNewTree includes non -1 values.");
-	// if (tree)
-	// 	b = vec_value_check(__vecTree, -1, 1, str + " __vecTree includes non -1 values.");
-	// if (visitBool)
-	// 	c = vec_value_check(__vecVisitBool, false, 1, str + " __vecVisitBool includes TRUE values.");
+	if (newtree)
+		a = vec_value_check(__vecNewTree, -1, 1, str + " __vecNewTree includes non -1 values.");
+	if (tree)
+		b = vec_value_check(__vecTree, -1, 1, str + " __vecTree includes non -1 values.");
+	if (visitBool)
+		c = vec_value_check(__vecVisitBool, false, 1, str + " __vecVisitBool includes TRUE values.");
 	// if (seq)
 	// 	d = vec_value_check(__vecSeq, -1, 1, str + " __vecSeq includes non -1 values.");
-	// if (fr)
-	// 	e = FR_check_hash(mRRid, str + " FR_check");
-	// if(reverse) f=FR_reverse_check(str+" FR_reverse_check");
+	if (fr)
+		e = FR_check_hash(mRRid, str + " FR_check");
+	if(reverse) f=FR_reverse_check(str+" FR_reverse_check");
 	if(identical_ele)
 	{
 		g=identical_element_check(mRRid, str);
@@ -159,7 +159,7 @@ template <typename T, typename T1>
 bool vec_value_check(T &vec, T1 val, int equality, string str) // equality: 1: should be equal to val, -1: shoud not equal to val, 2: should be greater than, -2: should be smaller than
 {
 	bool flag = false;
-	Nodelist vec_ind;
+	Nodelist vec_ind={};
 	if (equality == 1)
 	{
 		for (auto i = 0; i < vec.size(); i++)
@@ -173,15 +173,11 @@ bool vec_value_check(T &vec, T1 val, int equality, string str) // equality: 1: s
 		}
 		if (flag)
 		{
-			std::fstream result_bk(result, ios::app);
-			assert(!result_bk.fail());
-			result_bk << str << " vec Value errors: " << endl;
+			cout << str<<VAR_NAME(vec) << ", vec Value errors: " << endl;
 			for (auto i : vec_ind)
 			{
-				result_bk << vec[i] << ", ";
+				cout << vec[i] << ", ";
 			}
-			result_bk << endl;
-			result_bk.close();
 			vec_out(vec_ind, "vec_ind: ");
 			return true;
 		}
@@ -291,13 +287,27 @@ bool FR_reverse_check(string str)
 bool FR_check_hash(int rid, string str)
 {
 	sint &mRR_hash = vec_hash_mRR[rid];
+	bool flag = false;
 	for (const auto &node : mRR_hash)
 	{
 		if (vec_hash_FR[node].find(rid) == vec_hash_FR[node].end())
 		{
+			// cout<<"RRid in vec_hash_mRR of "<<node <<" includes: ";
+			// for(const auto &id:vec_hash_FR[node])
+			// {
+			// 	cout<<id<<", ";
+			// }
+			// cout<<endl;
+			flag = true;
 			cout << "FR_check error: " << rid << " is not in the FR of " << node << endl;
+			// return true;
 		}
 	}
+	if(flag)
+	{
+		return true;
+	}
+	return false;
 }
 
 bool FR_check(int rid, string str)

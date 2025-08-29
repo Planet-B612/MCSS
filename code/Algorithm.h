@@ -279,7 +279,7 @@ public:
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 #ifdef LOG
 		std::ofstream result;
-		string file_name = "../results/round/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps) + ".txt";
+		string file_name = "../round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps) + ".txt";
 		result.open(file_name, ios::app);
 		assert(!result.fail());
 		// result << "start recording at " << std::chrono::system_clock::now() << std::endl;
@@ -379,7 +379,7 @@ public:
 	
 			round_num++;
 #ifdef LOG
-			result<<(round_num)<<", \t"<<counter<<", \t"<<(__eta_left)<<", \t"<<1.0*(__numV_left)/(__eta_left)<<", \t theta = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add root: "<< RR.num_add_root_this_round<<" \t delete root: "<<RR.num_delete_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<elapsed.count() << " 秒"<<endl;  // the round that is currently running
+			result<<(round_num)<<", \t"<<counter<<", \t"<<(__eta_left)<<", \t"<<1.0*(__numV_left)/(__eta_left)<<", \t theta = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add root: "<< RR.num_add_root_this_round<<" \t delete root: "<<RR.num_delete_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<round_elapsed.count() << " 秒"<<endl;  // the round that is currently running
 #endif
 			RR.num_update_this_round=0;
 			RR.num_add_root_this_round = 0;

@@ -14,8 +14,7 @@ using namespace std;
 
 
 int main(int argn, char **argv)
-{
-    
+{   
     Argument arg;  // claimed in Argument.h
     R_graph.clear(), O_graph.clear();  // global variables
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));  // the type must be uint32_t, to be accord with the function definition
@@ -53,8 +52,8 @@ int main(int argn, char **argv)
 
         vector<int> seeds;
         // Alg.RR.build_n_mRRsets_tree(1,0);
-        Alg.RR.test_mRR();
-        exit(0);
+        // Alg.RR.test_mRR();
+        // exit(0);
 
         auto RR_info = Alg.AdaptiveSelect();
         seeds = seed_set;

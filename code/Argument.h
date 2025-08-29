@@ -5,6 +5,8 @@
 #include "graph.h"
 using namespace std;
 
+#define VAR_NAME(x) #x
+
 // global variables
 Graph R_graph, O_graph;  
 vector<double> Inv_inDeg;
@@ -43,14 +45,14 @@ int eta_for_verification=20000;
 
 class Argument{
 public:
-    float eta_0 = 10;
+    float eta_0 = 10000;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
     string model = "LT";
-    bool Rnd_cost = true;
+    bool Rnd_cost = false;
     //int simRnd = 100;
-    float eps = 0.5;
+    float eps = 0.9;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
@@ -60,14 +62,14 @@ public:
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
-    string result_dir = "../results/backup.txt";
-    int run_times=1;
+    string result_dir = "../backup.txt";
+    int run_times=10;
     int times=0;
-    int batch=1;
+    int batch=16;
     int linear_search_thr=0;  // recommended 50 for formal running
-    bool seed_out=true;
+    bool seed_out=false;
     bool gene_ini_pw=false;
-    bool real_time_pw=true;
+    bool real_time_pw=false;
     int numV=1;
     int eta_left_threshold = 5;
     float regen_threshold=0.15;
@@ -132,8 +134,6 @@ public:
                 regen_threshold = stof(argv[i + 1]);
             if (argv[i] == string("root_nbound"))
                 root_num_bound = stoi(argv[i + 1]);
-            if (argv[i] == string("-Rnd_cost"))
-                Rnd_cost = stoi(argv[i + 1]);
             // if (argv[i] == string("-over_pnodes"))
             //     over_pnodes = stof(argv[i + 1]);
         }      
