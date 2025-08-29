@@ -909,7 +909,7 @@ public:
 		bool find_del = false;
 		for (int i = 0; i < mRR_size; i++) 
 		{
-			auto &RR = mRR[i], &del_idx=vv_del_idx[i];
+			auto &RR = mRR[i];
 			min_tree_RR_size = static_cast<int>(RR.size());
 			for (int j = 0; j < min_tree_RR_size; j++)
 			{
@@ -932,15 +932,6 @@ public:
 			{
 				continue;
 			}
-			auto &RR= mRR[i];
-			int RR_size = static_cast<int>(RR.size());
-			for(int j=del_idx[0];j<RR_size;j++)
-			{
-				int node = RR[j];
-				if(__Activated[node])
-					continue; 
-				if(__vecNewTree[node] > -1) 
-			
 		}
 
 		auto &min_tree_RR=mRR[min_tree];
