@@ -38,6 +38,7 @@ public:
 	vsint vec_hash_mRR;
 	// #endif // !NDEBUG
 	vint vecRoot_num;
+	vint __vecSeq;
 	ulint _num_mRRsets = 0;
 	int pre_root_num = 0;
 	Argument *__arg;
@@ -55,6 +56,7 @@ public:
 	int __root_num_bound = 250; // try to delete unnecessary mRR-sets when the number of roots in an mRR exceeds this value. sample:0, facebook: 25, dblp: 250
 	vvint vv_polluted_nodes;
 	vvint vv_virtual_roots;
+	vvint vv_next_mRRnode;
 	std::random_device rd; // initialize random number generator
 
 	double mRR_traversal_time = 0.0;
@@ -900,7 +902,6 @@ public:
 				v_roots.erase(v_roots.begin() + i);
 				continue;
 			}
-			__vecNewTree[root] = mRR_size; // mark realized v_roots
 		}
 		v_roots_size = v_roots.size();
 
@@ -908,12 +909,14 @@ public:
 		bool find_del = false;
 		for (int i = 0; i < mRR_size; i++) 
 		{
-			auto &RR = mRR[i];
+			auto &RR = mRR[i], &del_idx=vv_del_idx[i];
 			min_tree_RR_size = static_cast<int>(RR.size());
 			for (int j = 0; j < min_tree_RR_size; j++)
 			{
-				__vecTree[RR[j]] = i;
-				if (!find_del && __Activated[RR[j]])
+				int node=RR[j];
+				__vecTree[node] = i;
+				__vecSeq[node] = j; 
+				if (__Activated[node])
 				{
 					first_del_idx = j;
 					min_tree = i;
@@ -927,8 +930,17 @@ public:
 			}
 			if (find_del)
 			{
-				break;
+				continue;
 			}
+			auto &RR= mRR[i];
+			int RR_size = static_cast<int>(RR.size());
+			for(int j=del_idx[0];j<RR_size;j++)
+			{
+				int node = RR[j];
+				if(__Activated[node])
+					continue; 
+				if(__vecNewTree[node] > -1) 
+			
 		}
 
 		auto &min_tree_RR=mRR[min_tree];
