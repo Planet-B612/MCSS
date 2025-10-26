@@ -1,0 +1,6 @@
+1, 	214, 	9786, 	13.4239, 	 theta = 6328; 	 update: 0	 add root: 0 	 delete root: 0, 	97.168 MB, 	0.821101 秒
+1, 	211, 	9789, 	13.4201, 	 theta = 6328; 	 update: 0	 add root: 0 	 delete root: 0, 	97.4844 MB, 	0.297512 秒
+1, 	2259, 	7741, 	16.706, 	 theta = 3164; 	 update: 0	 add root: 0 	 delete root: 0, 	70.2461 MB, 	0.469823 秒
+1, 	196, 	9804, 	13.4011, 	 theta = 6328; 	 update: 0	 add root: 0 	 delete root: 0, 	97.1406 MB, 	0.815261 秒
+1, 	191, 	9809, 	13.3947, 	 theta = 3164; 	 update: 0	 add root: 0 	 delete root: 0, 	70.3438 MB, 	0.434164 秒
+1, 	186, 	9814, 	13.3884, 	 theta = 3164; 	 update: 0	 add root: 0 	 delete root: 0, 	70.332 MB, 	0.440879 秒
