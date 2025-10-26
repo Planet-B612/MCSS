@@ -41,19 +41,43 @@ static double logcnk(int n, int k)
 
 int main(int argn, char **argv)
 {
-    double eps = 0.7;
-    int __eta_left = 60;
-    int eta = 20000;
-    int __numV_left = 4846609 + __eta_left - eta;
-    double delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
-    int batch_size = 8;
-    double approx=1.0-power((1-1.0/batch_size),batch_size);
-    double elta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
-    double eps_hat=99.0*eps/(100.0-eps);
-    const double alpha = sqrt(log(6.0 / delta));
-    const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
-    int theta = 2 * (alpha + beta)* (alpha + beta);
-    cout << "alpha: " << alpha << ", beta: " << beta << ", theta: " << theta << endl;
+    std::string filename = "/data/fc/graphInfo/Twitter";
+    std::vector<std::string> lines;
+    std::string line;
+    
+    // 读取文件
+    std::ifstream inFile(filename);
+    while (std::getline(inFile, line)) {
+        lines.push_back(line);
+    }
+    inFile.close();
+    
+    // 修改第一行
+    int firstNum = std::stoi(lines[0]);
+    lines[0] = std::to_string(firstNum) + " " + std::to_string(lines.size());
+    
+    // 写回文件
+    std::ofstream outFile(filename);
+    for (const auto& l : lines) {
+        outFile << l << std::endl;
+    }
+    outFile.close();
+    
+    std::cout << "修改完成! 新第一行: " << lines[0] << std::endl;
+
+    // double eps = 0.7;
+    // int __eta_left = 60;
+    // int eta = 20000;
+    // int __numV_left = 4846609 + __eta_left - eta;
+    // double delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+    // int batch_size = 8;
+    // double approx=1.0-power((1-1.0/batch_size),batch_size);
+    // double elta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+    // double eps_hat=99.0*eps/(100.0-eps);
+    // const double alpha = sqrt(log(6.0 / delta));
+    // const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
+    // int theta = 2 * (alpha + beta)* (alpha + beta);
+    // cout << "alpha: " << alpha << ", beta: " << beta << ", theta: " << theta << endl;
     // Argument arg;
     // arg.dataset_No = 0;
     // arg.real_time_pw = true;  // generate possible world in real time

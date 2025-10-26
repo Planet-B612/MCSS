@@ -74,10 +74,10 @@ public:
 		model = arg.model;
 		__vecVisitBool = std::vector<bool>(__numV, false);
 		__vecTree = std::vector<int>(__numV, -1);
-		// if(model != "IC")
-		// {
-		// 	__vecSeq = std::vector<int>(__numV, -1);
-		// }
+		if(model != "IC")
+		{
+			__vecSeq = std::vector<int>(__numV, -1);
+		}
 		__vecNewTree = std::vector<int>(__numV, -1);
 		__vecVisitNode = Nodelist(__numV);
 		result = arg.result_dir;
@@ -902,6 +902,7 @@ public:
 				v_roots.erase(v_roots.begin() + i);
 				continue;
 			}
+			__vecNewTree[root] = mRR_size; // mark realized v_roots
 		}
 		v_roots_size = v_roots.size();
 
@@ -913,10 +914,8 @@ public:
 			min_tree_RR_size = static_cast<int>(RR.size());
 			for (int j = 0; j < min_tree_RR_size; j++)
 			{
-				int node=RR[j];
-				__vecTree[node] = i;
-				__vecSeq[node] = j; 
-				if (__Activated[node])
+				__vecTree[RR[j]] = i;
+				if (!find_del&&__Activated[RR[j]])
 				{
 					first_del_idx = j;
 					min_tree = i;
@@ -930,7 +929,7 @@ public:
 			}
 			if (find_del)
 			{
-				continue;
+				break;
 			}
 		}
 
@@ -1017,7 +1016,7 @@ public:
 					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
 					if (it != frset.end() && *it == mRRid)
 					{
-						cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " already in _FRsets." << endl;
+						cout <<__LINE__<< "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " already in _FRsets." << endl;
 						exit(1);
 					}
 					frset.insert(it, mRRid);
@@ -1314,13 +1313,11 @@ public:
 			__vecVisitBool[root] = true;
 			auto &frset = _FRsets[root];
 			auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-			#ifdef DEBUG
 			if (it != frset.end() && *it == mRRid)
 			{
 				cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
 				exit(1);
 			}
-			#endif
 			frset.insert(it, mRRid);
 			#ifdef DEBUG
 				mRR_hash.insert(root);

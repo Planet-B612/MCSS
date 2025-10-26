@@ -45,27 +45,27 @@ int eta_for_verification=20000;
 
 class Argument{
 public:
-    float eta_0 = 10000;
+    float eta_0 = 20000;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
-    string model = "LT";
+    string model = "IC";
     bool Rnd_cost = false;
     //int simRnd = 100;
-    float eps = 0.9;
+    float eps = 0.7;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
-    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
+    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample", "Twitter"};
     // vector<int> data={4};
-    int dataset_No = 4;  // 17: sample, 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal
+    int dataset_No = 18;  // 17: sample, 18: Twitter, 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal, 9: friendster
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
     string result_dir = "../backup.txt";
-    int run_times=10;
+    int run_times=1;
     int times=0;
-    int batch=16;
+    int batch=4;
     int linear_search_thr=0;  // recommended 50 for formal running
     bool seed_out=false;
     bool gene_ini_pw=false;
@@ -77,6 +77,7 @@ public:
     float left_num = 100.0;
     float over_pnodes = 10.0;
     std::ofstream result_bk;
+    int delta_amp=1;
     
     Argument()
     {
@@ -111,7 +112,10 @@ public:
             if (argv[i] == string("-times"))
                 times = stoi(argv[i + 1]);
             if (argv[i] == string("-gene_ini_pw"))
-                gene_ini_pw = stoi(argv[i + 1]);
+                {
+                    gene_ini_pw = stoi(argv[i + 1]);
+                    cout<<"gene_ini_pw: "<<gene_ini_pw<<endl;
+                }
             if (argv[i] == string("-real_time_pw"))
                 real_time_pw = stoi(argv[i + 1]);
             if (argv[i] == string("-left_num"))
@@ -134,6 +138,8 @@ public:
                 regen_threshold = stof(argv[i + 1]);
             if (argv[i] == string("root_nbound"))
                 root_num_bound = stoi(argv[i + 1]);
+            if (argv[i] == string("-delta_amp"))
+                delta_amp = stoi(argv[i + 1]);
             // if (argv[i] == string("-over_pnodes"))
             //     over_pnodes = stof(argv[i + 1]);
         }      
@@ -174,6 +180,7 @@ public:
     {
         cur_data=k;
         string dataset_dir = graph_path + dataset[k];
+        cout<<dataset_dir<<", "<<dataset[k]<<endl;
         GraphBase::load_graph_directly_nbr_sorted(dataset_dir, O_graph, R_graph);
         // R_graph = GraphBase::load_graph(dataset_dir, 1);
         // O_graph = GraphBase::load_graph(dataset_dir, 0);
@@ -192,30 +199,7 @@ public:
         __Activated.resize(numV);
         fill(__Activated.begin(), __Activated.end(), false);
         //eta=(eta_0 + 0.02 * k)*numV;
-        string cost_file;
-        if (Rnd_cost)
-        {
-            cost_file = graph_path + dataset[k] + "_cost_Rand.txt";
-        }
-        else
-        {
-            cost_file = graph_path + dataset[k] + "_cost_001DEG.txt";
-            cout << "Using the cost file at " << cost_file << endl;
-        }
-        std::ifstream inFile;
-        inFile.open(cost_file);
-        if (!inFile)
-        {
-            cout << "cannot open the cost file at " << cost_file << endl;
-            exit(1);
-        }
-        inFile.seekg(0, std::ios_base::beg);
-        for (int i = 0; i < numV; i++)
-        {
-            inFile >> cost[i];
-            // assert(cost[i] >= 0 && cost[i] <= 1);
-        }
-        inFile.close();
+        
         // cout<<"==================Using uniform costs!!!==============="<<endl;
         // for (size_t i = 0; i < numV; i++)
         // {
@@ -271,6 +255,33 @@ public:
             }
             cout << "generate PO Done" <<endl;
             exit(0);
+        }
+        else
+        {
+            string cost_file;
+            if (Rnd_cost)
+            {
+                cost_file = graph_path + dataset[k] + "_cost_Rand.txt";
+            }
+            else
+            {
+                cost_file = graph_path + dataset[k] + "_cost_001DEG.txt";
+            }
+            cout << "Using the cost file at " << cost_file << endl;
+            std::ifstream inFile;
+            inFile.open(cost_file);
+            if (!inFile)
+            {
+                cout << "cannot open the cost file at " << cost_file << endl;
+                exit(1);
+            }
+            inFile.seekg(0, std::ios_base::beg);
+            for (int i = 0; i < numV; i++)
+            {
+                inFile >> cost[i];
+                // assert(cost[i] >= 0 && cost[i] <= 1);
+            }
+            inFile.close();
         }
         return;
     }
