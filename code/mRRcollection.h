@@ -95,6 +95,11 @@ public:
 			}
 			else
 			{
+				if(arg.times==2 && arg.Rnd_cost==false && arg.eta_0>4e6)
+				{
+					pw_path=arg.pw_path + arg.dataset[arg.dataset_No] + "_pw_lt6.txt";
+					cout<<"i = "<<arg.times<<" using pw file: "<< pw_path + arg.dataset[arg.dataset_No] + "_pw_lt6.txt"<<endl;
+				}
 				pw_path = arg.pw_path + arg.dataset[arg.dataset_No] + "_pw_lt" + to_string(arg.times) + ".txt";
 			}
 			cout << "used PO path: " + pw_path << endl;

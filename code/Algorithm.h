@@ -282,7 +282,7 @@ public:
 		return;
 	}
 
-	tuple<int,int,int,int,double,double> AdaptiveSelect()
+	tuple<int,int,int,int,double,double, double, double> AdaptiveSelect()
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 #ifdef LOG
@@ -421,7 +421,7 @@ public:
 		cout << "Single realization time " << total_realizaiton_time << " s" << endl;
 		cout << "Single seed selection time " << total_seed_selection_time << " s" << endl;
 
-		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
+		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV, RR.build_mRRset_time, RR.revise_mRRset_time);
 	}
 
 	tuple<double,double,double,double,double> accuracy_verification()

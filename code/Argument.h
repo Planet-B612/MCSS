@@ -45,11 +45,11 @@ int eta_for_verification=20000;
 
 class Argument{
 public:
-    float eta_0 = 20000;
+    float eta_0 = 2000;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
-    string model = "IC";
+    string model = "LT";
     bool Rnd_cost = false;
     //int simRnd = 100;
     float eps = 0.7;
@@ -99,7 +99,7 @@ public:
             //     simRnd = stoi(argv[i + 1]);
             if (argv[i] == string("-dataset_No"))
                 dataset_No = stoi(argv[i + 1]);
-            if (argv[i] == string("-Rnd_cost"))
+            if (argv[i] == string("-Rand_cost"))
                 Rnd_cost = stoi(argv[i + 1]);
             if (argv[i] == string("-eta_0"))
                 eta_0 = stof(argv[i + 1]);
@@ -228,7 +228,6 @@ public:
                 }
                 else
                 {
-                    out_pw.open(pw_path + dataset[dataset_No] + "_pw_lt" + to_string(i) + ".txt");
                     assert((!out_pw.fail()));
                     for(int v=0;v<(numV);v++)
                     {

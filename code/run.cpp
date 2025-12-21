@@ -21,8 +21,7 @@ int main(int argn, char **argv)
     arg.arg_update(argn, argv);
     // std::fstream result_bk("../results/backup", ios::app);
     // assert(!result_bk.fail());
-    double avg_cost = 0.0;
-    double avg_time = 0.0;
+    double avg_cost = 0.0, avg_time = 0.0, avg_build_time = 0.0, avg_revise_time = 0.0, avg_memory = 0.0;
     while(arg.times < arg.run_times && do_verify==false)
     {
         arg.Initialization();
@@ -57,6 +56,7 @@ int main(int argn, char **argv)
         
         auto RR_info = Alg.AdaptiveSelect();
         seeds = seed_set;
+        cout<<"Selected seed num: "<<seeds.size()<<endl;
         auto memory = getProcMemory();
         for (auto node : seeds)
         {
@@ -64,6 +64,9 @@ int main(int argn, char **argv)
         }
         avg_cost += total_cost;
         avg_time += get<4>(RR_info);
+        avg_memory += memory;
+        avg_build_time += get<6>(RR_info);
+        avg_revise_time += get<7>(RR_info);
         string results;
         results = "(" + arg.dataset[k] + ", eta = " + to_string(arg.eta_0) + ", Alg = " + "MINE, cost = " + to_string(total_cost) + ", prob = " + to_string(1.0) + ", time = " + to_string(get<4>(RR_info))  + ", memory = " + to_string(memory) + ", total_mRR = " + to_string(get<0>(RR_info)) +", mRR_update = " + to_string(get<1>(RR_info)) + +", mRR_add_back = " + to_string(get<2>(RR_info)) +", mRR_delete = " + to_string(get<3>(RR_info)) +  ")";
         // result_bk << results << endl;
@@ -79,6 +82,9 @@ int main(int argn, char **argv)
     }
     cout << "Average cost: " << avg_cost / arg.run_times << endl;
     cout << "Average time: " << avg_time / arg.run_times << endl;
+    cout << "Average memory: " << avg_memory / arg.run_times << " MB" << endl;
+    cout << "Average build mRRset time: " << avg_build_time / arg.run_times << " s" << endl;
+    cout << "Average revise mRRset time: " << avg_revise_time / arg.run_times << " s" << endl;
 
     if(do_verify)
     {
