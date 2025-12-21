@@ -5,7 +5,15 @@ dataset=("facebook" "dblp" "flickr" "nethept" "epinions" "youtube" "pokec" "orku
 #     echo "Error: Invalid dataset index"
 #     exit 1
 # fi
+# if [[ "$1" -lt 0 ]] || [[ "$1" -ge ${#dataset[@]} ]]; then
+#     echo "Error: Invalid dataset index"
+#     exit 1
+# fi
 
+# if ! [[ "$2" =~ ^[0-9]+$ ]]; then
+#     echo "Error: eta must be a number"
+#     exit 1
+# fi
 # if ! [[ "$2" =~ ^[0-9]+$ ]]; then
 #     echo "Error: eta must be a number"
 #     exit 1
@@ -29,6 +37,7 @@ model="LT"
 if [[ "$model" == "LT" ]]; then
     echo "Should be using LT model."
 fi
+delta_amp=1
 # OUTPUT="/home/cfeng/mRR_Regen/code/log_mine/mine_${dataset[$1]}_${eta}_b${batch}_eps${eps}_${start_time}_${end_time}_${cur_date}.log"
 OUTPUT="/home/cfeng/mRR_Regen/code/log_mine/mine_${dataset[18]}_${eta}_b${batch}_eps${eps}_${model}_${cur_date}.log"
 sudo cset proc -s "$set" -e -- ./run -dataset_No "18" -eta_0 "$eta" -model "$model" -batch "$batch" -eps "$eps" -times "$start_time" -run_times "$end_time" -Rand_cost "$Rand_cost" -regen "0.6" | tee -a "$OUTPUT"
