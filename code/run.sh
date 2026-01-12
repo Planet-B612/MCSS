@@ -31,7 +31,7 @@ if [[ "$1" -eq 18 ]]; then
     batch=4
     eps=0.9
 fi
-start_time=2
+start_time=3
 end_time=5
 model="LT"
 if [[ "$model" == "LT" ]]; then
