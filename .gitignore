@@ -33,5 +33,12 @@
 
 log*/
 result*/
-dSFMT/
 .vscode/
+run
+runtime
+*.txt
+*.sh
+runlog
+test
+test*.h 
+test*.cpp
