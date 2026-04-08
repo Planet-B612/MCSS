@@ -25,6 +25,8 @@ double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
+bool adapt_IM=true;
+bool mRR_time_test = false;
 
 
 bool do_verify = false;
@@ -45,26 +47,26 @@ int eta_for_verification=20000;
 
 class Argument{
 public:
-    float eta_0 = 10000;
+    float eta_0 = 2000;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
-    string model = "LT";
+    string model = "IC";
     bool Rnd_cost = false;
     //int simRnd = 100;
     float eps = 0.9;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
-    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample"};
+    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample", "Twitter"};
     // vector<int> data={4};
     int dataset_No = 4;  // 17: sample, 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
     string result_dir = "../backup.txt";
-    int run_times=10;
-    int times=0;
+    int run_times=20;
+    int times=10;
     int batch=16;
     int linear_search_thr=0;  // recommended 50 for formal running
     bool seed_out=false;
@@ -77,6 +79,7 @@ public:
     float left_num = 100.0;
     float over_pnodes = 10.0;
     std::ofstream result_bk;
+    int delta_amp=1;
     
     Argument()
     {
@@ -134,8 +137,12 @@ public:
                 regen_threshold = stof(argv[i + 1]);
             if (argv[i] == string("root_nbound"))
                 root_num_bound = stoi(argv[i + 1]);
-            // if (argv[i] == string("-over_pnodes"))
-            //     over_pnodes = stof(argv[i + 1]);
+            if (argv[i] == string("-delta_amp"))
+                delta_amp = stoi(argv[i + 1]);
+            if (argv[i] == string("-adapt_IM"))
+                adapt_IM = stoi(argv[i + 1]);
+            if (argv[i] == string("-mRR_time_test"))
+                mRR_time_test = stoi(argv[i + 1]);
         }      
     }   
     void Initialization()
@@ -153,6 +160,14 @@ public:
         if(do_verify)
         {
             cout<< "The accuracy verification is enabled, the number of polluted nodes is " << pol_node_num_for_accuracy_verification << ", the number of seeds is " << seed_num_for_accuracy_verification << ", the MC_round is "<<MC_round<<", the eta_for_verification is "<<eta_for_verification<<", eps_for_verification is "<<eps_for_verification<<endl;
+        }
+        if(model=="IC")
+        {
+            cout << "The diffusion model is IC." << endl;
+        }
+        else
+        {
+            cout << "The diffusion model is LT." << endl;
         }
         // if (format_graph != 0)
         // {
@@ -196,6 +211,7 @@ public:
         if (Rnd_cost)
         {
             cost_file = graph_path + dataset[k] + "_cost_Rand.txt";
+            cout << "Using the cost file at " << cost_file << endl;
         }
         else
         {
@@ -223,7 +239,7 @@ public:
         // }
         if(gene_ini_pw)
         {
-            for (int i = 0; i < run_times; i++){
+            for (int i = times; i < run_times; i++){
                 vector<vector<int>> PO(numV);
                 ofstream out_pw;
                 if(model=="IC")

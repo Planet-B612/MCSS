@@ -31,6 +31,7 @@ private:
 public:
 	vvint PO;
 	FRsets _FRsets;
+	FRsets _FRsets_veri;
 	mRRsets _mRRsets;
 	mRRsets vec_mRR_layer;
 	// #ifdef DEBUG
@@ -39,7 +40,7 @@ public:
 	// #endif // !NDEBUG
 	vint vecRoot_num;
 	vint __vecSeq;
-	ulint _num_mRRsets = 0;
+	ulint _num_mRRsets = 0, _num_mRRsets_veri = 0;
 	int pre_root_num = 0;
 	Argument *__arg;
 	string model;
@@ -66,6 +67,7 @@ public:
 		__arg = &arg;
 		__numV = arg.numV;
 		_FRsets = FRsets(__numV);
+		_FRsets_veri = FRsets(__numV);
 		__regen_threshold = arg.regen_threshold;
 		__root_num_bound = arg.root_num_bound;
 #ifdef DEBUG
@@ -458,7 +460,6 @@ public:
 				}
 			}
 		}
-
 		for (const auto &RR : mRR)
 		{
 			for (const auto &node : RR)
@@ -548,6 +549,78 @@ public:
 		{
 			__vecVisitBool[__vecVisitNode[i]] = false;
 		}
+		return 0;
+	}
+
+	int build_veri_mRRset_fresh(ulint theta, bool veri=false)
+	{
+		FRsets *FR;
+		ulint *num;
+		if(veri)
+		{
+			FR=&_FRsets_veri;
+			num= &_num_mRRsets_veri;
+		}
+		else
+		{
+			FR=&_FRsets;
+			num=&_num_mRRsets;
+		}
+		for (ulint mRRid = *num; mRRid < theta; mRRid++) 
+		{
+			int numVisitNode = 0, currNode = 0, root;
+			root = dsfmt_gv_genrand_uint32_range(__numV);
+			while ((__Activated)[root] || __vecVisitBool[root])
+			{
+				root = dsfmt_gv_genrand_uint32_range(__numV);
+			}
+			__vecVisitBool[root] = true;
+			(*FR)[root].push_back(mRRid);
+			if(model=="IC")
+			{
+				__vecVisitNode[numVisitNode++] = root;
+				while (currNode < numVisitNode)
+				{
+					const auto expand = __vecVisitNode[currNode];
+					currNode++;
+					for (auto &nbrId : (R_graph)[expand])
+					{
+						if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
+							continue;
+						if (dsfmt_gv_genrand_open_close() > Inv_inDeg[expand])
+							continue;
+						__vecVisitNode[numVisitNode++] = nbrId;
+						__vecVisitBool[nbrId] = true;
+						(*FR)[nbrId].push_back(mRRid);
+					}
+				}
+			}
+			else
+			{
+				__vecVisitNode[numVisitNode++] = root;
+				while(true)
+				{
+					auto &nbrs= (R_graph)[root];
+					ulint nbrs_size = nbrs.size();
+					if (nbrs_size == 0)
+					{
+						continue;
+					}
+					int nbrId = nbrs[dsfmt_gv_genrand_uint32_range(nbrs_size)];
+					if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
+						continue;
+					__vecVisitBool[nbrId] = true;
+					__vecVisitNode[numVisitNode++] = nbrId;
+					(*FR)[nbrId].push_back(mRRid);
+					root = nbrId;
+				}
+			}
+			for (int i = 0; i < numVisitNode; i++)
+			{
+				__vecVisitBool[__vecVisitNode[i]] = false;
+			}
+		}
+		*num = theta;		
 		return 0;
 	}
 
@@ -1251,6 +1324,176 @@ public:
 		return;
 	}
 
+
+	void naive_add_root(int mRRid, int num)
+	{
+		vecRoot_num[mRRid] += num;
+		mRRset &mRR = _mRRsets[mRRid];
+		auto &vec_RR_layer = vec_mRR_layer[mRRid];
+#ifdef DEBUG
+		sint &mRR_hash = vec_hash_mRR[mRRid];
+#endif // !NDEBUG
+		vint roots, new_roots;
+		roots.reserve(root_num);
+		new_roots.reserve(num);
+		mRR.reserve(root_num + num);
+		auto &v_roots = vv_virtual_roots[mRRid];
+		for (const auto &RR : mRR) // mark previous roots, and traverse the mRRset
+		{
+			int root = RR[0];
+			roots.push_back(root);
+			__vecTree[root] = 1024;
+			for (const auto &node : RR)
+			{
+				__vecVisitBool[node] = true;
+			}
+		}
+		for (auto root : v_roots)
+		{
+			__vecTree[root] = 1024; // a root
+		}
+#ifdef DEBUG
+		if (v_roots_check(mRRid, string(__func__) + " end"))
+		{
+			exit(1);
+		}
+#endif
+		bool virtual_root = false;
+		for (int j = 0; j < num; j++) // generate new roots
+		{
+			int root = dsfmt_gv_genrand_uint32_range(__numV);
+			while (__Activated[root] || __vecTree[root] > 0)
+			{
+				root = dsfmt_gv_genrand_uint32_range(__numV);
+			}
+			if (__vecVisitBool[root])
+			{
+				virtual_root = true;
+			}
+			__vecTree[root] = 1024;
+			new_roots.push_back(root);
+		}
+		roots.insert(roots.end(), new_roots.begin(), new_roots.end());
+		if(virtual_root)
+		{
+			mRR.resize(0);
+			
+			for(const auto &root : roots)
+			{
+
+			}
+		}
+		else
+		{
+
+		}
+			else
+			{
+				auto mRR_size_1 = mRR.size() + 1;
+				// mRR.reserve(mRR_size_1);
+				mRR.resize(mRR_size_1);
+				// vec_RR_layer.reserve(mRR_size_1);
+				vec_RR_layer.resize(mRR_size_1);
+				auto &RR = mRR[mRR_size_1 - 1];
+				RR.push_back(root);
+#ifdef DEBUG
+				mRR_hash.insert(root);
+#endif
+				__vecVisitBool[root] = true;
+				auto &frset = _FRsets[root];
+				auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+#ifdef DEBUG
+				if (it != frset.end() && *it == mRRid)
+				{
+					cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+					exit(1);
+				}
+#endif
+				frset.insert(it, mRRid);
+#ifdef DEBUG
+				mRR_hash.insert(root);
+				vec_hash_FR[root].insert(mRRid);
+#endif // !NDEBUG
+
+				int layer_start = 0, layer_end = 1;
+				while (layer_start < layer_end)
+				{
+					vec_RR_layer[mRR_size_1 - 1].push_back(layer_start);
+					for (int j = layer_start; j < layer_end; j++)
+					{
+						int node = RR[j];
+						for (const auto &nbrId : (R_graph)[node])
+						{
+							if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
+								continue;
+							if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
+								continue;
+							RR.push_back(nbrId);
+#ifdef DEBUG
+							mRR_hash.insert(root);
+#endif
+							__vecVisitBool[nbrId] = true;
+							auto &frset = _FRsets[nbrId];
+							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+#ifdef DEBUG
+							if (it != frset.end() && *it == mRRid)
+							{
+								cout << __LINE__ << ", Error: mRRid " << mRRid << " already in the FRset of node " << node << endl;
+								exit(1);
+							}
+#endif
+							frset.insert(it, mRRid);
+#ifdef DEBUG
+							vec_hash_FR[nbrId].insert(mRRid);
+#endif
+						}
+					}
+					layer_start = layer_end; // update the start index of the next layer
+					layer_end = RR.size();	 // update the end index of the next layer
+				}
+			}
+		}
+#ifdef DEBUG
+		if (v_roots_check(mRRid, string(__func__) + " end"))
+		{
+			exit(1);
+		}
+		mRRset a = {{}};
+		if (FR_reverse_check_hash(mRRid, a, "add_root"))
+		{
+			cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
+			exit(1);
+		}
+#endif
+		for (const auto &RR : mRR)
+		{
+			for (auto &node : RR)
+			{
+				__vecVisitBool[node] = false;
+			}
+		}
+		for (const auto &root : roots)
+		{
+			__vecTree[root] = -1;
+		}
+		for (const auto &root : new_roots)
+		{
+			__vecTree[root] = -1;
+		}
+
+		for (auto root : v_roots)
+		{
+			__vecTree[root] = -1;
+		}
+#ifdef DEBUG
+		if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 1))
+		{
+			exit(1);
+		}
+#endif
+		return;
+	}
+
 	void add_root_lt(int mRRid, int num)
 	{
 		vecRoot_num[mRRid] += num;
@@ -1498,6 +1741,7 @@ public:
 		for (int i = 0; i < __numV; i++)
 		{
 			FRset().swap(_FRsets[i]);
+			FRset().swap(_FRsets_veri[i]);
 		}
 		for (auto &vec : vv_virtual_roots)
 		{
@@ -1505,6 +1749,7 @@ public:
 		}
 		// no need to refresh mRRsets, since it is never recorded in ending rounds
 		_num_mRRsets = 0;
+		_num_mRRsets_veri=0;
 	}
 
 	/// Release memory

@@ -56,6 +56,7 @@ private:
 	double total_seed_selection_time = 0.0;
 	float __left_num = 600.0;
 	float __over_pnodes = 10.0;
+	int _delta_amp=1;
 
 public:
 	mRRcollection RR;
@@ -80,6 +81,7 @@ public:
 		// vec_LB= vector<double>(__numV, 0.0);
 		vec_deg= vector<int>(__numV, 0);
 		model=arg.model;
+		_delta_amp=arg.delta_amp;
 	}
 	
 	~Algorithm()
@@ -200,7 +202,8 @@ public:
 		int pre_theta=0;
 		if(batch_size>1)
 		{			
-			delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+			delta=_delta_amp*eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+			// delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
 			double eps_hat=99.0*eps/(100.0-eps);
 			const double alpha = sqrt(log(6.0 / delta));
 			const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
@@ -217,7 +220,7 @@ public:
 		}
 		else
 		{
-			delta=1.0/__numV_left;
+			delta=_delta_amp*1.0/__numV_left;
 			double eps_hat=(eps-delta)/(1-delta);
 			double eps_prime=(1-eps_hat)/(1+eps_hat);
 			theta_max=2*(1+eps_hat/3.0)*__numV_left*log(6.0/delta)/(eps_prime*eps_prime*(1-1/2.71828));
@@ -401,6 +404,144 @@ public:
 		cout << "Single realization time " << total_realizaiton_time << " s" << endl;
 		cout << "Single seed selection time " << total_seed_selection_time << " s" << endl;
 
+		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
+	}
+
+	bool build_seedset_veri(int theta, double ratio=1.0)
+	{
+		vec_deg.assign(__numV,0);
+		seed_batch.clear();
+		ratio_plain.clear();
+		RR_Mark.assign(theta,false);
+		for (int i = (__numV); i--;) 
+		{
+			if((__Activated)[i]) continue;  // activated nodes should not be considered
+			vec_deg[i] = RR._FRsets[i].size();  //The number of RR-sets covered by i.
+			// double deg_UB=deg+a_2+sqrt(2.0*a_2*deg+1.0*a_2*a_2);
+			ratio_plain.push_back(make_tuple(i,deg,1.0*vec_deg[i]/cost[i],0));  // do not push back, otherwise this vector will be very long
+		}
+
+		make_max_heap(ratio_plain);
+		int coverage=0; 
+		for(int i =0;i<batch_size;i++)
+		{
+			while(get<3>(ratio_plain[0])!=i)
+			{
+				seed=get<0>(ratio_plain[0]);
+				int nodeDeg=vec_deg[seed];
+				for(int RRId: RR._FRsets[seed])
+				{
+					if(RRId>=theta) break;
+					if((RR_Mark[RRId]==true)) 	nodeDeg--;
+				}
+				assert(nodeDeg>=0);
+				tuple<int,int, double, int> updated_node=make_tuple(seed,nodeDeg, nodeDeg/(cost)[seed],i);
+				max_heap_replace_max_value(ratio_plain, updated_node);
+			}
+			seed=get<0>(ratio_plain[0]);
+			seed_batch.push_back(seed);
+			coverage+=get<1>(ratio_plain[0]);
+			for(auto &rr:RR._FRsets[seed])
+			{
+				if(RR_Mark[rr] || rr>=theta) continue; 
+				RR_Mark[rr]=true;
+			}
+			tuple<int, int, double, int> disable_node=make_tuple(seed, 0, -1.0, i);
+			max_heap_replace_max_value(ratio_plain, disable_node);
+		}
+		vbool RR_mark_verify(theta,false);
+		for(int i=0;i<batch_size;i++)
+		{
+			for(auto &rr:RR._FRsets_veri[seed_batch[i]])
+			{
+				RR_mark_verify[rr]=true;
+			}
+		}
+		int coverage_verify=0;
+		for(int i=0;i<theta;i++)
+		{
+			if(RR_mark_verify[i]) coverage_verify++;
+		}
+		return (coverage_verify + 2.0 * a_1 / 3.0 - sqrt(2 * a_1 * coverage_verify + 4.0* a_1 *a_1 / 9.0)) >= ratio * (coverage_verify + a_2 + sqrt(2 * a_2 * coverage_verify + a_2 * a_2));
+	}
+
+	tuple<int,int,int,int,double,double> AdaptiveIM()
+	{
+		auto single_start = std::chrono::high_resolution_clock::now();
+		approx=1.0-power((1-1.0/batch_size),batch_size);
+		int round=0;
+		while((__eta_left)>0)
+		{
+			decimal = 1.0 * (__numV_left) / (__eta_left);
+			root_num=floor(decimal);
+			residual = decimal - root_num;  // in (0,1)
+			if((__eta_left)<=batch_size)
+			{
+				seed_batch.clear();
+				for(int i=0;i<(__eta_left);i++)
+				{
+					float min_cost=INT_MAX;
+					int node=(__numV);
+					for(int j=0;j<(__numV);j++)
+					{
+						if((__Activated)[j]) continue;
+						if(min_cost>(cost)[j])
+						{
+							min_cost=(cost)[j];
+							node=j;
+						}
+					}
+					(__Activated)[node]=true;
+					seed_batch.push_back(node);
+				}
+			}
+			else
+			{
+				double theta_max, i_max, ratio;
+				delta=_delta_amp*eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+				// delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+				double eps_hat=99.0*eps/(100.0-eps);
+				const double alpha = sqrt(log(6.0 / delta));
+				const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
+
+				theta = 2 * (alpha + beta)* (alpha + beta);
+				theta_max = 2 * __numV_left*(alpha + beta)*(alpha + beta) / eps_hat / eps_hat / 1.0 * (batch_size);
+
+				i_max = ceil(log(__numV_left / batch_size / eps_hat / eps_hat) / log(2)) + 1;
+
+				a_1 = log(3 * i_max / delta) + logcnk(__numV_left, batch_size);
+				a_2 = log(3 * i_max / delta);
+
+				ratio=(1-eps_hat)*approx;
+				bool select=false;
+				while(theta<theta_max)
+				{
+					RR.build_veri_mRRset_fresh(theta, true);
+					RR.build_veri_mRRset_fresh(theta, false);
+					select=build_seedset_veri(theta, ratio);
+					if(select) 
+					{
+						(seed_set).insert((seed_set).end(),seed_batch.begin(),seed_batch.end());
+						total_theta+=theta;
+						break;
+					}
+					theta*=2;
+				}
+				if(!select && theta>=theta_max) 
+				{
+					build_seedset_veri(theta);
+					(seed_set).insert((seed_set).end(),seed_batch.begin(),seed_batch.end());
+				}
+			}
+			counter=RR.realization_fresh_vec(seed_batch);
+			(__numV_left)-= counter;  // mRR-sets need to be updated;
+			(__eta_left)-=counter;
+			RR.refresh_mRRFRsets();
+		}
+		auto single_end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration <double> single_elapsed = single_end - single_start;
+		cout << "Single time " << single_elapsed.count() << " s" << endl;
+		cout << "Single spread " << (-(__eta_left))+ __eta*__numV <<endl;
 		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
 	}
 
