@@ -21,8 +21,7 @@ int main(int argn, char **argv)
     arg.arg_update(argn, argv);
     // std::fstream result_bk("../results/backup", ios::app);
     // assert(!result_bk.fail());
-    double avg_cost = 0.0;
-    double avg_time = 0.0;
+    double avg_cost = 0.0, avg_time = 0.0, avg_build_time = 0.0, avg_revise_time = 0.0, avg_memory = 0.0;
     while(arg.times < arg.run_times && do_verify==false)
     {
         arg.Initialization();
@@ -135,6 +134,9 @@ int main(int argn, char **argv)
     }
     cout << "Average cost: " << avg_cost / arg.run_times << endl;
     cout << "Average time: " << avg_time / arg.run_times << endl;
+    cout << "Average memory: " << avg_memory / arg.run_times << " MB" << endl;
+    cout << "Average build mRRset time: " << avg_build_time / arg.run_times << " s" << endl;
+    cout << "Average revise mRRset time: " << avg_revise_time / arg.run_times << " s" << endl;
 
     if(do_verify)
     {

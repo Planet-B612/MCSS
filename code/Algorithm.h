@@ -9,6 +9,12 @@
 #include <malloc.h>
 #include "Memory.h"
 #include "MemoryUsage.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <chrono>
+#include <iomanip>
+#include <string>
 // #include "test_ic.h"
 using namespace std;
 
@@ -57,6 +63,7 @@ private:
 	float __left_num = 600.0;
 	float __over_pnodes = 10.0;
 	int _delta_amp=1;
+	int _delta_amp=1;
 
 public:
 	mRRcollection RR;
@@ -81,6 +88,7 @@ public:
 		// vec_LB= vector<double>(__numV, 0.0);
 		vec_deg= vector<int>(__numV, 0);
 		model=arg.model;
+		_delta_amp=arg.delta_amp;
 		_delta_amp=arg.delta_amp;
 	}
 	
@@ -221,6 +229,7 @@ public:
 		else
 		{
 			delta=_delta_amp*1.0/__numV_left;
+			delta=_delta_amp*1.0/__numV_left;
 			double eps_hat=(eps-delta)/(1-delta);
 			double eps_prime=(1-eps_hat)/(1+eps_hat);
 			theta_max=2*(1+eps_hat/3.0)*__numV_left*log(6.0/delta)/(eps_prime*eps_prime*(1-1/2.71828));
@@ -277,14 +286,26 @@ public:
 		return;
 	}
 
-	tuple<int,int,int,int,double,double> AdaptiveSelect()
+	tuple<int,int,int,int,double,double, double, double> AdaptiveSelect()
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 #ifdef LOG
+		auto now = std::chrono::system_clock::now();
+		time_t tt = std::chrono::system_clock::to_time_t(now);
+		tm ltm;
+		localtime_r(&tt, &ltm);
+		std::stringstream ss;
+		ss << std::put_time(&ltm, "%Y%m%d_%H%M%S"); 
+		string time_str = ss.str();
 		std::ofstream result;
-		string file_name = "../round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps) + ".txt";
+		string file_name = "/home/cfeng/mRR_Regen/code/log_mine/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps)+time_str + ".txt";
 		result.open(file_name, ios::app);
-		assert(!result.fail());
+		if (result.fail()) 
+		{
+			std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
+			assert(false);
+		}
+			assert(!result.fail());
 		// result << "start recording at " << std::chrono::system_clock::now() << std::endl;
 #endif
 		auto single_start = std::chrono::high_resolution_clock::now();

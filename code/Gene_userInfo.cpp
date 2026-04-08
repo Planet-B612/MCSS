@@ -1,58 +1,57 @@
-#include "CommonFunc.h"
 #include "graph.h"
 #include <iostream>
 #include "Memory.h"
-#include "Algorithm.h"
 #include <string>
 #include "../dSFMT/dSFMT.h"
 // #include "../../dSFMT/dSFMT.c"
 using namespace std;
 
-int main()
+int main(int argn, char **argv)
 {
-    bool Rnd_cost = true;
-    bool isReverse = true;
-    bool Gene_prob = 0;
-    float prob_thresh = 0.2;
+    bool Rnd_cost = false;
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
-    vector<string> dataset = {"sample", "facebook", "dblp", "flickr", "pokec", "orkut", "livejournal", "friendster"};
+    vector<string> dataset = {"facebook", "epinions", "dblp","livejournal", "youtube", "Twitter"};
+    vint data = {5};
+    string graph_path="/data/fc/graphInfo/";
 
-    for (usint dataset_No = 0; dataset_No < 1; dataset_No++)
+    for (int i = 0; i < argn; i++)
     {
-        string dataset_dir = "/data/fc/graphInfo/new/" + dataset[dataset_No];
-        Graph F_graph = GraphBase::load_graph(dataset_dir, !isReverse);
-        int numV = F_graph.size();
-        // int numV=65608366;
-        if (Gene_prob == true)
+        if (argv[i] == string("-Rnd_cost"))
         {
-            ofstream outFile("/data/fc/graphInfo/new/" + dataset[dataset_No] + "_prob.txt");
-            for (int i = 0; i < numV; i++)
-            {
-                double cost = prob_thresh * dsfmt_gv_genrand_open_close();
-                outFile << cost << '\n';
-            }
-            outFile.close();
-            continue;
+            if (argv[i + 1] == string("true"))
+                Rnd_cost = true;
+            else
+                Rnd_cost = false;
         }
-        else if (Rnd_cost)
+    }
+
+    for (int dataset_No: data)
+    {
+        string dataset_dir = graph_path + dataset[dataset_No];
+        Graph O_graph, R_graph;
+        GraphBase::load_graph_directly_nbr_sorted(dataset_dir, O_graph, R_graph);
+        int numV = O_graph.size();
+        if (Rnd_cost)
         {
-            ofstream outFile("/data/fc/graphInfo/new/" + dataset[dataset_No] + "_cost_Rand.txt");
+            ofstream outFile(graph_path + dataset[dataset_No] + "_cost_Rand.txt");
             for (int i = 0; i < numV; i++)
             {
                 double cost = dsfmt_gv_genrand_open_close();
                 outFile << cost << '\n';
             }
             outFile.close();
+            cout<<"generate random cost file done"<<endl;
         }
         else
         {
-            ofstream outFile("/data/fc/graphInfo/new/" + dataset[dataset_No] + "_cost_001DEG.txt");
+            ofstream outFile(graph_path + dataset[dataset_No] + "_cost_001DEG.txt");
             for (int i = 0; i < numV; i++)
             {
-                double cost = 0.01 + 0.01 * (F_graph[i].size());
+                double cost = 0.01 + 0.01 * (O_graph[i].size());
                 outFile << cost << '\n';
             }
             outFile.close();
+            cout<<"generate 0.01*deg cost file done"<<endl;
         }
     }
 }

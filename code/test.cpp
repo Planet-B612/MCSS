@@ -16,12 +16,17 @@
 #include "Memory.h"
 // #include "MemoryUsage.h"
 #include <queue>
+#include <algorithm>   // std::shuffle
+#include <random>     
+#include <ctime>
+#include <ratio>
 // #include "test_ic.h"
 
 
 // #include <unordered_map>
 
 using namespace std;
+using namespace std::chrono;
 
 #define Test_Time 0
 
@@ -41,19 +46,60 @@ static double logcnk(int n, int k)
 
 int main(int argn, char **argv)
 {
-    double eps = 0.7;
-    int __eta_left = 60;
-    int eta = 20000;
-    int __numV_left = 4846609 + __eta_left - eta;
-    double delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
-    int batch_size = 8;
-    double approx=1.0-power((1-1.0/batch_size),batch_size);
-    double elta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
-    double eps_hat=99.0*eps/(100.0-eps);
-    const double alpha = sqrt(log(6.0 / delta));
-    const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
-    int theta = 2 * (alpha + beta)* (alpha + beta);
-    cout << "alpha: " << alpha << ", beta: " << beta << ", theta: " << theta << endl;
+    high_resolution_clock::time_point startTime = high_resolution_clock::now();	
+    std::random_device rd;                 // 硬件熵源（一次就够）
+    std::mt19937 g(rd());
+    int n=1e6;
+    vector<int> vec;
+    for(int i=0;i<n;i++)
+    {
+        vec.push_back(i);
+    }
+    std::shuffle(vec.begin(), vec.end(), g);
+    sort(vec.begin(),vec.end());
+    auto now = std::chrono::high_resolution_clock::now();
+    cout<<"The time is "<<std::chrono::duration<double>(now - startTime).count()<<endl;
+    // for(int i=2; i<20; i++)
+    // {
+    //     cout<<endl;
+    // }
+    // std::string filename = "/data/fc/graphInfo/Twitter";
+    // std::vector<std::string> lines;
+    // std::string line;
+    
+    // // 读取文件
+    // std::ifstream inFile(filename);
+    // while (std::getline(inFile, line)) {
+    //     lines.push_back(line);
+    // }
+    // inFile.close();
+    
+    // // 修改第一行
+    // int firstNum = std::stoi(lines[0]);
+    // lines[0] = std::to_string(firstNum) + " " + std::to_string(lines.size());
+    
+    // // 写回文件
+    // std::ofstream outFile(filename);
+    // for (const auto& l : lines) {
+    //     outFile << l << std::endl;
+    // }
+    // outFile.close();
+    
+    // std::cout << "修改完成! 新第一行: " << lines[0] << std::endl;
+
+    // double eps = 0.7;
+    // int __eta_left = 60;
+    // int eta = 20000;
+    // int __numV_left = 4846609 + __eta_left - eta;
+    // double delta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+    // int batch_size = 8;
+    // double approx=1.0-power((1-1.0/batch_size),batch_size);
+    // double elta=eps/(100.0*(1-1/2.71828)*(1-eps)*__eta_left);
+    // double eps_hat=99.0*eps/(100.0-eps);
+    // const double alpha = sqrt(log(6.0 / delta));
+    // const double beta = sqrt((logcnk(__numV_left, batch_size) + log(6.0 / delta)) / approx);
+    // int theta = 2 * (alpha + beta)* (alpha + beta);
+    // cout << "alpha: " << alpha << ", beta: " << beta << ", theta: " << theta << endl;
     // Argument arg;
     // arg.dataset_No = 0;
     // arg.real_time_pw = true;  // generate possible world in real time
