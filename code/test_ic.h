@@ -300,7 +300,12 @@ bool FR_check_hash(int rid, string str)
 			// cout<<endl;
 			flag = true;
 			cout << "FR_check error: " << rid << " is not in the FR of " << node << endl;
-			// return true;
+			cout<<"RRid in vec_hash_mRR of "<<node <<" includes: ";
+			for(const auto index:vec_hash_FR[node])
+			{
+				cout<<index<<", "<<endl;
+			}
+			return true;
 		}
 	}
 	if(flag)

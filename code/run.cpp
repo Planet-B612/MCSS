@@ -13,6 +13,7 @@
 using namespace std;
 
 
+
 int main(int argn, char **argv)
 {   
     Argument arg;  // claimed in Argument.h
@@ -45,7 +46,7 @@ int main(int argn, char **argv)
         double total_cost=0.0;
         __eta_left = (arg.eta_0 ) * arg.numV;
         root_num=ceil(1.0/arg.eta_0);  // initial root number
-        cout << " Running MINE_Alg at eta = " << __eta_left << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<< ", real_time_pw = "<<arg.real_time_pw <<", delta_amp = "<<arg.delta_amp<<", adapt_IM = "<<adapt_IM << endl;
+        cout << " Running MINE_Alg at eta = " << __eta_left << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<< ", real_time_pw = "<<arg.real_time_pw <<", delta_amp = "<<arg.delta_amp<<", adapt_IM = "<<adapt_IM<< ", ablation_update = "<<ablation_update<< ", ablation_add_root = "<<ablation_add_root<< endl;
         // result_bk<< "Running MINE_Alg at eta = " << arg.eta_0 + i * 0.01 << ", dataset = " << arg.dataset[k] << ", # node = " << arg.numV << ", eta = " << __eta_left <<", batch = "<<arg.batch<<", eps = "<<arg.eps<<", model = "<<arg.model <<", Rnd_cost = "<<arg.Rnd_cost<<", time = "<<arg.time<< ", real_time_pw = "<<arg.real_time_pw <<", q_ratio = "<<arg.q_ratio << endl;
         TAlg Alg(arg);
 
@@ -94,6 +95,7 @@ int main(int argn, char **argv)
         double adaIM_time=0.0;
         if(adapt_IM)
         {
+            cout<<"Running the adaptive IM algorithm..."<<endl;
             auto adaIM_beg = std::chrono::high_resolution_clock::now();
             Alg.AdaptiveIM();
             auto adaIM_end = std::chrono::high_resolution_clock::now();

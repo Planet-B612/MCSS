@@ -63,7 +63,6 @@ private:
 	float __left_num = 600.0;
 	float __over_pnodes = 10.0;
 	int _delta_amp=1;
-	int _delta_amp=1;
 
 public:
 	mRRcollection RR;
@@ -286,7 +285,7 @@ public:
 		return;
 	}
 
-	tuple<int,int,int,int,double,double, double, double> AdaptiveSelect()
+	tuple<int,int,int,int,double,double> AdaptiveSelect()
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
 #ifdef LOG
@@ -311,6 +310,7 @@ public:
 		auto single_start = std::chrono::high_resolution_clock::now();
 		while((__eta_left)>0)
 		{
+		// cout<<"round_num = "<<round_num<<endl;
 			auto start = std::chrono::high_resolution_clock::now();
 			decimal = 1.0 * (__numV_left) / (__eta_left);
 			root_num=floor(decimal);
@@ -403,7 +403,7 @@ public:
 	
 			round_num++;
 #ifdef LOG
-			result<<(round_num)<<", \t"<<counter<<", \t"<<(__eta_left)<<", \t"<<1.0*(__numV_left)/(__eta_left)<<", \t theta = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add root: "<< RR.num_add_root_this_round<<" \t delete root: "<<RR.num_delete_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<round_elapsed.count() << " 秒"<<endl;  // the round that is currently running
+			result<<(round_num)<<", \t"<<counter<<", \t"<<1.0*(__numV_left+counter)/(__eta_left+counter)<<", \t θ = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add: "<< RR.num_add_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<round_elapsed.count() << " s"<<endl;  // the round that is currently running
 #endif
 			RR.num_update_this_round=0;
 			RR.num_add_root_this_round = 0;
@@ -424,8 +424,7 @@ public:
 		cout << "Single round time " << total_round_time << " s" << endl;
 		cout << "Single realization time " << total_realizaiton_time << " s" << endl;
 		cout << "Single seed selection time " << total_seed_selection_time << " s" << endl;
-
-		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
+		return make_tuple(total_theta, RR.num_update_this_round, RR.num_add_root_this_round, RR.num_delete_root_this_round, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
 	}
 
 	bool build_seedset_veri(int theta, double ratio=1.0)
@@ -555,6 +554,7 @@ public:
 				}
 			}
 			counter=RR.realization_fresh_vec(seed_batch);
+			// cout<<"round "<<round<<", the number of influenced nodes is "<<counter<<endl;
 			(__numV_left)-= counter;  // mRR-sets need to be updated;
 			(__eta_left)-=counter;
 			RR.refresh_mRRFRsets();
@@ -563,7 +563,7 @@ public:
 		std::chrono::duration <double> single_elapsed = single_end - single_start;
 		cout << "Single time " << single_elapsed.count() << " s" << endl;
 		cout << "Single spread " << (-(__eta_left))+ __eta*__numV <<endl;
-		return make_tuple(total_theta, RR.num_update, RR.num_add_root, RR.num_delete_root, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
+		return make_tuple(total_theta, RR.num_update_this_round, RR.num_add_root_this_round, RR.num_delete_root_this_round, single_elapsed.count(),(-(__eta_left))+ __eta*__numV);
 	}
 
 	tuple<double,double,double,double,double> accuracy_verification()

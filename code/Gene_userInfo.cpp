@@ -11,7 +11,7 @@ int main(int argn, char **argv)
     bool Rnd_cost = false;
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
     vector<string> dataset = {"facebook", "epinions", "dblp","livejournal", "youtube", "Twitter"};
-    vint data = {5};
+    vint data = {0};
     string graph_path="/data/fc/graphInfo/";
 
     for (int i = 0; i < argn; i++)

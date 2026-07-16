@@ -6,6 +6,7 @@
 using namespace std;
 
 #define VAR_NAME(x) #x
+// #define DEBUG
 
 // global variables
 Graph R_graph, O_graph;  
@@ -25,8 +26,10 @@ double RR_step=100000;
 int num_gen = 0;
 int num_addback = 0;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
-bool adapt_IM=true;
+bool adapt_IM=false;
 bool mRR_time_test = false;
+bool ablation_update=true;
+bool ablation_add_root=false;
 
 
 bool do_verify = false;
@@ -48,27 +51,25 @@ int eta_for_verification=20000;
 class Argument{
 public:
     float eta_0 = 2000;
-    float eta_0 = 2000;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
     string model = "IC";
     bool Rnd_cost = false;
     //int simRnd = 100;
-    float eps = 0.7;
+    float eps = 0.9;
     double delta=0.01;
     //double delta_Inf = 0.01;  // 1/numV by default
     uint format_graph = 0; // 0: do not format graph, 1: form the forward graph, 2: form the reverse graph.
-    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample", "Twitter"};
-    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample", "Twitter"};
+    vector<string> dataset = {"facebook", "dblp", "flickr","nethept","epinions", "youtube", "pokec", "orkut", "livejournal", "friendster","DBLP_sym","Youtube_sym","twitter","citeseer","Flickr_sym","wikitalk","wikitalkar","sample", "Twitter", "congress"};
     // vector<int> data={4};
-    int dataset_No = 18;  // 17: sample, 18: Twitter, 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal, 9: friendster
+    int dataset_No = 4;  // 17: sample, 18: Twitter, 10: DBLP_sym, 11: Youtube_sym, 4: epinions, 8: livejournal, 9: friendster
     int cur_data;//=data[0];
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
     string result_dir = "../backup.txt";
-    int run_times=20;
-    int times=10;
+    int run_times=10;
+    int times=0;
     int batch=16;
     int linear_search_thr=0;  // recommended 50 for formal running
     bool seed_out=false;
@@ -81,7 +82,6 @@ public:
     float left_num = 100.0;
     float over_pnodes = 10.0;
     std::ofstream result_bk;
-    int delta_amp=1;
     int delta_amp=1;
     
     Argument()
@@ -149,6 +149,10 @@ public:
                 adapt_IM = stoi(argv[i + 1]);
             if (argv[i] == string("-mRR_time_test"))
                 mRR_time_test = stoi(argv[i + 1]);
+            if (argv[i] == string("-ablation_update"))
+                ablation_update = stoi(argv[i + 1]);
+            if (argv[i] == string("-ablation_add_root"))
+                ablation_add_root = stoi(argv[i + 1]);
         }      
     }   
     void Initialization()
@@ -294,33 +298,33 @@ public:
             cout << "generate PO Done" <<endl;
             exit(0);
         }
-        else
-        {
-            string cost_file;
-            if (Rnd_cost)
-            {
-                cost_file = graph_path + dataset[k] + "_cost_Rand.txt";
-            }
-            else
-            {
-                cost_file = graph_path + dataset[k] + "_cost_001DEG.txt";
-            }
-            cout << "Using the cost file at " << cost_file << endl;
-            std::ifstream inFile;
-            inFile.open(cost_file);
-            if (!inFile)
-            {
-                cout << "cannot open the cost file at " << cost_file << endl;
-                exit(1);
-            }
-            inFile.seekg(0, std::ios_base::beg);
-            for (int i = 0; i < numV; i++)
-            {
-                inFile >> cost[i];
-                // assert(cost[i] >= 0 && cost[i] <= 1);
-            }
-            inFile.close();
-        }
+        // else
+        // {
+        //     string cost_file;
+        //     if (Rnd_cost)
+        //     {
+        //         cost_file = graph_path + dataset[k] + "_cost_Rand.txt";
+        //     }
+        //     else
+        //     {
+        //         cost_file = graph_path + dataset[k] + "_cost_001DEG.txt";
+        //     }
+        //     cout << "Using the cost file at " << cost_file << endl;
+        //     std::ifstream inFile;
+        //     inFile.open(cost_file);
+        //     if (!inFile)
+        //     {
+        //         cout << "cannot open the cost file at " << cost_file << endl;
+        //         exit(1);
+        //     }
+        //     inFile.seekg(0, std::ios_base::beg);
+        //     for (int i = 0; i < numV; i++)
+        //     {
+        //         inFile >> cost[i];
+        //         // assert(cost[i] >= 0 && cost[i] <= 1);
+        //     }
+        //     inFile.close();
+        // }
         return;
     }
     
