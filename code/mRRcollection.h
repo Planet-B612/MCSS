@@ -425,44 +425,16 @@ public:
 			for (int i = 0; i < root_num;i++)
 			{
 				auto &RR = mRR[i];
-				// #ifdef PREFETCH
-				// _mm_prefetch(mRR[i+1].data(), _MM_HINT_T0);
-				// _mm_prefetch(vec_RR_layer[i+1].data(), _MM_HINT_T0);
-				// #endif
 				int layer_start = 0, layer_end = 1, node=RR[0], future_node;
 				while (layer_start < layer_end)
 				{
 					auto &nbrs = (R_graph)[node];
-					ulint nbrs_size = nbrs.size();
+					ulint nbrs_size = nbrs.size(), j=0;
 					vec_RR_layer[i].push_back(layer_start);
-					double prob = Inv_inDeg[node];
-					// #ifdef PREFETCH
-					// 	for(int k=32;k<nbrs_size+1;k+=1)
-					// 	{
-					// 		int nbrId=nbrs[k];
-					// 		_mm_prefetch(&__vecVisitBool[nbrId], _MM_HINT_T0);
-					// 		_mm_prefetch(&__Activated[nbrId], _MM_HINT_T0);
-					// 	}
-					// #endif
-					for (int j=0;j<nbrs_size;j++)
+					for (;j+16<nbrs_size;j+=16)
 					{
 						int nbrId=nbrs[j];
-						// #ifdef PREFETCH
-						// if(j+32<nbrs_size)
-						// {
-						// 	future_node=nbrs[j+32];
-						// 	_mm_prefetch(&_FRsets[future_node], _MM_HINT_T0);
-						// 	_mm_prefetch(&__vecVisitBool[future_node], _MM_HINT_T0);
-						// }
-						// if(nbrs_size-j>16)
-						// {
-						// 	future_node=nbrs[j+16];
-						// 	_mm_prefetch(&_FRsets[future_node], _MM_HINT_T0);
-						// 	_mm_prefetch(&__vecVisitBool[future_node], _MM_HINT_T0);							
-						// 	_mm_prefetch(&__Activated[future_node], _MM_HINT_T0);
-						// }
-						// #endif
-						if (__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > prob)
+						if (__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
 							continue;
 						RR.push_back(nbrId);
 						#ifdef DEBUG
@@ -480,7 +452,6 @@ public:
 					if(layer_end-layer_start>8)
 					{
 						_mm_prefetch(R_graph[layer_start+8].data(), _MM_HINT_T0);
-						_mm_prefetch(&Inv_inDeg[layer_start+8], _MM_HINT_T0);
 					}
 					#endif
 				}
@@ -551,21 +522,21 @@ public:
 		}
 		for (const auto &RR : mRR)
 		{
-			// ulint RR_size = RR.size(), i=0;
-			// __m512i zeros512 = _mm512_setzero_epi32();
-			// for(;i+16<=RR_size;i+=16)
-			// {
-			// 	__m512i indices = _mm512_load_epi32((const __m512i*)&RR[i]);
-			// 	_mm512_i32scatter_epi32((void*)__vecVisitBool.data(), indices, zeros512, 1);
-			// }
-			// for (;i<RR_size;i++)
-			// {
-			// 	__vecVisitBool[RR[i]] = false;
-			// }
-			for(const auto &node:RR)
+			ulint RR_size = RR.size(), i=0;
+			__m512i zeros512 = _mm512_setzero_epi32();
+			for(;i+16<=RR_size;i+=16)
 			{
-				__vecVisitBool[node] = false;
+				__m512i indices = _mm512_load_epi32((const __m512i*)&RR[i]);
+				_mm512_i32scatter_epi32((void*)__vecVisitBool.data(), indices, zeros512, 1);
 			}
+			for (;i<RR_size;i++)
+			{
+				__vecVisitBool[RR[i]] = false;
+			}
+			// for(const auto &node:RR)
+			// {
+			// 	__vecVisitBool[node] = false;
+			// }
 		}
 		// vec_value_check(__vecVisitBool, false, 1, string(__func__) + "beg="+to_string(0)+" __vecVisitBool includes TRUE values.");
 		// FR_sorted_check(__func__);

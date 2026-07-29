@@ -10,7 +10,7 @@ using namespace std;
 
 // global variables
 Graph R_graph, O_graph;  
-vector<double> Inv_inDeg;
+vector<float> Inv_inDeg;
 int __numV_left;
 double __eta_left;
 int root_num;
