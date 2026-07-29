@@ -1,8 +1,7 @@
 #pragma once
 #include <vector>
 #include <set>
-
-
+#include "AlignedVector.h"
 
 /// A set of reverse reachable sets
 // typedef int_vec_patchmap mRRset;
@@ -13,24 +12,25 @@
 typedef std::vector<int> vint;
 typedef std::vector<vint> vvint;
 typedef std::vector<bool> vbool;
+typedef std::vector<int, AlignedAllocator<int, 512>> vint_aligned; // 64 can not be expressed by a variable
 
 /// Node list
-typedef std::vector<int> Nodelist;
+// typedef std::vector<int> Nodelist;
 /// Edge structure: neighbor id, the edge weight
 // typedef std::pair<int, float> Edge;
 /// Edgelist structure from one source/target node
-typedef std::vector<int> Edgelist;
+// typedef std::vector<int> Edgelist;
 /// Graph structure
-typedef std::vector<Edgelist> Graph;
+typedef std::vector<vint_aligned> Graph;
 /// One forward reachable set
 // typedef spp::sparse_hash_set<int> int_unordered_set;
 // typedef spp::sparse_hash_set<int> FRset;
-typedef std::vector<int> FRset;
+typedef vint_aligned FRset;
 /// A set of forward reachable sets
 typedef std::vector<FRset> FRsets;
 typedef std::vector<FRsets> FRcollection;
 /// One reverse reachable set
-typedef std::vector<vint> mRRset;
+typedef std::vector<vint_aligned> mRRset;
 // typedef std::vector<int_vec_patchmap> mRRset;
 typedef std::vector<mRRset> mRRsets;
 

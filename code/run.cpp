@@ -19,6 +19,7 @@ int main(int argn, char **argv)
     Argument arg;  // claimed in Argument.h
     R_graph.clear(), O_graph.clear();  // global variables
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));  // the type must be uint32_t, to be accord with the function definition
+    // dsfmt_gv_init_gen_rand(42);
     arg.arg_update(argn, argv);
     // std::fstream result_bk("../results/backup", ios::app);
     // assert(!result_bk.fail());
@@ -58,8 +59,9 @@ int main(int argn, char **argv)
             residual=0.0;
             cout<<"tesing time of building mRRsets..."<<endl;
             vector<double> time_mine_mRR, time_mRR_fresh;
-            for(int num=2e6;num<=1e7;num+=2e6)
+            for(int i=0;i<5;i++)
             {
+                int num=5e5;
                 cout<<"generating "<<num<<" mRRsets..."<<endl;
                 auto mine_start = std::chrono::high_resolution_clock::now();
                 // for (auto i = 0; i < num; i++)
@@ -72,22 +74,23 @@ int main(int argn, char **argv)
                 double build_time_mine = std::chrono::duration<double>(mine_end - mine_start).count();
                 time_mine_mRR.push_back(build_time_mine);
                 Alg.RR.refresh_FRmRRsets(0);
-                cout<<"my mRRsets built, now building fresh mRRsets..."<<endl;
+                cout<<"mine time: "<<build_time_mine<<endl;
 
-                auto fresh_start = std::chrono::high_resolution_clock::now();
-                for (auto i = 0; i < num; i++)
-                {
-                    Alg.RR.build_one_mRRset_fresh_vec(i, root_num, 0);
-                }
-                auto fresh_end = std::chrono::high_resolution_clock::now();
-                double build_time_fresh = std::chrono::duration<double>(fresh_end - fresh_start).count();
-                time_mRR_fresh.push_back(build_time_fresh);
-                Alg.RR.refresh_FRmRRsets(0);
+                // auto fresh_start = std::chrono::high_resolution_clock::now();
+                // for (auto i = 0; i < num; i++)
+                // {
+                //     Alg.RR.build_one_mRRset_fresh_vec(i, root_num, 0);
+                // }
+                // auto fresh_end = std::chrono::high_resolution_clock::now();
+                // double build_time_fresh = std::chrono::duration<double>(fresh_end - fresh_start).count();
+                // time_mRR_fresh.push_back(build_time_fresh);
+                // Alg.RR.refresh_FRmRRsets(0);
+                // cout<<"fresh time: "<<build_time_fresh<<endl;
             }
-            for(int i=0;i<time_mine_mRR.size();i++)
-            {
-                cout << "num_mRRsets: " << (i+1)*2e6 << ", time_mine_mRR: " << time_mine_mRR[i] << " s, time_fresh_mRR: " << time_mRR_fresh[i] << " s" << endl;
-            }
+            // for(int i=0;i<time_mine_mRR.size();i++)
+            // {
+            //     cout << "num_mRRsets: " << (i+1)*1e6 << ", time_mine_mRR: " << time_mine_mRR[i] << " s, time_fresh_mRR: " << time_mRR_fresh[i] << " s" << endl;
+            // }
             exit(0);
         }
 

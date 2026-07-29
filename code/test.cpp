@@ -46,19 +46,36 @@ static double logcnk(int n, int k)
 
 int main(int argn, char **argv)
 {
-    high_resolution_clock::time_point startTime = high_resolution_clock::now();	
-    std::random_device rd;                 // 硬件熵源（一次就够）
-    std::mt19937 g(rd());
-    int n=1e6;
-    vector<int> vec;
-    for(int i=0;i<n;i++)
+    int num=3;
+    Graph g(num);
+    for(int i=0;i<num;i++)
     {
-        vec.push_back(i);
+        for(int j=0;j<num;j++)
+        {
+            g[i].push_back(j);
+        }
     }
-    std::shuffle(vec.begin(), vec.end(), g);
-    sort(vec.begin(),vec.end());
-    auto now = std::chrono::high_resolution_clock::now();
-    cout<<"The time is "<<std::chrono::duration<double>(now - startTime).count()<<endl;
+    for(const auto &nbrs:g)
+    {
+        for(const auto &nbr:nbrs)
+        {
+            cout<<nbr<<", ";
+        }
+        cout<<endl;
+    }
+    // high_resolution_clock::time_point startTime = high_resolution_clock::now();	
+    // std::random_device rd;                 // 硬件熵源（一次就够）
+    // std::mt19937 g(rd());
+    // int n=1e6;
+    // vector<int> vec;
+    // for(int i=0;i<n;i++)
+    // {
+    //     vec.push_back(i);
+    // }
+    // std::shuffle(vec.begin(), vec.end(), g);
+    // sort(vec.begin(),vec.end());
+    // auto now = std::chrono::high_resolution_clock::now();
+    // cout<<"The time is "<<std::chrono::duration<double>(now - startTime).count()<<endl;
     // for(int i=2; i<20; i++)
     // {
     //     cout<<endl;

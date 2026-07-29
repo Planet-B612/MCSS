@@ -15,7 +15,7 @@ int __numV_left;
 double __eta_left;
 int root_num;
 double residual=0.0, decimal=1.0;
-vector<bool> __Activated;
+vector<int8> __Activated;
 // vector<vector<int>> activated_nodes;
 vector<int> seed_set;
 vector<float> cost;
@@ -30,6 +30,7 @@ bool adapt_IM=false;
 bool mRR_time_test = false;
 bool ablation_update=true;
 bool ablation_add_root=false;
+uint32_t vecBoolTime=0;
 
 
 bool do_verify = false;
@@ -254,7 +255,7 @@ public:
                 vector<vector<int>> PO(numV);
                 ofstream out_pw;
                 if(model=="IC")
-                {   
+                {
                     out_pw.open(pw_path + dataset[dataset_No] + "_pw_ic" + to_string(i) + ".txt");
                     assert((!out_pw.fail()));
                     for(int i=0;i<(numV);i++)

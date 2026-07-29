@@ -109,7 +109,7 @@ static inline void loginfo(const string title, _Ty val)
 // }
 
 /// Make the vector to a min-heap.
-inline void make_min_heap(Nodelist &vec)
+inline void make_min_heap(vint &vec)
 {
 	// Min heap
 	const auto size = vec.size();
@@ -145,7 +145,7 @@ inline void make_min_heap(Nodelist &vec)
 }
 
 /// Replace the value for the first element and down-heap this element.
-inline void min_heap_replace_min_value(Nodelist &vec, const int &val)
+inline void min_heap_replace_min_value(vint &vec, const int &val)
 {
 	// Increase the value of the first element
 	const auto size = vec.size();

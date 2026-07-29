@@ -159,7 +159,7 @@ template <typename T, typename T1>
 bool vec_value_check(T &vec, T1 val, int equality, string str) // equality: 1: should be equal to val, -1: shoud not equal to val, 2: should be greater than, -2: should be smaller than
 {
 	bool flag = false;
-	Nodelist vec_ind={};
+	vint vec_ind={};
 	if (equality == 1)
 	{
 		for (auto i = 0; i < vec.size(); i++)
@@ -436,7 +436,7 @@ void mRR_out(int mRRid, string str = "")
 	result_bk.close();
 }
 
-void set_out(Nodelist p_nodes)
+void set_out(vint p_nodes)
 {
 	// std::fstream result_bk(result, ios::out);
 	(*__arg).result_bk.open(result);
@@ -453,7 +453,7 @@ void set_out(Nodelist p_nodes)
 	(*__arg).result_bk.close();
 }
 
-bool output_info(int mRRid, bool erase = false, Nodelist p_nodes = {})
+bool output_info(int mRRid, bool erase = false, vint p_nodes = {})
 {
 	// cout<<vec_virtual_roots[mRRid].size()<<endl;
 	// if(p_nodes.size()==0 && vec_virtual_roots[mRRid].size()==0)

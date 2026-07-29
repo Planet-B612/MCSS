@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <climits>
 #include <random>
+#include <immintrin.h>
 using namespace std;
 
 class mRRcollection
@@ -21,15 +22,15 @@ private:
 	/// __numE: number of edges in the graph.
 	size_t __numE = 0;
 	/// _num_mRRsets: number of RR sets.
-	vector<bool> __vecVisitBool;
+	vector<int> __vecVisitBool;
 	vint __vecTree;
 	// vint __vecSeq;
 	vint __vecNewTree;
-	Nodelist __vecVisitNode;
+	vint __vecVisitNode;
 	float rand_div = 1.0;
 
 public:
-	vvint PO;
+	Graph PO;
 	FRsets _FRsets;
 	FRsets _FRsets_veri;
 	mRRsets _mRRsets;
@@ -69,20 +70,20 @@ public:
 		_FRsets_veri = FRsets(__numV);
 		__regen_threshold = arg.regen_threshold;
 		__root_num_bound = arg.root_num_bound;
-#ifdef DEBUG
+		#ifdef DEBUG
 		vec_hash_FR.resize(__numV);
-#endif
+		#endif
 		model = arg.model;
-		__vecVisitBool = std::vector<bool>(__numV, false);
+		__vecVisitBool = std::vector<int>(__numV, false);
 		__vecTree = std::vector<int>(__numV, -1);
 		if(model != "IC")
 		{
 			__vecSeq = std::vector<int>(__numV, -1);
 		}
 		__vecNewTree = std::vector<int>(__numV, -1);
-		__vecVisitNode = Nodelist(__numV);
+		__vecVisitNode = vint(__numV);
 		result = arg.result_dir;
-		PO.resize((__numV), vector<int>());
+		PO.resize((__numV), vint_aligned());
 		if (arg.real_time_pw == true)
 		{
 			generate_possible_world();
@@ -134,7 +135,7 @@ public:
 		}
 	}
 
-	int realization(Nodelist seeds)
+	int realization(vint seeds)
 	{
 		int curr_Node = 0, numVisitNode = 0;
 		int counter_real = 0; // local counter not used
@@ -171,7 +172,7 @@ public:
 		return counter_real;
 	}
 
-	int realization_fresh_vec(Nodelist seeds)
+	int realization_fresh_vec(vint seeds)
 	{
 		int curr_Node = 0, numVisitNode = 0;
 		int counter_real = 0; // local counter not used
@@ -365,9 +366,9 @@ public:
 			_num_mRRsets = numSamples;
 			vv_virtual_roots.resize(numSamples);
 			_mRRsets.resize(numSamples);
-#ifdef DEBUG
+		#ifdef DEBUG
 			vec_hash_mRR.resize(numSamples);
-#endif // !NDEBUG
+		#endif // !NDEBUG
 			vv_polluted_nodes.resize(numSamples);
 			if(model=="IC")
 			{
@@ -397,11 +398,12 @@ public:
 		vecRoot_num[mRRid] = root_num;
 		mRRset &mRR = _mRRsets[mRRid];
 		// vint &vec_next_mRRnode=vv_next_mRRnode[mRRid];
-#ifdef DEBUG
+		#ifdef DEBUG
 		sint &mRR_hash = vec_hash_mRR[mRRid];
-#endif // !NDEBUG
+		#endif // !NDEBUG
 		mRR.resize(root_num);
-		auto &vec_RR_layer = vec_mRR_layer[mRRid];
+		auto &vec_RR_layer = vec_mRR_layer[mRRid];		
+		vec_RR_layer.resize(root_num);
 		for (int i = 0; i < root_num; i++) // roots should be independent, and thus are selected in advance, while the diffusion from them is dependent
 		{
 			root = dsfmt_gv_genrand_uint32_range(__numV);
@@ -420,35 +422,79 @@ public:
 		}
 		if(model=="IC")
 		{
-			vec_RR_layer.resize(root_num);
-			for (int i = 0; i < root_num; i++)
+			for (int i = 0; i < root_num;i++)
 			{
 				auto &RR = mRR[i];
-				int layer_start = 0, layer_end = 1;
+				// #ifdef PREFETCH
+				// _mm_prefetch(mRR[i+1].data(), _MM_HINT_T0);
+				// _mm_prefetch(vec_RR_layer[i+1].data(), _MM_HINT_T0);
+				// #endif
+				int layer_start = 0, layer_end = 1, node=RR[0], future_node;
 				while (layer_start < layer_end)
 				{
+					auto &nbrs = (R_graph)[node];
+					ulint nbrs_size = nbrs.size();
 					vec_RR_layer[i].push_back(layer_start);
-					for (int j = layer_start; j < layer_end; j++)
+					double prob = Inv_inDeg[node];
+					// #ifdef PREFETCH
+					// 	for(int k=32;k<nbrs_size+1;k+=1)
+					// 	{
+					// 		int nbrId=nbrs[k];
+					// 		_mm_prefetch(&__vecVisitBool[nbrId], _MM_HINT_T0);
+					// 		_mm_prefetch(&__Activated[nbrId], _MM_HINT_T0);
+					// 	}
+					// #endif
+					for (int j=0;j<nbrs_size;j++)
 					{
-						int node = RR[j];
-						for (const auto &nbrId : (R_graph)[node])
-						{
-							if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
-								continue;
-							if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
-								continue;
-							RR.push_back(nbrId);
+						int nbrId=nbrs[j];
+						// #ifdef PREFETCH
+						// if(j+32<nbrs_size)
+						// {
+						// 	future_node=nbrs[j+32];
+						// 	_mm_prefetch(&_FRsets[future_node], _MM_HINT_T0);
+						// 	_mm_prefetch(&__vecVisitBool[future_node], _MM_HINT_T0);
+						// }
+						// if(nbrs_size-j>16)
+						// {
+						// 	future_node=nbrs[j+16];
+						// 	_mm_prefetch(&_FRsets[future_node], _MM_HINT_T0);
+						// 	_mm_prefetch(&__vecVisitBool[future_node], _MM_HINT_T0);							
+						// 	_mm_prefetch(&__Activated[future_node], _MM_HINT_T0);
+						// }
+						// #endif
+						if (__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > prob)
+							continue;
+						RR.push_back(nbrId);
 						#ifdef DEBUG
-							mRR_hash.insert(nbrId);
-							vec_hash_FR[nbrId].insert(mRRid);
+						mRR_hash.insert(nbrId);
+						vec_hash_FR[nbrId].insert(mRRid);
 						#endif
-							__vecVisitBool[nbrId] = true;
-							_FRsets[nbrId].push_back(mRRid);
-						}
+						__vecVisitBool[nbrId] = true;
+						#ifndef PREFETCH // be careful to here, this line should be applied only when _FRsets is prefetched below.
+						_FRsets[nbrId].push_back(mRRid);
+						#endif
 					}
-					layer_start = layer_end; // update the start index of the next layer
+					node = RR[++layer_start];
 					layer_end = RR.size();	 // update the end index of the next layer
+					#ifdef PREFETCH  // usefull for 5% acceleration
+					if(layer_end-layer_start>8)
+					{
+						_mm_prefetch(R_graph[layer_start+8].data(), _MM_HINT_T0);
+						_mm_prefetch(&Inv_inDeg[layer_start+8], _MM_HINT_T0);
+					}
+					#endif
 				}
+				#ifdef PREFETCH
+				for(int j=1;j<layer_end;j++)
+				{
+					if(j+2<layer_end)
+					{
+						auto &frset=_FRsets[RR[j+2]];
+						_mm_prefetch(frset.data()+frset.size(), _MM_HINT_T0);
+					}
+					_FRsets[RR[j]].push_back(mRRid);
+				}
+				#endif
 			}
 		}
 		else // LT model
@@ -479,7 +525,9 @@ public:
 						break;
 					}
 					__vecVisitBool[nbrId] = true;
+					#ifndef PREFETCH
 					_FRsets[nbrId].push_back(mRRid);
+					#endif
 					RR.push_back(nbrId);
 					node = nbrId;
 					#ifdef DEBUG
@@ -487,11 +535,34 @@ public:
 						vec_hash_FR[nbrId].insert(mRRid);
 					#endif
 				}
+				#ifdef PREFETCH
+				ulint RR_size=RR.size();
+				for(int j=1;j<RR_size;j++)
+				{
+					if(j+2<RR_size)
+					{
+						auto &frset=_FRsets[RR[j+2]];
+						_mm_prefetch(frset.data()+frset.size(), _MM_HINT_T0);
+					}
+					_FRsets[RR[j]].push_back(mRRid);
+				}
+				#endif
 			}
 		}
 		for (const auto &RR : mRR)
 		{
-			for (const auto &node : RR)
+			// ulint RR_size = RR.size(), i=0;
+			// __m512i zeros512 = _mm512_setzero_epi32();
+			// for(;i+16<=RR_size;i+=16)
+			// {
+			// 	__m512i indices = _mm512_load_epi32((const __m512i*)&RR[i]);
+			// 	_mm512_i32scatter_epi32((void*)__vecVisitBool.data(), indices, zeros512, 1);
+			// }
+			// for (;i<RR_size;i++)
+			// {
+			// 	__vecVisitBool[RR[i]] = false;
+			// }
+			for(const auto &node:RR)
 			{
 				__vecVisitBool[node] = false;
 			}
@@ -653,7 +724,7 @@ public:
 		return 0;
 	}
 
-	void mRR_update(int mRRid, Nodelist &del_nodes)
+	void mRR_update(int mRRid, vint &del_nodes)
 	{
 		mRRset &mRR = _mRRsets[mRRid];
 		mRRset &mRR_layer = vec_mRR_layer[mRRid];
@@ -707,7 +778,7 @@ public:
 		}
 		auto &min_tree_layer = mRR_layer[min_tree];
 		affected_layer_idx = upper_bound(min_tree_layer.begin(), min_tree_layer.end(), first_del_idx) - min_tree_layer.begin() - 1;
-		vint &min_tree_RR = mRR[min_tree];
+		vint_aligned &min_tree_RR = mRR[min_tree];
 		int affected_layer_beg = min_tree_layer[affected_layer_idx];
 		int affected_next_layer_beg, min_tree_layer_size = static_cast<int>(min_tree_layer.size());
 		if (affected_layer_idx == min_tree_layer_size - 1)
@@ -734,7 +805,7 @@ public:
 // 		}
 // #endif
 		mRR_copy[0].reserve(min_tree_RR_size - affected_next_layer_beg);
-		mRR_copy[0] = vector<int>(std::make_move_iterator(min_tree_RR.begin() + affected_next_layer_beg), std::make_move_iterator(min_tree_RR.end()));
+		mRR_copy[0] = vint_aligned(std::make_move_iterator(min_tree_RR.begin() + affected_next_layer_beg), std::make_move_iterator(min_tree_RR.end()));
 		
 		min_tree_RR.resize(affected_next_layer_beg);
 		min_tree_layer.resize(affected_layer_idx);
@@ -974,7 +1045,7 @@ public:
 // #endif
 	}
 
-	void naive_mRR_update(int mRRid, Nodelist &del_nodes)
+	void naive_mRR_update(int mRRid, vint &del_nodes)
 	{
 		mRRset &mRR = _mRRsets[mRRid];
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];
@@ -1102,7 +1173,7 @@ public:
 		return;
 	}
 
-	void mRR_update_lt(int mRRid, Nodelist &del_nodes)
+	void mRR_update_lt(int mRRid, vint &del_nodes)
 	{
 		mRRset &mRR = _mRRsets[mRRid];
 		// vint &vec_next_mRRnode = vv_next_mRRnode[mRRid];
@@ -1175,7 +1246,7 @@ public:
 		mRRset mRR_copy(mRR_size - min_tree);  // mRR_copy should contain the truncated part of the min_tree_RR
 		if(first_del_idx_1< min_tree_RR_size)
 		{
-			mRR_copy[0] = vector<int>(std::make_move_iterator(min_tree_RR.begin() + first_del_idx_1), std::make_move_iterator(min_tree_RR.end()));
+			mRR_copy[0] = vint_aligned(std::make_move_iterator(min_tree_RR.begin() + first_del_idx_1), std::make_move_iterator(min_tree_RR.end()));
 		}
 		min_tree_RR.resize(first_del_idx);
 		for (int i = min_tree + 1; i < mRR_size; i++)
@@ -2090,7 +2161,7 @@ public:
 #endif // !NDEBUG
 		for (ulint i = max_size; i < _num_mRRsets; i++)
 		{
-			Nodelist().swap(vv_virtual_roots[i]);
+			vint().swap(vv_virtual_roots[i]);
 		}
 		vv_virtual_roots.resize(max_size);
 
@@ -2108,7 +2179,7 @@ public:
 		}
 		for (auto &vec : vv_virtual_roots)
 		{
-			Nodelist().swap(vec);
+			vint().swap(vec);
 		}
 		// no need to refresh mRRsets, since it is never recorded in ending rounds
 		_num_mRRsets = 0;
@@ -2119,8 +2190,8 @@ public:
 	void release_memory()
 	{
 		refresh_RRsets();
-		std::vector<bool>().swap(__vecVisitBool);
-		Nodelist().swap(__vecVisitNode);
+		std::vector<int>().swap(__vecVisitBool);
+		vint().swap(__vecVisitNode);
 		FRsets().swap(_FRsets);
 		vector<int>().swap(__vecTree);
 		vector<vector<int>>().swap(vv_virtual_roots);

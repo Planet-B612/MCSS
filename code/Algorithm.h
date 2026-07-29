@@ -36,7 +36,7 @@ private:
 	string model="IC";
 	
 	int counter=0;  // record the number of nodes being affected in total
-	Nodelist seed_batch;
+	vint seed_batch;
 	int seed;
 	int batch_size=1;
 	int deg=0;
@@ -50,7 +50,7 @@ private:
 	vector<int> vec_mRR_num;
 	int window_beg=0;
 	ulint max_size_within_window=0;
-	// Nodelist num_deg_incremental;
+	// vint num_deg_incremental;
 	vector<bool> RR_Mark;
 	double a_1=0.0, a_2=0.0;
 	int __dataset_No = 0;
