@@ -429,12 +429,46 @@ public:
 				while (layer_start < layer_end)
 				{
 					auto &nbrs = (R_graph)[node];
-					ulint nbrs_size = nbrs.size(), j=0;
+					// ulint nbrs_size = nbrs.size();
 					vec_RR_layer[i].push_back(layer_start);
-					for (;j+16<nbrs_size;j+=16)
+					float prob=Inv_inDeg[node];
+					// for (;j+16<nbrs_size;j+=16)
+					// {
+					// 	__m512i nbr_ids = _mm512_load_epi32((const __m512i*)&nbrs[j]);
+					// 	__m512i visited = _mm512_i32gather_epi32(nbr_ids, (const int*)__vecVisitBool.data(), 1);
+    				// 	__m512i activated = _mm512_i32gather_epi32(nbr_ids, (const int*)__Activated.data(), 1);
+					// 	// __mmask16 mask_visited = _mm512_cmpeq_epi32_mask(visited, zero);
+    				// 	// __mmask16 mask_activated = _mm512_cmpeq_epi32_mask(activated, zero);
+					// 	__mmask16 final_mask = _mm512_kand(_mm512_cmpeq_epi32_mask(visited, zeros512), _mm512_cmpeq_epi32_mask(activated, zeros512));
+					// 	if (final_mask == 0) continue;
+					// 	int temp_ids[16], candidates[16], idx=0; // take the 16 nbrs to temp_ids
+    				// 	_mm512_store_epi32(temp_ids, nbr_ids);
+					// 	while(final_mask)
+					// 	{
+					// 		int bit = __builtin_ctz((unsigned)final_mask);
+					// 		candidates[idx++]=bit;
+					// 		final_mask &= final_mask - 1;
+					// 	}
+					// 	for(int i=0;i<idx;i++)
+					// 	{
+					// 		int the_node=temp_ids[candidates[i]];
+					// 		if(dsfmt_gv_genrand_open_close() > prob)
+					// 			continue;
+					// 		RR.push_back(the_node);
+					// 		#ifdef DEBUG
+					// 		mRR_hash.insert(the_node);
+					// 		vec_hash_FR[the_node].insert(mRRid);
+					// 		#endif
+					// 		__vecVisitBool[the_node] = true;
+					// 		#ifndef PREFETCH // be careful to here, this line should be applied only when _FRsets is prefetched below.
+					// 		_FRsets[the_node].push_back(mRRid);
+					// 		#endif
+					// 	}
+					// }
+					for(const auto &nbrId:nbrs)
 					{
-						int nbrId=nbrs[j];
-						if (__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
+						// int nbrId=nbrs[j];
+						if(__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > prob)
 							continue;
 						RR.push_back(nbrId);
 						#ifdef DEBUG
@@ -523,7 +557,6 @@ public:
 		for (const auto &RR : mRR)
 		{
 			ulint RR_size = RR.size(), i=0;
-			__m512i zeros512 = _mm512_setzero_epi32();
 			for(;i+16<=RR_size;i+=16)
 			{
 				__m512i indices = _mm512_load_epi32((const __m512i*)&RR[i]);

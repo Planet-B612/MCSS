@@ -3,6 +3,7 @@
 #include <iostream>
 #include "CommonStruc.h"
 #include "graph.h"
+#include <immintrin.h>
 using namespace std;
 
 #define VAR_NAME(x) #x
@@ -30,7 +31,7 @@ bool adapt_IM=false;
 bool mRR_time_test = false;
 bool ablation_update=true;
 bool ablation_add_root=false;
-uint32_t vecBoolTime=0;
+__m512i zeros512 = _mm512_setzero_epi32();
 
 
 bool do_verify = false;
