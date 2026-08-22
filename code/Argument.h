@@ -31,7 +31,9 @@ bool adapt_IM=false;
 bool mRR_time_test = false;
 bool ablation_update=true;
 bool ablation_add_root=false;
-__m512i zeros512 = _mm512_setzero_epi32();
+const __m512i zeros512 = _mm512_setzero_epi32();
+const __m512i ones512 = _mm512_set1_epi32(1);
+__m512i numV512 = _mm512_set1_epi32(__numV);
 
 
 bool do_verify = false;

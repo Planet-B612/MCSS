@@ -8,6 +8,7 @@
 using namespace std;
 #include "../dSFMT/dSFMT.h"
 #include <tuple>
+#include <immintrin.h> 
 using std::tuple;
 /// Assertion
 template <typename _Ty>
@@ -107,6 +108,123 @@ static inline void loginfo(const string title, _Ty val)
 // 		}
 // 	}
 // }
+
+void simd_ordered_insert(vint_aligned& arr, int target) {
+    int low = 0;
+    int high = arr.size(); // 半开半闭区间 [low, high)
+
+    __m256i v_target = _mm256_set1_epi32(target);
+
+    while (high - low >= 8) {
+        int step = (high - low) / 8;
+
+        // 1. 计算 8 个采样点索引
+        vint_aligned offsets(8);
+        for (int i = 0; i < 8; ++i) {
+            offsets[i] = low + (i + 1) * step - 1;
+        }
+
+        // 2. 加载采样点
+        __m256i v_offsets = _mm256_load_si256((__m256i*)offsets.data());
+        __m256i v_pivots = _mm256_i32gather_epi32(arr.data(), v_offsets, 4);
+
+        // 3. 【优化项 1】相等快速检测 (Early Hit Exit)
+        // 只有在元素唯一时，此操作才对 lower_bound 合法！
+        __m256i cmp_eq = _mm256_cmpeq_epi32(v_target, v_pivots);
+        int mask_eq = _mm256_movemask_ps(_mm256_castsi256_ps(cmp_eq));
+        if (mask_eq != 0) {
+            // __builtin_ctz 获取匹配项的位索引，直接返回，提前结束搜索
+			arr.insert(arr.begin() + offsets[__builtin_ctz(mask_eq)], target);
+            return;
+        }
+
+        // 4. 严格小于比较: pivot < target (即 target > pivot)
+        __m256i cmp_gt = _mm256_cmpgt_epi32(v_target, v_pivots);
+        int mask_gt = _mm256_movemask_ps(_mm256_castsi256_ps(cmp_gt));
+        int rank = __builtin_popcount(mask_gt); // 有多少个采样点 < target
+
+        // 5. 【优化项 2】无分支（Branchless）缩小区间
+        // 利用三目运算符触发 cmov 指令，避免 CPU 分支预测失败
+        low  = (rank == 0) ? low  : offsets[rank - 1] + 1;
+        high = (rank == 8) ? high : offsets[rank];
+    }
+
+    // 标量收尾阶段（同样加上相等提前退出）
+    while (low < high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == target) {
+            arr.insert(arr.begin() + mid, target);
+            return;
+        }
+        if (arr[mid] < target) {
+            low = mid + 1;
+        } 
+		else {
+            high = mid;
+        }
+    }
+	arr.insert(arr.begin() + low, target);
+    return;
+}
+
+void simd_ordered_erase(vint_aligned& arr, int target) {
+    int low = 0;
+    int high = arr.size(); // 半开半闭区间 [low, high)
+
+    __m256i v_target = _mm256_set1_epi32(target);
+
+    while (high - low >= 8) {
+        int step = (high - low) / 8;
+
+        // 1. 计算 8 个采样点索引
+        vint_aligned offsets(8);
+        for (int i = 0; i < 8; ++i) {
+            offsets[i] = low + (i + 1) * step - 1;
+        }
+
+        // 2. 加载采样点
+        __m256i v_offsets = _mm256_load_si256((__m256i*)offsets.data());
+        __m256i v_pivots = _mm256_i32gather_epi32(arr.data(), v_offsets, 4);
+
+        // 3. 【优化项 1】相等快速检测 (Early Hit Exit)
+        // 只有在元素唯一时，此操作才对 lower_bound 合法！
+        __m256i cmp_eq = _mm256_cmpeq_epi32(v_target, v_pivots);
+        int mask_eq = _mm256_movemask_ps(_mm256_castsi256_ps(cmp_eq));
+        if (mask_eq != 0) {
+            // __builtin_ctz 获取匹配项的位索引，直接返回，提前结束搜索
+			arr.erase(arr.begin() + offsets[__builtin_ctz(mask_eq)]);
+            return;
+        }
+
+        // 4. 严格小于比较: pivot < target (即 target > pivot)
+        __m256i cmp_gt = _mm256_cmpgt_epi32(v_target, v_pivots);
+        int mask_gt = _mm256_movemask_ps(_mm256_castsi256_ps(cmp_gt));
+        int rank = __builtin_popcount(mask_gt); // 有多少个采样点 < target
+
+        // 5. 【优化项 2】无分支（Branchless）缩小区间
+        // 利用三目运算符触发 cmov 指令，避免 CPU 分支预测失败
+        low  = (rank == 0) ? low  : offsets[rank - 1] + 1;
+        high = (rank == 8) ? high : offsets[rank];
+    }
+
+    // 标量收尾阶段（同样加上相等提前退出）
+    while (low < high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == target) {
+            arr.erase(arr.begin() + mid);
+            return;
+        }
+        if (arr[mid] < target) {
+            low = mid + 1;
+        }
+		else {
+            high = mid;
+        }
+    }
+	// arr.erase(arr.begin() + low);
+    // cout<<target<<" not found in the array, cannot erase."<<endl;
+    return;
+}
 
 /// Make the vector to a min-heap.
 inline void make_min_heap(vint &vec)

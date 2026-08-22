@@ -3,14 +3,11 @@
 #include <chrono>
 // #include <algorithm>
 #include "CommonStruc.h"
+#include "CommonFunc.h"
 #include "../dSFMT/dSFMT.h"
-#include "mRRcollection.h"
-#include "Algorithm.h"
-#include "../dSFMT/dSFMT.h"
-#include "graph.h"
-#include <iostream>
-#include <vector>
-#include "CommonStruc.h"
+// #include "mRRcollection.h"
+// #include "Algorithm.h"
+// #include "graph.h"
 #include <cstring>
 #include "Timer.h"
 #include "Memory.h"
@@ -20,6 +17,10 @@
 #include <random>     
 #include <ctime>
 #include <ratio>
+#include <algorithm>
+#include <immintrin.h> // SIMD intrinsics
+#include <numeric>
+#include <cmath>
 // #include "test_ic.h"
 
 
@@ -30,39 +31,160 @@ using namespace std::chrono;
 
 #define Test_Time 0
 
-static double logcnk(int n, int k) 
-{
-    double ans = 0;
-    for (int i = n - k + 1; i <= n; i++)
+#include <iostream>
+#include <vector>
+#include <immintrin.h>
+
+int main() {
+    dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
+
+    __m512i minus_one = _mm512_set1_epi32(-1);
+    __m512i zero = _mm512_setzero_si512();
+    vint_aligned arr;
+    int Vnum=1e6, copy_size=1000, RR_size=10000;
+    vint __vecNewTree(Vnum, -1), eraseNodes;
+    mRRset mRR_copy(copy_size);
+    for(int i=0;i<copy_size;i++)
     {
-        ans += log(i);
+        for(int j=0;j<RR_size;j++)
+        {
+            mRR_copy[i].push_back(dsfmt_gv_genrand_uint32_range(Vnum));
+        }
+        arr.push_back(i);
     }
-    for (int i = 1; i <= k; i++)
+    cout<<"mRR_copy has been generated"<<endl;
+
+    high_resolution_clock::time_point startTime = high_resolution_clock::now();	
+    for (auto &RR : mRR_copy)
     {
-        ans -= log(i);
+        for (auto &node : RR)
+        {
+            if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+            {
+                auto it=std::lower_bound(RR.begin(), RR.end(), 400);
+                if(it != RR.end() && *it == 400)
+                {
+                    RR.erase(it);
+                }
+            }
+            __vecNewTree[node] = -1;
+        }
     }
-    return ans;
+    high_resolution_clock::time_point vallina_time = high_resolution_clock::now();	
+    cout<< "The time for vallina is "<<std::chrono::duration<double>(vallina_time - startTime).count()<<" s"<<endl;
+
+    for (auto &RR : mRR_copy)
+    {
+        for (auto &node : RR)
+        {
+            if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+            {
+                simd_ordered_erase(RR, 600);
+            }
+            __vecNewTree[node] = -1;
+        }
+    }
+    high_resolution_clock::time_point simd_time = high_resolution_clock::now();	
+    cout<< "The time for simd is "<<std::chrono::duration<double>(simd_time-vallina_time).count()<<" s"<<endl;
+
+#ifdef dcwnfekj
+    for(int i=0;i<copy_size;i++)
+    {
+        auto &RR = mRR_copy[i];
+        int j=0;
+        if(i%100==0)
+        {
+            cout<<"processing "<<i<<"th mRR..."<<endl;
+        }
+        for (; j + 16 <= RR.size(); j += 16)
+        {
+            __m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+
+            __m512i vals = _mm512_i32gather_epi32(idx, __vecNewTree.data(), 4);
+
+            __mmask16 mask = _mm512_cmplt_epi32_mask(vals, zero);
+
+            // scatter: __vecNewTree[node] = -1
+            _mm512_i32scatter_epi32(__vecNewTree.data(), idx, minus_one, 4);
+
+            // 把需要 erase 的 node 收集起来
+            alignas(64) int nodes[16];
+            _mm512_store_si512(reinterpret_cast<void*>(nodes), idx);
+
+            while (mask)
+            {
+                int k = __builtin_ctz(mask);
+                eraseNodes.push_back(nodes[k]);
+                mask &= mask - 1;
+            }
+        }
+
+        for (; j < RR.size(); ++j)
+        {
+            int node = RR[j];
+            if (__vecNewTree[node] < 0)
+            {
+                simd_ordered_erase(RR, 400);
+            }
+            __vecNewTree[node] = -1;
+        }
+
+        for (int node : eraseNodes)
+        {
+            simd_ordered_erase(RR, 400);
+        }
+    }
+    high_resolution_clock::time_point SIMD_time = high_resolution_clock::now();	
+
+    cout<< "The time for SIMD is "<<std::chrono::duration<double>(SIMD_time - vallina_time).count()<<" s"<<endl;
+
+#endif 
+    return 0;
 }
 
-int main(int argn, char **argv)
-{
-    int num=3;
-    Graph g(num);
-    for(int i=0;i<num;i++)
-    {
-        for(int j=0;j<num;j++)
-        {
-            g[i].push_back(j);
-        }
-    }
-    for(const auto &nbrs:g)
-    {
-        for(const auto &nbr:nbrs)
-        {
-            cout<<nbr<<", ";
-        }
-        cout<<endl;
-    }
+
+
+// int main(int argn, char **argv)
+// {
+//     int num=3;
+//     Graph g(num);
+//     for(int i=0;i<num;i++)
+//     {
+//         for(int j=0;j<num;j++)
+//         {
+//             g[i].push_back(j);
+//         }
+//     }
+//     for(const auto &nbrs:g)
+//     {
+//         for(const auto &nbr:nbrs)
+//         {
+//             cout<<nbr<<", ";
+//         }
+//         cout<<endl;
+//     }
+
+       // 严格递增、无重复元素的数组
+    // vint_aligned data = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160};
+    // int n = data.size();
+
+    // // cout<<simd_ordered_insert(data, 711)<<endl;
+    // simd_ordered_insert(data, 711);
+
+    // // cout<<simd_ordered_insert(data, 40)<<endl;
+    // simd_ordered_insert(data, 40);
+
+    // // cout<<simd_ordered_insert(data, 5)<<endl;
+    // simd_ordered_insert(data, 5);
+
+    // // cout<<simd_ordered_insert(data, 120)<<endl;
+    // simd_ordered_insert(data, 120);
+
+    // // cout<<simd_ordered_insert(data, 20)<<endl;
+    // simd_ordered_insert(data, 20);
+    // // cout<<simd_ordered_insert(data, 60)<<endl;
+    // simd_ordered_insert(data, 60);
+
     // high_resolution_clock::time_point startTime = high_resolution_clock::now();	
     // std::random_device rd;                 // 硬件熵源（一次就够）
     // std::mt19937 g(rd());
@@ -147,8 +269,8 @@ int main(int argn, char **argv)
     // RR.mRR_update(0,del_nodes);
     // __Activated[3] = true;
     // __Activated[4] = true;
-    return 0;
-}
+    // return 0;
+// }
 
 // int main()
 // {
