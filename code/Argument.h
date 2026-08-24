@@ -16,7 +16,7 @@ int __numV_left;
 double __eta_left;
 int root_num;
 double residual=0.0, decimal=1.0;
-vector<int8> __Activated;
+vector<int> __Activated;
 // vector<vector<int>> activated_nodes;
 vector<int> seed_set;
 vector<float> cost;
@@ -33,7 +33,8 @@ bool ablation_update=true;
 bool ablation_add_root=false;
 const __m512i zeros512 = _mm512_setzero_epi32();
 const __m512i ones512 = _mm512_set1_epi32(1);
-__m512i numV512 = _mm512_set1_epi32(__numV);
+const __m512i minus_one512 = _mm512_set1_epi32(-1);
+__m512i numV512;
 
 
 bool do_verify = false;
@@ -208,6 +209,7 @@ public:
         // R_graph = GraphBase::load_graph(dataset_dir, 1);
         // O_graph = GraphBase::load_graph(dataset_dir, 0);
         numV=static_cast<int>(R_graph.size());
+        numV512 = _mm512_set1_epi32(numV);
         __numV_left=numV;
         round_num=0;
 

@@ -716,7 +716,7 @@ public:
 				continue;
 			while (mask) 
 			{
-				int bit = __builtin_ctz((unsigned)mask);
+				int bit = __builtin_clz((unsigned)mask);
 				del_v_roots.push_back(i + bit);
 				mask &= mask - 1;
         	}
@@ -753,12 +753,14 @@ public:
 			int j = 0;
 			for (; j+16 <= min_tree_RR_size; j+=16)
 			{
-				__m512i idx = _mm512_load_epi32((const __m512i*)&RR[i]);
+				__m512i idx = _mm512_load_epi32((const __m512i*)&RR);
+				const __m512i treeId512 = _mm512_set1_epi32(i);
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, treeId512, 4);
 				__m512i act = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
 				__mmask16 mask = _mm512_cmpeq_epi32_mask(act, ones512);
         		if (mask != 0) 
 				{
-					first_del_idx = __builtin_ctz((unsigned)mask)+j;
+					first_del_idx = __builtin_clz((unsigned)mask)+j; // count from high bit.
 					find_del=true;					
 					min_tree = i;
 					break;
@@ -796,7 +798,7 @@ public:
 		i=affected_next_layer_beg;
 		for (; i+16 <= min_tree_RR_size; i+=16)
 		{
-			__m512i idx = _mm512_load_epi32((const __m512i*)&min_tree_RR[i]);
+			__m512i idx = _mm512_load_epi32((const __m512i*)&min_tree_RR);
 			_mm512_i32scatter_epi32(__vecTree.data(), idx, numV512, 4);
 		}
 		for (; i < min_tree_RR_size; i++)
@@ -836,11 +838,11 @@ public:
 			}
 			for (;j<RR.size();j++)
 			{
-				int node = RR[j];
+				// int node = RR[j];
 // #ifdef DEBUG
 // 				mRR_hash.erase(node);
 // #endif // !NDEBUG
-				__vecTree[node] = i;
+				__vecTree[RR[j]] = i;
 			}
 			RR.swap(mRR_copy[i - min_tree]);
 			mRR_layer[i].clear();
@@ -911,17 +913,14 @@ public:
 					__vecNewTree[nbrId] = min_tree; // mark the node as in the new mRR
 					if (__vecTree[nbrId] < 0)		// nbrId was not in this mRR previously
 					{
-						simd_ordered_insert(frset, mRRid);
-						// auto &frset = _FRsets[nbrId];
-						// frset.insert(frset.begin()+simd_ordered_insert(frset, mRRid), mRRid);
-						// auto &frset = _FRsets[nbrId];
-						// auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-						// // if (it != frset.end() && *it == mRRid)
-						// // {
-						// // 	cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " already in _FRsets." << endl;
-						// // 	exit(1);
-						// // }
-						// frset.insert(it, mRRid);
+						auto &frset = _FRsets[nbrId];
+						auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+						// if (it != frset.end() && *it == mRRid)
+						// {
+						// 	cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " already in _FRsets." << endl;
+						// 	exit(1);
+						// }
+						frset.insert(it, mRRid);
 // #ifdef DEBUG
 // 						vec_hash_FR[nbrId].insert(mRRid);
 // #endif // !NDEBUG
@@ -930,6 +929,12 @@ public:
 			}
 			layer_start = layer_end; // update the start index of the next layer
 			layer_end = min_tree_RR.size();
+			#ifdef PREFETCH  // usefull for 5% acceleration
+			if(layer_end-layer_start>8)
+			{
+				_mm_prefetch(R_graph[layer_start+8].data(), _MM_HINT_T0);
+			}
+			#endif
 		}
 		if (min_tree_RR.size() < 1) // make sure it is not empty, // if the last RR root is a del_node
 		{
@@ -971,17 +976,16 @@ public:
 // #endif
 						if (__vecTree[nbrId] < 0) // nbrId was not in this mRR previously
 						{
-							simd_ordered_insert(frset, mRRid);
 							// auto &frset = _FRsets[nbrId];
 							// frset.insert(frset.begin()+simd_ordered_insert(frset, mRRid), mRRid);
-							// auto &frset = _FRsets[nbrId];
-							// auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+							auto &frset = _FRsets[nbrId];
+							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
 							// if (it != frset.end() && *it == mRRid)
 							// {
 							// 	cout <<__LINE__<< ",Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " already in _FRsets." << endl;
 							// 	exit(1);
 							// }
-							// frset.insert(it, mRRid);
+							frset.insert(it, mRRid);
 // #ifdef DEBUG
 // 							vec_hash_FR[nbrId].insert(mRRid);
 // #endif // !NDEBUG
@@ -999,14 +1003,58 @@ public:
 // 			exit(1);
 // 		}
 // #endif
-
-		for (const auto &RR : mRR_copy)
+		for(int i=0;i<mRR_copy.size();i++)
 		{
-			for (const auto &node : RR)
-			{
-				if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+			auto &RR = mRR_copy[i];
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
+        	{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				__m512i vals = _mm512_i32gather_epi32(idx, __vecNewTree.data(), 4);
+				__mmask16 mask = _mm512_cmplt_epi32_mask(vals, zeros512);
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);  // set vecTree
+
+				alignas(64) int nodes[16];
+            	_mm512_store_si512(reinterpret_cast<void*>(nodes), idx);
+
+				while (mask)
 				{
-					simd_ordered_erase(_FRsets[node], mRRid);
+					int node = nodes[__builtin_ctz(mask)];
+					auto &frset = _FRsets[node];
+					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+					// if (it != frset.end() && *it == mRRid)
+					// {
+						frset.erase(it);
+// #ifdef DEBUG
+// 						vec_hash_FR[node].erase(mRRid);
+// #endif // !NDEBUG
+					// }
+					// else
+					// {
+					// 	cout << __LINE__ << ", Error: mRRid is not in the FRset of " << node << endl;
+					// }
+					mask &= mask - 1;
+				}
+			}
+			for (; j < RR_size; ++j)
+			{
+				int node = RR[j];
+				if (__vecNewTree[node] < 0)
+				{
+				    auto &frset = _FRsets[node];
+					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+					frset.erase(it);
+				}
+				__vecTree[node] = -1;
+			}
+		}
+
+// 		for (const auto &RR : mRR_copy)
+// 		{
+// 			for (const auto &node : RR)
+// 			{
+// 				if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+// 				{
 // 					auto &frset = _FRsets[node];
 // 					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
 // 					if (it != frset.end() && *it == mRRid)
@@ -1020,10 +1068,10 @@ public:
 // 					{
 // 						cout << __LINE__ << ", Error: mRRid is not in the FRset of " << node << endl;
 // 					}
-				}
-				__vecTree[node] = -1;
-			}
-		}
+// 				}
+// 				__vecTree[node] = -1;
+// 			}
+// 		}
 // reset all static variables
 // #ifdef DEBUG
 // 		if (v_roots_check(mRRid, string(__func__) + " end"))
@@ -1040,18 +1088,30 @@ public:
 		for (int i = 0; i <= safe_size; i++)
 		{
 			auto &RR = mRR[i];
-			for (const auto &node : RR)
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
+        	{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);
+			}
+			for (;j<RR_size;j++)
 			{
-				__vecTree[node] = -1; // reset the tree id
+				__vecTree[RR[j]] = -1; // reset the tree id
 			}
 		}
 
 		for (int i = min_tree; i < mRR_size; i++)
 		{
 			auto &RR = mRR[i];
-			for (const auto &node : RR)
+			ulint j=0, RR_size=RR.size();
+			for(;j+16<=RR_size;j+=16)
 			{
-				__vecNewTree[node] = -1; // reset the tree id
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecNewTree.data(), idx, minus_one512, 4);
+			}
+			for (;j<RR_size;j++)
+			{
+				__vecNewTree[RR[j]] = -1; // reset the tree id
 			}
 		}
 		for (const auto &root : v_roots) // reset the v_roots
@@ -1071,7 +1131,7 @@ public:
 	{
 		mRRset &mRR = _mRRsets[mRRid];
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];
-		vint &v_roots = vv_virtual_roots[mRRid];
+		auto &v_roots = vv_virtual_roots[mRRid];
 		vint roots;
 		for(const auto del_node: del_nodes)
 		{
@@ -1208,7 +1268,7 @@ public:
 		}
 		#endif // !NDEBUG
 		int mRR_size = static_cast<int>(mRR.size());
-		vint &v_roots = vv_virtual_roots[mRRid];
+		auto &v_roots = vv_virtual_roots[mRRid];
 		ulint v_roots_size = v_roots.size();
 		vint roots, del_roots;
 		// vvint vv_del_idx(mRR_size);
@@ -1231,22 +1291,33 @@ public:
 
 		int min_tree = __numV, affected_layer_idx = __numV, first_del_idx = __numV, min_tree_RR_size=__numV;
 		bool find_del = false;
-		for (int i = 0; i < mRR_size; i++) 
+		for (int i = 0; i < mRR_size; i++)
 		{
 			auto &RR = mRR[i];
 			min_tree_RR_size = static_cast<int>(RR.size());
-			for (int j = 0; j < min_tree_RR_size; j++)
+			int j = 0;
+			for (; j+16 <= min_tree_RR_size; j+=16)
+			{
+				__m512i idx = _mm512_load_epi32((const __m512i*)&RR[i]);
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, _mm512_set1_epi32(i), 4);
+				__m512i act = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
+				__mmask16 mask = _mm512_cmpeq_epi32_mask(act, ones512);
+        		if (mask != 0) 
+				{
+					first_del_idx = __builtin_clz((unsigned)mask)+j;
+					find_del=true;					
+					min_tree = i;
+					break;
+				}
+			}
+			for (; j < min_tree_RR_size; j++)
 			{
 				__vecTree[RR[j]] = i;
-				if (!find_del&&__Activated[RR[j]])
+				if (__Activated[RR[j]])
 				{
 					first_del_idx = j;
 					min_tree = i;
 					find_del = true;
-					__vecTree[RR[j]] = -1; // reset the tree id of the del_node here
-				}
-				if (find_del)
-				{	
 					break;
 				}
 			}
@@ -1257,13 +1328,18 @@ public:
 		}
 
 		auto &min_tree_RR=mRR[min_tree];
-		int first_del_idx_1=first_del_idx+1;
-		for (int i =first_del_idx_1; i < min_tree_RR_size; i++)
+		int first_del_idx_1=first_del_idx+1,i=first_del_idx_1;
+		for (; i+16 <= min_tree_RR_size; i+=16)
+		{
+			__m512i idx = _mm512_load_epi32((const __m512i*)&min_tree_RR);
+			_mm512_i32scatter_epi32(__vecTree.data(), idx, numV512, 4);
+		}
+		for (; i < min_tree_RR_size; i++)
 		{
 			__vecTree[min_tree_RR[i]] = __numV;
-			#ifdef DEBUG
-				mRR_hash.erase(min_tree_RR[i]);
-			#endif
+// #ifdef DEBUG
+// 			mRR_hash.erase(min_tree_RR[i]);
+// #endif
 		}
 		mRRset mRR_copy(mRR_size - min_tree);  // mRR_copy should contain the truncated part of the min_tree_RR
 		if(first_del_idx_1< min_tree_RR_size)
@@ -1279,12 +1355,19 @@ public:
 				roots.push_back(RR[0]);
 				__vecNewTree[RR[0]] = mRR_size; // the root should not be added into some tree during the new exploration
 			}
-			for (const auto &node : RR)
+			int j=0;
+			for(; j+16 <= RR.size(); j+=16)
 			{
-		#ifdef DEBUG
-				mRR_hash.erase(node);
-		#endif // !NDEBUG	
-				__vecTree[node] = i;
+				__m512i idx = _mm512_load_epi32((const __m512i*)&RR[j]);
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, _mm512_set1_epi32(i), 4);
+			}
+			for (;j<RR.size();j++)
+			{
+				// int node = RR[j];
+// #ifdef DEBUG
+// 				mRR_hash.erase(node);
+// #endif // !NDEBUG
+				__vecTree[RR[j]] = i;
 			}
 			RR.swap(mRR_copy[i - min_tree]);
 		}
@@ -1351,25 +1434,43 @@ public:
 				node = nbrId;
 			}
 		}
-		for (const auto &RR : mRR_copy)
+		for(int i=0;i<mRR_copy.size();i++)
 		{
-			for (const auto &node : RR)
-			{
-				if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+			auto &RR = mRR_copy[i];
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
+        	{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				__m512i vals = _mm512_i32gather_epi32(idx, __vecNewTree.data(), 4);
+				__mmask16 mask = _mm512_cmplt_epi32_mask(vals, zeros512);
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);  // set vecTree
+
+				alignas(64) int nodes[16];
+            	_mm512_store_si512(reinterpret_cast<void*>(nodes), idx);
+
+				while (mask)
 				{
+					int node = nodes[__builtin_ctz(mask)];
 					auto &frset = _FRsets[node];
 					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-					if (it != frset.end() && *it == mRRid)
-					{
+					// if (it != frset.end() && *it == mRRid)
+					// {
 						frset.erase(it);
-		#ifdef DEBUG
-						vec_hash_FR[node].erase(mRRid);
-		#endif // !NDEBUG
-					}
-					else
-					{
-						cout << __LINE__ << ", Error: mRRid is not in the FRset of " << node << endl;
-					}
+// #ifdef DEBUG
+// 						vec_hash_FR[node].erase(mRRid);
+// #endif // !NDEBUG
+					// }
+					mask &= mask - 1;
+				}
+			}
+			for (; j < RR_size; ++j)
+			{
+				int node = RR[j];
+				if (__vecNewTree[node] < 0)
+				{
+				    auto &frset = _FRsets[node];
+					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+					frset.erase(it);
 				}
 				__vecTree[node] = -1;
 			}
@@ -1389,18 +1490,30 @@ public:
 		for (int i = 0; i <= safe_size; i++)
 		{
 			auto &RR = mRR[i];
-			for (const auto &node : RR)
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
+        	{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);
+			}
+			for (;j<RR_size;j++)
 			{
-				__vecTree[node] = -1; // reset the tree id
+				__vecTree[RR[j]] = -1; // reset the tree id
 			}
 		}
 
 		for (int i = min_tree; i < mRR_size; i++)
 		{
 			auto &RR = mRR[i];
-			for (const auto &node : RR)
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
+        	{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecNewTree.data(), idx, minus_one512, 4);
+			}
+			for (;j<RR_size;j++)
 			{
-				__vecNewTree[node] = -1; // reset the tree id
+				__vecNewTree[RR[j]] = -1; // reset the tree id
 			}
 		}
 		for (const auto &root : v_roots) // reset the v_roots
@@ -1434,9 +1547,15 @@ public:
 			int root = RR[0];
 			roots.push_back(root);
 			__vecTree[root] = 1024;
-			for (const auto &node : RR)
+			ulint RR_size=RR.size(), j=0;
+			for (; j+16 <= RR_size; j+=16)
 			{
-				__vecVisitBool[node] = true;
+				__m512i idx = _mm512_load_epi32((const __m512i*)&RR);
+				_mm512_i32scatter_epi32(__vecVisitBool.data(), idx, ones512, 4);
+			}
+			for (;j<RR_size;j++)
+			{
+				__vecVisitBool[RR[j]] = 1;
 			}
 		}
 		for (auto root : v_roots)
@@ -1501,11 +1620,10 @@ public:
 					for (int j = layer_start; j < layer_end; j++)
 					{
 						int node = RR[j];
+						auto prob=Inv_inDeg[node];
 						for (const auto &nbrId : (R_graph)[node])
 						{
-							if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
-								continue;
-							if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
+							if (__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > prob)
 								continue;
 							RR.push_back(nbrId);
 			#ifdef DEBUG
@@ -1546,23 +1664,32 @@ public:
 		#endif
 		for (const auto &RR : mRR)
 		{
-			for (auto &node : RR)
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
 			{
-				__vecVisitBool[node] = false;
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecVisitBool.data(), idx, zeros512, 4);
+			}
+			for (; j < RR_size; ++j)
+			{
+				__vecVisitBool[RR[j]] = false;
 			}
 		}
-		for (const auto &root : roots)
+		ulint all_roots_size = roots.size()+v_roots.size()+new_roots.size(), k=0;
+		roots.insert(roots.end(),
+         std::make_move_iterator(v_roots.begin()),
+         std::make_move_iterator(v_roots.end()));
+		roots.insert(roots.end(),
+         std::make_move_iterator(new_roots.begin()),
+         std::make_move_iterator(new_roots.end()));
+		for(;k+16<=all_roots_size;k+=16)
 		{
-			__vecTree[root] = -1;
+			__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(roots.data() + k));
+			_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);
 		}
-		for (const auto &root : new_roots)
+		for (; k < all_roots_size; ++k)
 		{
-			__vecTree[root] = -1;
-		}
-
-		for (auto root : v_roots)
-		{
-			__vecTree[root] = -1;
+			__vecTree[roots[k]] = -1;
 		}
 		#ifdef DEBUG
 		if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 1))
@@ -1973,9 +2100,15 @@ public:
 			int root = RR[0];
 			roots.push_back(root);
 			__vecTree[root] = 1024;
-			for (const auto &node : RR)
+			ulint RR_size=RR.size(), j=0;
+			for (; j+16 <= RR_size; j+=16)
 			{
-				__vecVisitBool[node] = true;
+				__m512i idx = _mm512_load_epi32((const __m512i*)&RR);
+				_mm512_i32scatter_epi32(__vecVisitBool.data(), idx, ones512, 4);
+			}
+			for (;j<RR_size;j++)
+			{
+				__vecVisitBool[RR[j]] = 1;
 			}
 		}
 		#ifdef DEBUG
@@ -2068,22 +2201,32 @@ public:
 		#endif
 		for (const auto &RR : mRR)
 		{
-			for (auto &node : RR)
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
 			{
-				__vecVisitBool[node] = false;
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecVisitBool.data(), idx, zeros512, 4);
+			}
+			for (; j < RR_size; ++j)
+			{
+				__vecVisitBool[RR[j]] = false;
 			}
 		}
-		for (const auto &root : roots)
+		ulint all_roots_size = roots.size()+v_roots.size()+new_roots.size(), k=0;
+		roots.insert(roots.end(),
+         std::make_move_iterator(v_roots.begin()),
+         std::make_move_iterator(v_roots.end()));
+		roots.insert(roots.end(),
+         std::make_move_iterator(new_roots.begin()),
+         std::make_move_iterator(new_roots.end()));
+		for(;k+16<=all_roots_size;k+=16)
 		{
-			__vecTree[root] = -1;
+			__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(roots.data() + k));
+			_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);
 		}
-		for (const auto &root : new_roots)
+		for (; k < all_roots_size; ++k)
 		{
-			__vecTree[root] = -1;
-		}
-		for (auto root : v_roots)
-		{
-			__vecTree[root] = -1;
+			__vecTree[roots[k]] = -1;
 		}
 		#ifdef DEBUG
 			if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 1))
@@ -2098,7 +2241,7 @@ public:
 		vecRoot_num[mRRid] -= num_del_roots;
 		mRRset &mRR = _mRRsets[mRRid];
 		ulint mRR_size = mRR.size();
-		vint &v_roots = vv_virtual_roots[mRRid], roots;
+		vint_aligned &v_roots = vv_virtual_roots[mRRid], roots;
 		ulint v_roots_size = v_roots.size();
 		if (v_roots_size >= num_del_roots)
 		{
@@ -2183,7 +2326,7 @@ public:
 #endif // !NDEBUG
 		for (ulint i = max_size; i < _num_mRRsets; i++)
 		{
-			vint().swap(vv_virtual_roots[i]);
+			vint_aligned().swap(vv_virtual_roots[i]);
 		}
 		vv_virtual_roots.resize(max_size);
 
@@ -2201,7 +2344,7 @@ public:
 		}
 		for (auto &vec : vv_virtual_roots)
 		{
-			vint().swap(vec);
+			vint_aligned().swap(vec);
 		}
 		// no need to refresh mRRsets, since it is never recorded in ending rounds
 		_num_mRRsets = 0;
@@ -2216,7 +2359,7 @@ public:
 		vint().swap(__vecVisitNode);
 		FRsets().swap(_FRsets);
 		vector<int>().swap(__vecTree);
-		vector<vector<int>>().swap(vv_virtual_roots);
+		vector<vint_aligned>().swap(vv_virtual_roots);
 	}
 
 	/// Set cascade model
