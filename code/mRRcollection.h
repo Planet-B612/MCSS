@@ -213,6 +213,7 @@ class mRRcollection
         std::mt19937 gen(rd());
         std::binomial_distribution<int> dist(num_revise_RR, residual);
         ceil_root_RR=dist(gen);
+		floor_root_RR = num_revise_RR - ceil_root_RR;
 		int num_polluted=0, root_num_1=root_num+1;
 
 		auto single_start = std::chrono::high_resolution_clock::now();
@@ -277,7 +278,7 @@ class mRRcollection
 				}
 			}
 		}
-		floor_root_RR = num_revise_RR - ceil_root_RR;
+		// floor_root_RR = num_revise_RR - ceil_root_RR;
 		for (auto mRRid : vec_rootnum_RRid) // directly reuse updated previous mRR-sets with root number root_num, if there is any such mRR-sets
 		{
 			if (floor_root_RR > 0) // if still need floor_root_RR
@@ -750,7 +751,7 @@ class mRRcollection
 			if (__Activated[v_roots[i]]) // is a del_node
 			{
 				del_v_roots.push_back(i);
-			}			
+			}		
 		}
 		for(int i = static_cast<int>(del_v_roots.size()) - 1; i > -1; i--)
 		{
