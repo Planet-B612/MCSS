@@ -4,6 +4,7 @@
 #include "CommonStruc.h"
 #include "graph.h"
 #include <immintrin.h>
+#include <cassert>
 using namespace std;
 
 #define VAR_NAME(x) #x
@@ -29,12 +30,16 @@ int num_addback = 0;
 int deg_amplifier=1.0; // amplify the in_deg_threshold to make diffusion easier
 bool adapt_IM=false;
 bool mRR_time_test = false;
-bool ablation_update=true;
+bool ablation_update=false;
 bool ablation_add_root=false;
 const __m512i zeros512 = _mm512_setzero_epi32();
 const __m512i ones512 = _mm512_set1_epi32(1);
 const __m512i minus_one512 = _mm512_set1_epi32(-1);
 __m512i numV512;
+string mRR_output_path = "../mRR_output.txt";
+string layer_output_path = "../layer_output.txt";
+string FR_output_path = "../FR_output.txt";
+int num_update=0, num_add_root=0;
 
 
 bool do_verify = false;
@@ -73,7 +78,7 @@ public:
     string graph_path="/data/fc/graphInfo/";
     string pw_path="/data/fc/realization/";
     string result_dir = "../backup.txt";
-    int run_times=10;
+    int run_times=1;
     int times=0;
     int batch=16;
     int linear_search_thr=0;  // recommended 50 for formal running
@@ -205,6 +210,9 @@ public:
         cur_data=k;
         string dataset_dir = graph_path + dataset[k];
         cout<<dataset_dir<<", "<<dataset[k]<<endl;
+        mRR_output_path="../mRR_output_" + dataset[k] + "_" + model+ ".txt";
+        layer_output_path="../layer_output_" + dataset[k] + "_" + model+ ".txt";
+        FR_output_path="../FR_output_" + dataset[k] + "_" + model+ ".txt";
         GraphBase::load_graph_directly_nbr_sorted(dataset_dir, O_graph, R_graph);
         // R_graph = GraphBase::load_graph(dataset_dir, 1);
         // O_graph = GraphBase::load_graph(dataset_dir, 0);

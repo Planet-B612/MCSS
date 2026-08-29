@@ -341,7 +341,7 @@ public:
 							node=j;
 						}
 					}
-					(__Activated)[node]=true;
+					(__Activated)[node]=1;
 					seed_batch.push_back(node);
 				}
 			}
@@ -511,7 +511,7 @@ public:
 							node=j;
 						}
 					}
-					(__Activated)[node]=true;
+					(__Activated)[node]=1;
 					seed_batch.push_back(node);
 				}
 			}
@@ -612,9 +612,9 @@ public:
 				selected[node] = true;
 				pol_nodes.push_back(node);
 			}
-			__Activated.assign(__numV, false);
+			__Activated.assign(__numV, 0);
 			for(auto pol_node: pol_nodes){
-				__Activated[pol_node] = true;
+				__Activated[pol_node] = 1;
 			}
 			__numV_left=__numV-pol_node_num_for_accuracy_verification;
 			__eta_left=eta_for_verification;			
@@ -630,9 +630,9 @@ public:
 			double theta=max(2*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification), (2+2*eps_for_verification/3)*__numV_left*log(__numV_left)/(inf_LB*eps_for_verification*eps_for_verification));
 
 			// estimate with fresh mRR-sets
-			__Activated.assign(__numV, false);
+			__Activated.assign(__numV, 0);
 			for(auto pol_node: pol_nodes){
-				__Activated[pol_node] = true;
+				__Activated[pol_node] = 1;
 			}
 			cout<<__LINE__<<": building fresh mRR-sets on residual graph for theta = "<<theta<<endl;
 			RR.build_n_mRRsets_fresh_vec(theta);
@@ -660,7 +660,7 @@ public:
 			RR.vec_mRR_layer.resize(theta);
 			RR.vv_polluted_nodes.resize(theta);
 			RR.vecRoot_num.resize(theta);
-			__Activated.assign(__numV, false);  // reset the __Activated states
+			__Activated.assign(__numV, 0);  // reset the __Activated states
 			vvint vec_del_nodes(theta);
 			__numV_left=__numV;
 			__eta_left=eta_for_verification+pol_node_num_for_accuracy_verification;
@@ -677,7 +677,7 @@ public:
 			// activate the nodes
 			for(int pol_node:pol_nodes)
 			{
-				__Activated[pol_node] = true;  // activate the polluted nodes
+				__Activated[pol_node] = 1;  // activate the polluted nodes
 				for(int rid:RR._FRsets[pol_node])
 				{
 					vec_del_nodes[rid].push_back(pol_node);
@@ -739,7 +739,7 @@ public:
 		vector<double> vecActivateWeight(__numV, 0.0);  // total weight of active neighbors in LT
 		for (auto seed : vec_seed)
 		{
-			__Activated[seed] = true;
+			__Activated[seed] = 1;
 		}
 		vec_visitNode= vec_seed;
 		for (uint32_t i = 0; i < MC_round; i++)
@@ -760,7 +760,7 @@ public:
 						if (__Activated[nbr]) continue;
 						if (dsfmt_gv_genrand_open_close() <= Inv_inDeg[nbr])
 						{
-							__Activated[nbr] = true;
+							__Activated[nbr] = 1;
 							vec_visitNode.push_back(nbr);
 							numVisit++;
 						}
@@ -784,14 +784,14 @@ public:
 						vecActivateWeight[nbr] += Inv_inDeg[nbr];
 						if (vecActivateWeight[nbr] >= vecThr[nbr])
 						{
-							__Activated[nbr] = true;
+							__Activated[nbr] = 1;
 							vec_visitNode.push_back(nbr);
 							numVisit++;
 						}
 					}
 				}
 			}
-			int active = count(__Activated.begin(), __Activated.end(), true)-pol_node_num;
+			int active = count(__Activated.begin(), __Activated.end(), 1)-pol_node_num;
 			if(active >__eta_left)
 			{
 				active=__eta_left;
@@ -800,7 +800,7 @@ public:
 			spread += active;
 			for(int i=seed_num_for_accuracy_verification; i<vec_visitNode.size(); i++)
 			{
-				__Activated[vec_visitNode[i]] = false;  // reset the activated nodes
+				__Activated[vec_visitNode[i]] = 0;  // reset the activated nodes
 			}
 		}
 		free(visited);

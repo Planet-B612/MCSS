@@ -1,11 +1,20 @@
+#define DEBUG
+#define PREFETCH
+
+#include <atomic>
+#include <mutex>
+#include <omp.h>
+#include <immintrin.h>
 #include <iostream>
 #include <vector>
 #include <chrono>
 // #include <algorithm>
+#include "../dSFMT/dSFMT.h"
+#include "Argument.h"
 #include "CommonStruc.h"
 #include "CommonFunc.h"
 #include "../dSFMT/dSFMT.h"
-// #include "mRRcollection.h"
+#include "mRRcollection.h"
 // #include "Algorithm.h"
 // #include "graph.h"
 #include <cstring>
@@ -21,10 +30,9 @@
 #include <immintrin.h> // SIMD intrinsics
 #include <numeric>
 #include <cmath>
+#include <cassert>
 // #include "test_ic.h"
 
-
-// #include <unordered_map>
 
 using namespace std;
 using namespace std::chrono;
@@ -33,138 +41,178 @@ using namespace std::chrono;
 
 #include <iostream>
 #include <vector>
-#include <immintrin.h>
 
-int main() {
+int main(int argn, char **argv)
+{   
+    vint seeds;
+    int RR_num=200000;
+    Argument arg;
+    arg.dataset_No=18;
+    R_graph.clear(), O_graph.clear();
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
-
-    __m512i minus_one = _mm512_set1_epi32(-1);
-    __m512i zero = _mm512_setzero_si512();
-    vint_aligned arr;
-    int Vnum=1e6, copy_size=10000, RR_size=1000;
-    vint __vecNewTree(Vnum, -1), eraseNodes;
-    mRRset mRR_copy(copy_size);
-    for(int i=0;i<copy_size;i++)
+    arg.arg_update(argn, argv);
+    arg.Initialization();
+    arg.load_cost_graph(arg.dataset_No);
+    mRRcollection RR(arg);
+    root_num=20;
+    RR.build_n_mRRsets_tree(RR_num,0);
+    // RR.out_mRRset();
+    // RR.out_layer();
+    // RR.out_FR();
+    // exit(1);
+    for (int j = 0; j < 2000; j++)
     {
-        for(int j=0;j<RR_size;j++)
+        int root = dsfmt_gv_genrand_uint32_range(arg.numV);
+        while (__Activated[root])
         {
-            mRR_copy[i].push_back(dsfmt_gv_genrand_uint32_range(Vnum));
+            root = dsfmt_gv_genrand_uint32_range(arg.numV);
         }
-        arr.push_back(i);
+        __Activated[root] = 1;
+        seeds.push_back(root);
     }
-    cout<<"mRR_copy has been generated"<<endl;
-
-    high_resolution_clock::time_point startTime = high_resolution_clock::now();	
-    for (auto &RR : mRR_copy)
+    RR.realization(seeds);
+    root_num=40;
+    cout<<"updating mRR-sets"<<endl;
+    RR.build_n_mRRsets_tree(RR_num,0);
+    if(RR.FR_reverse_check(""))
     {
-        for (auto &node : RR)
-        {
-            if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
-            {
-                auto it=std::lower_bound(RR.begin(), RR.end(), 400);
-                if(it != RR.end() && *it == 400)
-                {
-                    RR.erase(it);
-                }
-            }
-            // __vecNewTree[node] = -1;
-        }
-        // auto it=std::lower_bound(RR.begin(), RR.end(), 400);
-        // if(it != RR.end() && *it == 400)
-        // {
-        //     RR.erase(it);
-        // }
+        cout<<"\033[31m"<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
+        exit(1);
     }
-    high_resolution_clock::time_point vallina_time = high_resolution_clock::now();	
-    cout<< "The time for vallina is "<<std::chrono::duration<double>(vallina_time - startTime).count()<<" s"<<endl;
-
-    // for (auto &RR : mRR_copy)
-    // {
-    //     for (auto &node : RR)
-    //     {
-    //         if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
-    //         {
-    //             simd_ordered_erase(RR, 600);
-    //         }
-    //         __vecNewTree[node] = -1;
-    //     }
-    // }
-    // high_resolution_clock::time_point simd_time = high_resolution_clock::now();	
-    // cout<< "The time for simd is "<<std::chrono::duration<double>(simd_time-vallina_time).count()<<" s"<<endl;
-
-    for(int i=0;i<copy_size;i++)
-    {
-        auto &RR = mRR_copy[i];
-        int j=0;
-        // if(i%100==0)
-        // {
-        //     cout<<"processing "<<i<<"th mRR..."<<endl;
-        // }
-        auto size=RR.size();
-        for (; j + 16 <= size; j += 16)
-        {
-            __m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
-
-            __m512i vals = _mm512_i32gather_epi32(idx, __vecNewTree.data(), 4);
-
-            __mmask16 mask = _mm512_cmplt_epi32_mask(vals, zero);
-
-            // scatter: __vecNewTree[node] = -1
-            // _mm512_i32scatter_epi32(__vecNewTree.data(), idx, minus_one, 4);
-
-            // 把需要 erase 的 node 收集起来
-            alignas(64) int nodes[16];
-            _mm512_store_si512(reinterpret_cast<void*>(nodes), idx);
-
-            while (mask)
-            {
-                int k = __builtin_ctz(mask);
-                auto it=std::lower_bound(RR.begin(), RR.end(), 400);
-                if(it != RR.end() && *it == 400)
-                {
-                    RR.erase(it);
-                }
-                mask &= mask - 1;
-            }
-        }
-
-        for (; j < size; ++j)
-        {
-            // int node = RR[j];
-            // if (__vecNewTree[node] < 0)
-            // {
-            //     auto it=std::lower_bound(RR.begin(), RR.end(), 400);
-            //     if(it != RR.end() && *it == 400)
-            //     {
-            //         RR.erase(it);
-            //     }
-            // }
-            __vecNewTree[RR[j]] = -1;
-        }
-    }
-    // cout<<"erasing begins."<<endl; 
-    int k=0;
-    // for (auto &RR : mRR_copy)
-    // {
-        // for (auto &node : RR)
-        // {
-        //     if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
-        //     {
-        //         // auto it=std::lower_bound(RR.begin(), RR.end(), 400);
-        //         // if(it != RR.end() && *it == 400)
-        //         // {
-        //         //     RR.erase(it);
-        //         // }
-        //     }
-        //     // __vecNewTree[node] = -1;
-        // }
-    //     simd_ordered_erase(RR, 400);
-    // }
-    high_resolution_clock::time_point SIMD_time = high_resolution_clock::now();	
-
-    cout<< "The time for SIMD is "<<std::chrono::duration<double>(SIMD_time - vallina_time).count()<<" s"<<endl;
-    return 0;
+    cout<<"Finished updating and adding roots."<<endl;
+    cout<<"num_update: "<<num_update<<", num_add_root: "<<num_add_root<<endl;
 }
+
+// int main() {
+//     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
+
+//     __m512i minus_one = _mm512_set1_epi32(-1);
+//     __m512i zero = _mm512_setzero_si512();
+//     vint_aligned arr;
+//     int Vnum=1e6, copy_size=10000, RR_size=1000;
+//     vint __vecNewTree(Vnum, -1), eraseNodes;
+//     mRRset mRR_copy(copy_size);
+//     for(int i=0;i<copy_size;i++)
+//     {
+//         for(int j=0;j<RR_size;j++)
+//         {
+//             mRR_copy[i].push_back(dsfmt_gv_genrand_uint32_range(Vnum));
+//         }
+//         arr.push_back(i);
+//     }
+//     cout<<"mRR_copy has been generated"<<endl;
+
+//     high_resolution_clock::time_point startTime = high_resolution_clock::now();	
+//     for (auto &RR : mRR_copy)
+//     {
+//         for (auto &node : RR)
+//         {
+//             if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+//             {
+//                 auto it=std::lower_bound(RR.begin(), RR.end(), 400);
+//                 if(it != RR.end() && *it == 400)
+//                 {
+//                     RR.erase(it);
+//                 }
+//             }
+//             // __vecNewTree[node] = -1;
+//         }
+//         // auto it=std::lower_bound(RR.begin(), RR.end(), 400);
+//         // if(it != RR.end() && *it == 400)
+//         // {
+//         //     RR.erase(it);
+//         // }
+//     }
+//     high_resolution_clock::time_point vallina_time = high_resolution_clock::now();	
+//     cout<< "The time for vallina is "<<std::chrono::duration<double>(vallina_time - startTime).count()<<" s"<<endl;
+
+//     // for (auto &RR : mRR_copy)
+//     // {
+//     //     for (auto &node : RR)
+//     //     {
+//     //         if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+//     //         {
+//     //             simd_ordered_erase(RR, 600);
+//     //         }
+//     //         __vecNewTree[node] = -1;
+//     //     }
+//     // }
+//     // high_resolution_clock::time_point simd_time = high_resolution_clock::now();	
+//     // cout<< "The time for simd is "<<std::chrono::duration<double>(simd_time-vallina_time).count()<<" s"<<endl;
+
+//     for(int i=0;i<copy_size;i++)
+//     {
+//         auto &RR = mRR_copy[i];
+//         int j=0;
+//         // if(i%100==0)
+//         // {
+//         //     cout<<"processing "<<i<<"th mRR..."<<endl;
+//         // }
+//         auto size=RR.size();
+//         for (; j + 16 <= size; j += 16)
+//         {
+//             __m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+
+//             __m512i vals = _mm512_i32gather_epi32(idx, __vecNewTree.data(), 4);
+
+//             __mmask16 mask = _mm512_cmplt_epi32_mask(vals, zero);
+
+//             // scatter: __vecNewTree[node] = -1
+//             // _mm512_i32scatter_epi32(__vecNewTree.data(), idx, minus_one, 4);
+
+//             // 把需要 erase 的 node 收集起来
+//             alignas(64) int nodes[16];
+//             _mm512_store_si512(reinterpret_cast<void*>(nodes), idx);
+
+//             while (mask)
+//             {
+//                 int k = __builtin_ctz(mask);
+//                 auto it=std::lower_bound(RR.begin(), RR.end(), 400);
+//                 if(it != RR.end() && *it == 400)
+//                 {
+//                     RR.erase(it);
+//                 }
+//                 mask &= mask - 1;
+//             }
+//         }
+
+//         for (; j < size; ++j)
+//         {
+//             // int node = RR[j];
+//             // if (__vecNewTree[node] < 0)
+//             // {
+//             //     auto it=std::lower_bound(RR.begin(), RR.end(), 400);
+//             //     if(it != RR.end() && *it == 400)
+//             //     {
+//             //         RR.erase(it);
+//             //     }
+//             // }
+//             __vecNewTree[RR[j]] = -1;
+//         }
+//     }
+//     // cout<<"erasing begins."<<endl; 
+//     int k=0;
+//     // for (auto &RR : mRR_copy)
+//     // {
+//         // for (auto &node : RR)
+//         // {
+//         //     if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
+//         //     {
+//         //         // auto it=std::lower_bound(RR.begin(), RR.end(), 400);
+//         //         // if(it != RR.end() && *it == 400)
+//         //         // {
+//         //         //     RR.erase(it);
+//         //         // }
+//         //     }
+//         //     // __vecNewTree[node] = -1;
+//         // }
+//     //     simd_ordered_erase(RR, 400);
+//     // }
+//     high_resolution_clock::time_point SIMD_time = high_resolution_clock::now();	
+
+//     cout<< "The time for SIMD is "<<std::chrono::duration<double>(SIMD_time - vallina_time).count()<<" s"<<endl;
+//     return 0;
+// }
 
 
 

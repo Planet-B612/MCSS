@@ -16,7 +16,7 @@ using namespace std;
 
 class mRRcollection
 {
-private:
+	private:
 	/// __numV: number of nodes in the graph.
 	int __numV;
 	/// __numE: number of edges in the graph.
@@ -29,7 +29,7 @@ private:
 	vint __vecVisitNode;
 	float rand_div = 1.0;
 
-public:
+	public:
 	Graph PO;
 	FRsets _FRsets;
 	FRsets _FRsets_veri;
@@ -70,11 +70,11 @@ public:
 		_FRsets_veri = FRsets(__numV);
 		__regen_threshold = arg.regen_threshold;
 		__root_num_bound = arg.root_num_bound;
-		#ifdef DEBUG
-		vec_hash_FR.resize(__numV);
-		#endif
+		// #ifdef DEBUG
+		// vec_hash_FR.resize(__numV);
+		// #endif
 		model = arg.model;
-		__vecVisitBool = std::vector<int>(__numV, false);
+		__vecVisitBool = std::vector<int>(__numV, 0);
 		__vecTree = std::vector<int>(__numV, -1);
 		if(model != "IC")
 		{
@@ -142,11 +142,11 @@ public:
 		for (auto seed : seeds)
 		{
 			++counter_real;
-			(__Activated)[seed] = true;
+			(__Activated)[seed] = 1;
 			__vecVisitNode[numVisitNode++] = seed;
 			for (const auto &rrid : _FRsets[seed])
 			{
-				if (rrid >= _num_mRRsets)
+				if (rrid >= static_cast<int>(_num_mRRsets))
 					continue;
 				vv_polluted_nodes[rrid].push_back(seed);
 			}
@@ -160,10 +160,10 @@ public:
 					continue;
 				__vecVisitNode[numVisitNode++] = v;
 				++counter_real;
-				(__Activated)[v] = true;
+				(__Activated)[v] = 1;
 				for (const auto &rrid : _FRsets[v])
 				{
-					if (rrid >= _num_mRRsets)
+					if (rrid >= static_cast<int>(_num_mRRsets))
 						continue;
 					vv_polluted_nodes[rrid].push_back(v);
 				}
@@ -179,7 +179,7 @@ public:
 		for (auto seed : seeds)
 		{
 			++counter_real;
-			(__Activated)[seed] = true;
+			(__Activated)[seed] = 1;
 			__vecVisitNode[numVisitNode++] = seed;
 		}
 		while (curr_Node < numVisitNode)
@@ -191,19 +191,19 @@ public:
 					continue;
 				__vecVisitNode[numVisitNode++] = v;
 				++counter_real;
-				(__Activated)[v] = true;
+				(__Activated)[v] = 1;
 			}
 		}
 		return counter_real;
 	}
 
-#include "test_ic.h"
+	#include "test_ic.h"
 
 	/// Generate a set of n mRR sets
 	void build_n_mRRsets_tree(const ulint numSamples, const int pre_theta)
 	{
 		floor_root_RR = 0;
-		ceil_root_RR = 0;												   // the number mRR-sets with root number root_num+1 in the previous revisable mRR-sets
+		ceil_root_RR = 0;   // the number mRR-sets with root number root_num+1 in the previous revisable mRR-sets
 		ulint prevSize = _num_mRRsets;								   // previous total number of mRR-sets
 		vector<int> mRR_mark(prevSize, -1);								   // false indicates this mRR is not directly reused.
 		ulint num_revise_RR = (prevSize > numSamples ? numSamples : prevSize); // the number of mRR-sets that will be revised (revisable mRR-sets)
@@ -224,7 +224,12 @@ public:
 				num_polluted++;
 			}
 		}
-		
+		size_t count = std::count_if(mRR_mark.begin(), mRR_mark.end(), [](int x) { return x > 0; });
+		if(count<5 && _num_mRRsets>0)
+		{
+			cout<<"Too few polluted mRR-sets, please check the correctness of the input seeds."<<endl;
+			exit(1);
+		}		
 		if(pre_theta>100 && (1.0*(num_polluted)/(numSamples-pre_theta)>__regen_threshold))  // brute regen is needed
 		{
 			refresh_FRmRRsets(pre_theta);
@@ -235,6 +240,10 @@ public:
 		{
 			for(ulint i=pre_theta;i<num_revise_RR;i++)  // build the basic information of previous mRR-sets, and update these mRR-sets
 			{
+				if(i%2000==0)
+				{
+					cout<<"updating mRR-sets: "<<i<<"/"<<num_revise_RR<<endl;
+				}
 				if (mRR_mark[i] > 0)
 				{
 					if(model=="IC")
@@ -245,6 +254,7 @@ public:
 						}
 						else
 						{
+							num_update++;
 							mRR_update(i, vv_polluted_nodes[i]);
 						}
 						// naive_mRR_update(i, vv_polluted_nodes[i]);
@@ -287,6 +297,10 @@ public:
 		int root_diff=0;
 		for(ulint i=pre_theta;i<num_revise_RR;i++)
 		{
+			if(i%2000==0)
+			{
+				cout<<"adding roots to mRR-sets: "<<i<<"/"<<num_revise_RR<<endl;
+			}
 			if (mRR_mark[i] <__numV) // for mRR-sets that have not been directly reused
 			{
 				if (floor_root_RR > 0) // derive floor-rooted mRR first
@@ -301,7 +315,7 @@ public:
 					{
 						if(model=="IC")
 						{
-							auto single_start = std::chrono::high_resolution_clock::now();
+							// auto single_start = std::chrono::high_resolution_clock::now();
 							// add_root(i, -root_diff);
 							if(ablation_add_root)
 							{
@@ -310,6 +324,7 @@ public:
 							}
 							else
 							{
+								num_add_root++;
 								add_root(i, -root_diff);
 							}
 							// naive_add_root(i, -root_diff);
@@ -366,9 +381,9 @@ public:
 			_num_mRRsets = numSamples;
 			vv_virtual_roots.resize(numSamples);
 			_mRRsets.resize(numSamples);
-		#ifdef DEBUG
-			vec_hash_mRR.resize(numSamples);
-		#endif // !NDEBUG
+		// #ifdef DEBUG
+		// 	vec_hash_mRR.resize(numSamples);
+		// #endif
 			vv_polluted_nodes.resize(numSamples);
 			if(model=="IC")
 			{
@@ -398,9 +413,9 @@ public:
 		vecRoot_num[mRRid] = root_num;
 		mRRset &mRR = _mRRsets[mRRid];
 		// vint &vec_next_mRRnode=vv_next_mRRnode[mRRid];
-		#ifdef DEBUG
-		sint &mRR_hash = vec_hash_mRR[mRRid];
-		#endif // !NDEBUG
+		// #ifdef DEBUG
+		// sint &mRR_hash = vec_hash_mRR[mRRid];
+		// #endif
 		mRR.resize(root_num);
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];		
 		vec_RR_layer.resize(root_num);
@@ -412,48 +427,46 @@ public:
 			{
 				root = dsfmt_gv_genrand_uint32_range(__numV);
 			}
-			__vecVisitBool[root] = true; // only record the state of roots, but do not push the root into the queue, since we are not going to diffuse here.
+			__vecVisitBool[root] = 1; // only record the state of roots, but do not push the root into the queue, since we are not going to diffuse here.
 			_FRsets[root].push_back(mRRid);
 			mRR[i].push_back(root);
-#ifdef DEBUG
-			mRR_hash.insert(root);
-			vec_hash_FR[root].insert(mRRid);
-#endif // !NDEBUG
+// #ifdef DEBUG
+// 			mRR_hash.insert(root);
+// 			vec_hash_FR[root].insert(mRRid);
+// #endif
 		}
 		if(model=="IC")
 		{
 			for (int i = 0; i < root_num;i++)
 			{
 				auto &RR = mRR[i];
-				int layer_start = 0, layer_end = 1, node=RR[0], future_node;
+				int layer_start = 0, layer_end = 1, expand;
 				while (layer_start < layer_end)
 				{
-					auto &nbrs = (R_graph)[node];
-					// ulint nbrs_size = nbrs.size();
 					vec_RR_layer[i].push_back(layer_start);
-					float prob=Inv_inDeg[node];
-					for(const auto &nbrId:nbrs)
+					for (int j = layer_start; j < layer_end; j++)
 					{
-						if(__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > prob)
-							continue;
-						RR.push_back(nbrId);
-						#ifdef DEBUG
-						mRR_hash.insert(nbrId);
-						vec_hash_FR[nbrId].insert(mRRid);
-						#endif
-						__vecVisitBool[nbrId] = true;
-						#ifndef PREFETCH // be careful to here, this line should be applied only when _FRsets is prefetched below.
-						_FRsets[nbrId].push_back(mRRid);
+						expand = RR[j];
+						auto prob=Inv_inDeg[expand];
+						for (const auto &nbrId : (R_graph)[expand])
+						{
+							if(__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > prob)
+								continue;
+							RR.push_back(nbrId);
+							__vecVisitBool[nbrId] = 1; // mark the node as in the new mRR
+							#ifndef PREFETCH // be careful to here, this line should be applied only when _FRsets is prefetched below.
+							_FRsets[nbrId].push_back(mRRid);
+							#endif
+						}
+						#ifdef PREFETCH  // usefull for 5% acceleration
+						if(RR.size()-j>8)
+						{
+							_mm_prefetch(R_graph[j+8].data(), _MM_HINT_T0);
+						}
 						#endif
 					}
-					node = RR[++layer_start];
+					layer_start = layer_end;
 					layer_end = RR.size();	 // update the end index of the next layer
-					#ifdef PREFETCH  // usefull for 5% acceleration
-					if(layer_end-layer_start>8)
-					{
-						_mm_prefetch(R_graph[layer_start+8].data(), _MM_HINT_T0);
-					}
-					#endif
 				}
 				#ifdef PREFETCH
 				for(int j=1;j<layer_end;j++)
@@ -495,20 +508,20 @@ public:
 						// vec_next_mRRnode.push_back(nbrId);
 						break;
 					}
-					__vecVisitBool[nbrId] = true;
+					__vecVisitBool[nbrId] = 1;
 					#ifndef PREFETCH
 					_FRsets[nbrId].push_back(mRRid);
 					#endif
 					RR.push_back(nbrId);
 					node = nbrId;
-					#ifdef DEBUG
-						mRR_hash.insert(nbrId);
-						vec_hash_FR[nbrId].insert(mRRid);
-					#endif
+					// #ifdef DEBUG
+					// 	mRR_hash.insert(nbrId);
+					// 	vec_hash_FR[nbrId].insert(mRRid);
+					// #endif
 				}
 				#ifdef PREFETCH
 				ulint RR_size=RR.size();
-				for(int j=1;j<RR_size;j++)
+				for(ulint j=1;j<RR_size;j++)
 				{
 					if(j+2<RR_size)
 					{
@@ -525,16 +538,27 @@ public:
 			ulint RR_size = RR.size(), i=0;
 			for(;i+16<=RR_size;i+=16)
 			{
-				__m512i indices = _mm512_load_epi32((const __m512i*)&RR[i]);
-				_mm512_i32scatter_epi32((void*)__vecVisitBool.data(), indices, zeros512, 1);
+				__m512i indices = _mm512_load_epi32((const void*)(RR.data()+i));
+				_mm512_i32scatter_epi32((void*)__vecVisitBool.data(), indices, zeros512, 4);
 			}
 			for (;i<RR_size;i++)
 			{
-				__vecVisitBool[RR[i]] = false;
+				__vecVisitBool[RR[i]] = 0;
 			}
 		}
-		// vec_value_check(__vecVisitBool, false, 1, string(__func__) + "beg="+to_string(0)+" __vecVisitBool includes TRUE values.");
-		// FR_sorted_check(__func__);
+		// #ifdef DEBUG
+		// if(vec_value_check(__vecVisitBool, false, 1, string(__func__) + "in the " + to_string(mRRid) +"-th mRR-set, __vecVisitBool includes TRUE values."))
+		// {
+		// 	print_single_mRRset(mRRid);
+		// 	exit(1);
+		// }
+		// if(FR_sorted_check(__func__))
+		// {
+		// 	out_FR();
+		// 	out_mRRset();
+		// 	exit(1);
+		// }
+		// #endif
 		return 0;
 	}
 
@@ -560,7 +584,7 @@ public:
 			{
 				root = dsfmt_gv_genrand_uint32_range(__numV);
 			}
-			__vecVisitBool[root] = true;
+			__vecVisitBool[root] = 1;
 			_FRsets[root].push_back(mRRid);
 			roots.push_back(root);
 		}
@@ -581,7 +605,7 @@ public:
 						if (dsfmt_gv_genrand_open_close() > Inv_inDeg[expand])
 							continue;
 						__vecVisitNode[numVisitNode++] = nbrId;
-						__vecVisitBool[nbrId] = true;
+						__vecVisitBool[nbrId] = 1;
 						_FRsets[nbrId].push_back(mRRid);
 					}
 				}
@@ -604,7 +628,7 @@ public:
 					int nbrId = nbrs[dsfmt_gv_genrand_uint32_range(nbrs_size)];
 					if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
 						continue;
-					__vecVisitBool[nbrId] = true;
+					__vecVisitBool[nbrId] = 1;
 					__vecVisitNode[numVisitNode++] = nbrId;
 					_FRsets[nbrId].push_back(mRRid);
 					node = nbrId;
@@ -613,7 +637,7 @@ public:
 		}
 		for (int i = 0; i < numVisitNode; i++)
 		{
-			__vecVisitBool[__vecVisitNode[i]] = false;
+			__vecVisitBool[__vecVisitNode[i]] = 0;
 		}
 		return 0;
 	}
@@ -640,7 +664,7 @@ public:
 			{
 				root = dsfmt_gv_genrand_uint32_range(__numV);
 			}
-			__vecVisitBool[root] = true;
+			__vecVisitBool[root] = 1;
 			(*FR)[root].push_back(mRRid);
 			if(model=="IC")
 			{
@@ -656,7 +680,7 @@ public:
 						if (dsfmt_gv_genrand_open_close() > Inv_inDeg[expand])
 							continue;
 						__vecVisitNode[numVisitNode++] = nbrId;
-						__vecVisitBool[nbrId] = true;
+						__vecVisitBool[nbrId] = 1;
 						(*FR)[nbrId].push_back(mRRid);
 					}
 				}
@@ -675,7 +699,7 @@ public:
 					int nbrId = nbrs[dsfmt_gv_genrand_uint32_range(nbrs_size)];
 					if (__vecVisitBool[nbrId] || (__Activated)[nbrId])
 						continue;
-					__vecVisitBool[nbrId] = true;
+					__vecVisitBool[nbrId] = 1;
 					__vecVisitNode[numVisitNode++] = nbrId;
 					(*FR)[nbrId].push_back(mRRid);
 					root = nbrId;
@@ -683,7 +707,7 @@ public:
 			}
 			for (int i = 0; i < numVisitNode; i++)
 			{
-				__vecVisitBool[__vecVisitNode[i]] = false;
+				__vecVisitBool[__vecVisitNode[i]] = 0;
 			}
 		}
 		*num = theta;		
@@ -694,10 +718,10 @@ public:
 	{
 		mRRset &mRR = _mRRsets[mRRid];
 		mRRset &mRR_layer = vec_mRR_layer[mRRid];
-// #ifdef DEBUG
-// 		mRRset pre_mRR = mRR;
-// 		sint &mRR_hash = vec_hash_mRR[mRRid];
-// #endif
+		#ifdef DEBUG
+		mRRset mRR_original = mRR, mRR_layer_original = mRR_layer;
+		vint_aligned v_roots_original= vv_virtual_roots[mRRid];
+		#endif
 		int mRR_size = static_cast<int>(mRR.size());
 		vint_aligned &v_roots = vv_virtual_roots[mRRid];
 		ulint v_roots_size = v_roots.size();
@@ -705,11 +729,11 @@ public:
 		roots.reserve(v_roots_size + mRR_size);
 		del_roots.reserve(mRR_size);
 
-		int i = 0;
+		ulint i = 0;
 		vint del_v_roots;  del_v_roots.reserve(v_roots_size);
 		for(; i+16<=v_roots_size; i+=16)
 		{
-			__m512i idx = _mm512_load_epi32((const __m512i*)&v_roots[i]);
+			__m512i idx = _mm512_load_epi32((const void*)(v_roots.data() + i));
 			__m512i active = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
 			__mmask16 mask = _mm512_cmpeq_epi32_mask(active, ones512);
 			if (mask == 0)
@@ -736,25 +760,32 @@ public:
 		v_roots_size = v_roots.size();
 		for (; i + 16 <= v_roots_size; i += 16) 
 		{
-			__m512i idx = _mm512_load_epi32((const __m512i*)&v_roots[i]);
+			__m512i idx = _mm512_load_epi32((const void*)(v_roots.data()+i));
 			_mm512_i32scatter_epi32(__vecNewTree.data(), idx, _mm512_set1_epi32(mRR_size), 4);
     	}
 		for(; i < v_roots_size; i++)
 		{
 			__vecNewTree[v_roots[i]] = mRR_size;
 		}
+		#ifdef DEBUG
+		if (v_roots_check(mRRid, string(__func__) + " end"))
+		{
+			exit(1);
+		}
+		#endif
 
-		int min_tree = __numV, affected_layer_idx = __numV, first_del_idx = __numV, min_tree_RR_size;
+		int min_tree = __numV, affected_layer_idx = __numV, first_del_idx = __numV;
+		ulint min_tree_RR_size=__numV;
 		bool find_del = false;
 		for (int i = 0; i < mRR_size; i++) // mark previous roots, and traverse the mRRset. Traversing from the end is not necessary, since we need to know whether a node us already in the mRR if regenerating.
 		{
 			auto &RR = mRR[i];
-			min_tree_RR_size = static_cast<int>(RR.size());
-			int j = 0;
+			min_tree_RR_size = (RR.size());
+			const __m512i treeId512 = _mm512_set1_epi32(i);
+			ulint j = 0;
 			for (; j+16 <= min_tree_RR_size; j+=16)
 			{
-				__m512i idx = _mm512_load_epi32((const __m512i*)&RR);
-				const __m512i treeId512 = _mm512_set1_epi32(i);
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
 				_mm512_i32scatter_epi32(__vecTree.data(), idx, treeId512, 4);
 				__m512i act = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
 				__mmask16 mask = _mm512_cmpeq_epi32_mask(act, ones512);
@@ -786,7 +817,7 @@ public:
 		affected_layer_idx = upper_bound(min_tree_layer.begin(), min_tree_layer.end(), first_del_idx) - min_tree_layer.begin() - 1;
 		vint_aligned &min_tree_RR = mRR[min_tree];
 		int affected_layer_beg = min_tree_layer[affected_layer_idx];
-		int affected_next_layer_beg, min_tree_layer_size = static_cast<int>(min_tree_layer.size());
+		int affected_next_layer_beg=0, min_tree_layer_size = static_cast<int>(min_tree_layer.size());
 		if (affected_layer_idx == min_tree_layer_size - 1)
 		{
 			affected_next_layer_beg = min_tree_RR_size;
@@ -796,31 +827,33 @@ public:
 			affected_next_layer_beg = min_tree_layer[affected_layer_idx + 1];
 		}
 		i=affected_next_layer_beg;
+		auto i_aligned = min((((ulint)i + 15) / 16) * 16, min_tree_RR_size);
+		for (; i < i_aligned; i++)
+		{
+			__vecTree[min_tree_RR[i]] = __numV;
+		}
 		for (; i+16 <= min_tree_RR_size; i+=16)
 		{
-			__m512i idx = _mm512_load_epi32((const __m512i*)&min_tree_RR);
+			__m512i idx = _mm512_load_epi32((const void*)(min_tree_RR.data()+i));
 			_mm512_i32scatter_epi32(__vecTree.data(), idx, numV512, 4);
 		}
 		for (; i < min_tree_RR_size; i++)
 		{
 			__vecTree[min_tree_RR[i]] = __numV;
-// #ifdef DEBUG
-// 			mRR_hash.erase(min_tree_RR[i]);
-// #endif
 		}
 		mRRset mRR_copy(mRR_size - min_tree);
-// #ifdef DEBUG
-// 		if (affected_next_layer_beg > min_tree_RR_size)
-// 		{
-// 			cout << "Error: affected_next_layer_beg > min_tree_RR_size in mRR_update, mRRid=" << mRRid << ", affected_next_layer_beg=" << affected_next_layer_beg << ", min_tree_RR_size=" << min_tree_RR_size << endl;
-// 			exit(1);
-// 		}
-// #endif
+#ifdef DEBUG
+		if (affected_next_layer_beg > min_tree_RR_size)
+		{
+			cout << "Error: affected_next_layer_beg > min_tree_RR_size in mRR_update, mRRid=" << mRRid << ", affected_next_layer_beg=" << affected_next_layer_beg << ", min_tree_RR_size=" << min_tree_RR_size << endl;
+			exit(1);
+		}
+#endif
 		mRR_copy[0].reserve(min_tree_RR_size - affected_next_layer_beg);
 		mRR_copy[0] = vint_aligned(std::make_move_iterator(min_tree_RR.begin() + affected_next_layer_beg), std::make_move_iterator(min_tree_RR.end()));
 		
 		min_tree_RR.resize(affected_next_layer_beg);
-		min_tree_layer.resize(affected_layer_idx);
+		min_tree_layer.resize(affected_layer_idx); // do not contain the beggin of the affected layer.
 
 		for (int i = min_tree + 1; i < mRR_size; i++) // traverse trees after the min_tree
 		{
@@ -830,18 +863,15 @@ public:
 				roots.push_back(RR[0]);
 				__vecNewTree[RR[0]] = mRR_size; // should not be added into some tree during the new exploration
 			}
-			int j=0;
+			ulint j=0;
+			const __m512i treeId512 = _mm512_set1_epi32(i);
 			for(; j+16 <= RR.size(); j+=16)
 			{
-				__m512i idx = _mm512_load_epi32((const __m512i*)&RR[j]);
-				_mm512_i32scatter_epi32(__vecTree.data(), idx, _mm512_set1_epi32(i), 4);
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, treeId512, 4);
 			}
 			for (;j<RR.size();j++)
 			{
-				// int node = RR[j];
-// #ifdef DEBUG
-// 				mRR_hash.erase(node);
-// #endif // !NDEBUG
 				__vecTree[RR[j]] = i;
 			}
 			RR.swap(mRR_copy[i - min_tree]);
@@ -857,24 +887,6 @@ public:
 				v_roots.erase(v_roots.begin() + i);
 			}
 		}
-// #ifdef DEBUG
-// 		// if (del_nodes_check(mRRid, del_nodes))
-// 		// {
-// 		// 	cout << __LINE__ << ": Error: del_nodes_check failed in mRR_update, mRRid=" << mRRid << endl;
-// 		// 	exit(1);
-// 		// }
-// 		if (v_roots_check(mRRid, string(__func__) + " end"))
-// 		{
-// 			cout << __LINE__ << ": Error: v_roots_check failed in mRR_update, mRRid=" << mRRid << endl;
-// 			exit(1);
-// 		}
-// 		if (min_tree >= mRR_size)
-// 		{
-// 			cout << __LINE__ << ": Error: min_tree > mRR_size in mRR_update, mRRid=" << mRRid << ", min_tree=" << min_tree << ", mRR_size=" << mRR_size << endl;
-// 			mRR_out(mRRid);
-// 			exit(1);
-// 		}
-// #endif
 		for (int i = affected_next_layer_beg - 1; i >= affected_layer_beg; i--)
 		{
 			int node = min_tree_RR[i];
@@ -882,9 +894,6 @@ public:
 			{
 				__vecTree[node] = -1;						// necessary to make __vecTree all -1
 				min_tree_RR.erase(min_tree_RR.begin() + i); // remove del_nodes
-// #ifdef DEBUG
-// 				mRR_hash.erase(node);
-// #endif // !NDEBUG
 				affected_next_layer_beg--;
 			}
 			else
@@ -907,35 +916,42 @@ public:
 					if (__Activated[nbrId] || (__vecTree[nbrId] > -1 && __vecTree[nbrId] <= min_tree) || __vecNewTree[nbrId] > -1 || dsfmt_gv_genrand_open_close() > prob)
 						continue;
 					min_tree_RR.push_back(nbrId);
-// #ifdef DEBUG
-// 					mRR_hash.insert(nbrId);
-// #endif												// !NDEBUG
 					__vecNewTree[nbrId] = min_tree; // mark the node as in the new mRR
+					#ifdef PREFETCH
 					if (__vecTree[nbrId] < 0)		// nbrId was not in this mRR previously
 					{
 						auto &frset = _FRsets[nbrId];
 						auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-						// if (it != frset.end() && *it == mRRid)
-						// {
-						// 	cout << "Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " already in _FRsets." << endl;
-						// 	exit(1);
-						// }
 						frset.insert(it, mRRid);
-// #ifdef DEBUG
-// 						vec_hash_FR[nbrId].insert(mRRid);
-// #endif // !NDEBUG
 					}
+					#endif
 				}
+				#ifdef PREFETCH  // usefull for 5% acceleration
+				if(min_tree_RR.size()-j>8)
+				{
+					_mm_prefetch(R_graph[j+8].data(), _MM_HINT_T0);
+				}
+				#endif
 			}
 			layer_start = layer_end; // update the start index of the next layer
 			layer_end = min_tree_RR.size();
-			#ifdef PREFETCH  // usefull for 5% acceleration
-			if(layer_end-layer_start>8)
-			{
-				_mm_prefetch(R_graph[layer_start+8].data(), _MM_HINT_T0);
-			}
-			#endif
 		}
+		#ifdef PREFETCH
+		for(int j=layer_start;j<layer_end;j++)
+		{
+			if(j+2<layer_end)
+			{
+				auto &frset=_FRsets[min_tree_RR[j+2]];
+				_mm_prefetch(frset.data()+frset.size(), _MM_HINT_T0);
+			}
+			if (__vecTree[min_tree_RR[j]] < 0)
+			{
+				auto &frset = _FRsets[min_tree_RR[j]];
+				auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+				frset.insert(it, mRRid);
+			}
+		}
+		#endif
 		if (min_tree_RR.size() < 1) // make sure it is not empty, // if the last RR root is a del_node
 		{
 			mRR.resize(min_tree); // remove the last RR
@@ -951,12 +967,10 @@ public:
 		mRR_layer.resize(mRR_size + num_new_roots);
 		for (ulint i = 0; i < num_new_roots; i++)
 		{
-			auto &RR = mRR[mRR_size + i];
-			auto &RR_layer = mRR_layer[mRR_size + i];
+			int mRR_size_plus_i= mRR_size + i;
+			auto &RR = mRR[mRR_size_plus_i];
+			auto &RR_layer = mRR_layer[mRR_size_plus_i];
 			RR.push_back(roots[i]);
-// #ifdef DEBUG
-// 			mRR_hash.insert(roots[i]);
-// #endif // !NDEBUG
 			int layer_start = 0, layer_end = 1, node;
 			while (layer_start < layer_end)
 			{
@@ -970,40 +984,45 @@ public:
 						if (__Activated[nbrId] || (__vecTree[nbrId] > -1 && __vecTree[nbrId] <= min_tree) || __vecNewTree[nbrId] > -1 || dsfmt_gv_genrand_open_close() > prob)
 							continue;
 						RR.push_back(nbrId);
-						__vecNewTree[nbrId] = mRR_size + i;
-// #ifdef DEBUG
-// 						mRR_hash.insert(nbrId);
-// #endif
+						__vecNewTree[nbrId] = mRR_size_plus_i; // cannot use SIMD here, because this state may be immediately used.
+						#ifdef PREFETCH
 						if (__vecTree[nbrId] < 0) // nbrId was not in this mRR previously
 						{
-							// auto &frset = _FRsets[nbrId];
-							// frset.insert(frset.begin()+simd_ordered_insert(frset, mRRid), mRRid);
 							auto &frset = _FRsets[nbrId];
 							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-							// if (it != frset.end() && *it == mRRid)
-							// {
-							// 	cout <<__LINE__<< ",Error: mRRid=" << mRRid << ", nbrId=" << nbrId << " already in _FRsets." << endl;
-							// 	exit(1);
-							// }
 							frset.insert(it, mRRid);
-// #ifdef DEBUG
-// 							vec_hash_FR[nbrId].insert(mRRid);
-// #endif // !NDEBUG
 						}
+						#endif
 					}
+					#ifdef PREFETCH  // usefull for 5% acceleration
+					if(RR.size()-j>8)
+					{
+						_mm_prefetch(R_graph[j+8].data(), _MM_HINT_T0);
+					}
+					#endif
 				}
 				layer_start = layer_end; // update the start index of the next layer
 				layer_end = RR.size();
 			}
+			#ifdef PREFETCH  // prefetch here may be unuseful, since the position to be inserted is unknown.
+			for(int j=1;j<layer_end;j++)
+			{
+				if(j+2<layer_end)
+				{
+					auto &frset=_FRsets[RR[j+2]];
+					_mm_prefetch(frset.data()+frset.size(), _MM_HINT_T0);
+					_mm_prefetch(frset.data(), _MM_HINT_T0);
+				}
+				if (__vecTree[RR[j]] < 0)
+				{
+					auto &frset = _FRsets[RR[j]];
+					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+					frset.insert(it, mRRid);
+				}
+			}
+			#endif
 		}
-// #ifdef DEBUG
-// 		if (FR_reverse_check_hash(mRRid, mRR_copy, "mRR_update end"))
-// 		{
-// 			cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
-// 			exit(1);
-// 		}
-// #endif
-		for(int i=0;i<mRR_copy.size();i++)
+		for(ulint i=0;i<mRR_copy.size();i++)
 		{
 			auto &RR = mRR_copy[i];
 			ulint j=0, RR_size=RR.size();
@@ -1022,17 +1041,7 @@ public:
 					int node = nodes[__builtin_ctz(mask)];
 					auto &frset = _FRsets[node];
 					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-					// if (it != frset.end() && *it == mRRid)
-					// {
 						frset.erase(it);
-// #ifdef DEBUG
-// 						vec_hash_FR[node].erase(mRRid);
-// #endif // !NDEBUG
-					// }
-					// else
-					// {
-					// 	cout << __LINE__ << ", Error: mRRid is not in the FRset of " << node << endl;
-					// }
 					mask &= mask - 1;
 				}
 			}
@@ -1048,37 +1057,6 @@ public:
 				__vecTree[node] = -1;
 			}
 		}
-
-// 		for (const auto &RR : mRR_copy)
-// 		{
-// 			for (const auto &node : RR)
-// 			{
-// 				if (__vecNewTree[node] < 0) // previously in mRR but now not in mRR
-// 				{
-// 					auto &frset = _FRsets[node];
-// 					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-// 					if (it != frset.end() && *it == mRRid)
-// 					{
-// 						frset.erase(it);
-// // #ifdef DEBUG
-// // 						vec_hash_FR[node].erase(mRRid);
-// // #endif // !NDEBUG
-// 					}
-// 					else
-// 					{
-// 						cout << __LINE__ << ", Error: mRRid is not in the FRset of " << node << endl;
-// 					}
-// 				}
-// 				__vecTree[node] = -1;
-// 			}
-// 		}
-// reset all static variables
-// #ifdef DEBUG
-// 		if (v_roots_check(mRRid, string(__func__) + " end"))
-// 		{
-// 			exit(1);
-// 		}
-// #endif
 		mRR_size = mRR.size();
 		int safe_size = min_tree;
 		if (min_tree >= mRR_size)
@@ -1119,12 +1097,19 @@ public:
 			__vecNewTree[root] = -1; // reset the tree id
 		}
 		vecRoot_num[mRRid] = mRR_size + v_roots.size();
-// #ifdef DEBUG
-// 		if (synthetic_check(mRRid, string(__func__) + " end", 1, 1, 1, 0, 1, 1))
-// 		{
-// 			exit(1);
-// 		}
-// #endif
+		#ifdef DEBUG
+		if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 0, 0) || identical_element_check(mRRid, string(__func__) + " end")) //previous: 1, 1, 0, 0, 0, 0, 0
+		{
+			out_mRRset(mRR_original);
+			out_layer(mRR_layer_original);
+			out_vec(v_roots_original);
+
+			out_mRRset(mRR);
+			out_layer(mRR_layer);
+			out_vec(v_roots);
+			exit(1);
+		}
+		#endif
 	}
 
 	void naive_mRR_update(int mRRid, vint &del_nodes)
@@ -1135,15 +1120,15 @@ public:
 		vint roots;
 		for(const auto del_node: del_nodes)
 		{
-			__vecVisitBool[del_node] = true; // is deleted nodes
+			__vecVisitBool[del_node] = 1; // is deleted nodes
 		}
 		for(const auto &RR:mRR)
 		{
 			int root=RR[0];
-			if(__vecVisitBool[root]==false)
+			if(__vecVisitBool[root]==0)
 			{
 				roots.push_back(root);
-				__vecVisitBool[root]=true;
+				__vecVisitBool[root]=1;
 			}
 			for(const auto &node:RR)
 			{
@@ -1152,10 +1137,10 @@ public:
 				if (it != frset.end() && *it == mRRid)
 				{
 					frset.erase(it);
-					#ifdef DEBUG
-					vec_hash_FR[node].erase(mRRid);
-					mRR_hash.erase(node);
-					#endif // !NDEBUG
+					// #ifdef DEBUG
+					// vec_hash_FR[node].erase(mRRid);
+					// mRR_hash.erase(node);
+					// #endif // !NDEBUG
 				}
 				else
 				{
@@ -1164,30 +1149,30 @@ public:
 			}
 			auto &frset = _FRsets[root];
 			auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-			#ifdef DEBUG
-			if (it != frset.end() && *it == mRRid)
-			{
-				cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
-				exit(1);
-			}
-			#endif
+			// #ifdef DEBUG
+			// if (it != frset.end() && *it == mRRid)
+			// {
+			// 	cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+			// 	exit(1);
+			// }
+			// #endif
 			frset.insert(it, mRRid);
 		}
 		for(const auto &v_root:v_roots)
 		{
-			if(__vecVisitBool[v_root]==false)
+			if(__vecVisitBool[v_root]==0)
 			{
 				roots.push_back(v_root);
-				__vecVisitBool[v_root]=true;
+				__vecVisitBool[v_root]=1;
 				auto &frset = _FRsets[v_root];
 				auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-				#ifdef DEBUG
-				if (it != frset.end() && *it == mRRid)
-				{
-					cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << v_root << " already in _FRsets." << endl;
-					exit(1);
-				}
-				#endif
+				// #ifdef DEBUG
+				// if (it != frset.end() && *it == mRRid)
+				// {
+				// 	cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << v_root << " already in _FRsets." << endl;
+				// 	exit(1);
+				// }
+				// #endif
 				frset.insert(it, mRRid);
 			}
 		}
@@ -1197,15 +1182,15 @@ public:
 		vec_RR_layer.resize(roots.size());
 		if(model=="IC")
 		{
-			for (int i = 0; i < roots.size(); i++)
+			for (ulint i = 0; i < roots.size(); i++)
 			{
 				auto &RR = mRR[i];
 				RR.push_back(roots[i]);
-				int layer_start = 0, layer_end = 1;
+				ulint layer_start = 0, layer_end = 1;
 				while (layer_start < layer_end)
 				{
 					vec_RR_layer[i].push_back(layer_start);
-					for (int j = layer_start; j < layer_end; j++)
+					for (ulint j = layer_start; j < layer_end; j++)
 					{
 						int node = RR[j];
 						for (const auto &nbrId : (R_graph)[node])
@@ -1215,20 +1200,20 @@ public:
 							if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
 								continue;
 							RR.push_back(nbrId);
-						#ifdef DEBUG
-							mRR_hash.insert(nbrId);
-							vec_hash_FR[nbrId].insert(mRRid);
-						#endif
-							__vecVisitBool[nbrId] = true;
+						// #ifdef DEBUG
+						// 	mRR_hash.insert(nbrId);
+						// 	vec_hash_FR[nbrId].insert(mRRid);
+						// #endif
+							__vecVisitBool[nbrId] = 1;
 							auto &frset = _FRsets[nbrId];
 							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-							#ifdef DEBUG
-							if (it != frset.end() && *it == mRRid)
-							{
-								cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
-								exit(1);
-							}
-							#endif
+							// #ifdef DEBUG
+							// if (it != frset.end() && *it == mRRid)
+							// {
+							// 	cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+							// 	exit(1);
+							// }
+							// #endif
 							frset.insert(it, mRRid);
 						}
 					}
@@ -1241,16 +1226,16 @@ public:
 		{
 			for(const auto &node:RR)
 			{
-				__vecVisitBool[node] = false;
+				__vecVisitBool[node] = 0;
 			}
 		}
 		for(const auto node:roots)
 		{
-			__vecVisitBool[node] = false;
+			__vecVisitBool[node] = 0;
 		}
 		for(const auto del_node: del_nodes)
 		{
-			__vecVisitBool[del_node] = false;
+			__vecVisitBool[del_node] = 0;
 		}
 		return;
 	}
@@ -1259,14 +1244,14 @@ public:
 	{
 		mRRset &mRR = _mRRsets[mRRid];
 		// vint &vec_next_mRRnode = vv_next_mRRnode[mRRid];
-		#ifdef DEBUG
-		mRRset pre_mRR = mRR;
-		sint &mRR_hash = vec_hash_mRR[mRRid];
-		if (synthetic_check(mRRid, string(__func__) + "beg", 1, 1, 0, 0, 1, 1))
-		{
-			exit(1);
-		}
-		#endif // !NDEBUG
+		// #ifdef DEBUG
+		// mRRset pre_mRR = mRR;
+		// sint &mRR_hash = vec_hash_mRR[mRRid];
+		// if (synthetic_check(mRRid, string(__func__) + "beg", 1, 1, 0, 0, 1, 1))
+		// {
+		// 	exit(1);
+		// }
+		// #endif
 		int mRR_size = static_cast<int>(mRR.size());
 		auto &v_roots = vv_virtual_roots[mRRid];
 		ulint v_roots_size = v_roots.size();
@@ -1277,28 +1262,57 @@ public:
 		roots.reserve(v_roots_size + mRR_size);
 		del_roots.reserve(mRR_size);
 
-		for (int i = static_cast<int>(v_roots_size - 1); i > -1; i--)
+		ulint i = 0;
+		vint del_v_roots;  del_v_roots.reserve(v_roots_size);
+		for(; i+16<=v_roots_size; i+=16)
 		{
-			int root = v_roots[i];
-			if (__Activated[root]) // is a del_node
-			{
-				v_roots.erase(v_roots.begin() + i);
+			__m512i idx = _mm512_load_epi32((const void*)(v_roots.data()+i));
+			__m512i active = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
+			__mmask16 mask = _mm512_cmpeq_epi32_mask(active, ones512);
+			if (mask == 0)
 				continue;
-			}
-			__vecNewTree[root] = mRR_size; // mark realized v_roots
+			while (mask) 
+			{
+				int bit = __builtin_clz((unsigned)mask);
+				del_v_roots.push_back(i + bit);
+				mask &= mask - 1;
+        	}
 		}
+		for(; i<v_roots_size; i++)
+		{
+			if (__Activated[v_roots[i]]) // is a del_node
+			{
+				del_v_roots.push_back(i);
+			}			
+		}
+		for(int i = static_cast<int>(del_v_roots.size()) - 1; i > -1; i--)
+		{
+			v_roots.erase(v_roots.begin() + i);
+		}
+		i=0;
 		v_roots_size = v_roots.size();
+		const __m512i mRR_size512 = _mm512_set1_epi32(mRR_size);
+		for (; i + 16 <= v_roots_size; i += 16) 
+		{
+			__m512i idx = _mm512_load_epi32((const void*)(v_roots.data()+i));
+			_mm512_i32scatter_epi32(__vecNewTree.data(), idx, mRR_size512, 4);
+    	}
+		for(; i < v_roots_size; i++)
+		{
+			__vecNewTree[v_roots[i]] = mRR_size;
+		}
 
-		int min_tree = __numV, affected_layer_idx = __numV, first_del_idx = __numV, min_tree_RR_size=__numV;
+		int min_tree = __numV, first_del_idx = __numV; 
+		ulint min_tree_RR_size=__numV;
 		bool find_del = false;
 		for (int i = 0; i < mRR_size; i++)
 		{
 			auto &RR = mRR[i];
-			min_tree_RR_size = static_cast<int>(RR.size());
-			int j = 0;
+			min_tree_RR_size = (RR.size());
+			ulint j = 0;
 			for (; j+16 <= min_tree_RR_size; j+=16)
 			{
-				__m512i idx = _mm512_load_epi32((const __m512i*)&RR[i]);
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
 				_mm512_i32scatter_epi32(__vecTree.data(), idx, _mm512_set1_epi32(i), 4);
 				__m512i act = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
 				__mmask16 mask = _mm512_cmpeq_epi32_mask(act, ones512);
@@ -1328,18 +1342,24 @@ public:
 		}
 
 		auto &min_tree_RR=mRR[min_tree];
-		int first_del_idx_1=first_del_idx+1,i=first_del_idx_1;
+		ulint first_del_idx_1=first_del_idx+1;
+		i=first_del_idx_1;
+		auto i_aligned = min((((ulint)i + 15) / 16) * 16, min_tree_RR_size);
+		for (; i < i_aligned; i++)
+		{
+			__vecTree[min_tree_RR[i]] = __numV;
+		}
 		for (; i+16 <= min_tree_RR_size; i+=16)
 		{
-			__m512i idx = _mm512_load_epi32((const __m512i*)&min_tree_RR);
+			__m512i idx = _mm512_load_epi32((const void*)(min_tree_RR.data()+i));
 			_mm512_i32scatter_epi32(__vecTree.data(), idx, numV512, 4);
 		}
 		for (; i < min_tree_RR_size; i++)
 		{
 			__vecTree[min_tree_RR[i]] = __numV;
-// #ifdef DEBUG
-// 			mRR_hash.erase(min_tree_RR[i]);
-// #endif
+		// #ifdef DEBUG
+		// 			mRR_hash.erase(min_tree_RR[i]);
+		// #endif
 		}
 		mRRset mRR_copy(mRR_size - min_tree);  // mRR_copy should contain the truncated part of the min_tree_RR
 		if(first_del_idx_1< min_tree_RR_size)
@@ -1350,23 +1370,20 @@ public:
 		for (int i = min_tree + 1; i < mRR_size; i++)
 		{
 			auto &RR = mRR[i];
-			if (!__Activated[RR[0]])
+			if (__Activated[RR[0]]==0)
 			{
 				roots.push_back(RR[0]);
 				__vecNewTree[RR[0]] = mRR_size; // the root should not be added into some tree during the new exploration
 			}
-			int j=0;
+			ulint j=0;
+			const __m512i treeId512 = _mm512_set1_epi32(i);
 			for(; j+16 <= RR.size(); j+=16)
 			{
-				__m512i idx = _mm512_load_epi32((const __m512i*)&RR[j]);
-				_mm512_i32scatter_epi32(__vecTree.data(), idx, _mm512_set1_epi32(i), 4);
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, treeId512, 4);
 			}
 			for (;j<RR.size();j++)
 			{
-				// int node = RR[j];
-// #ifdef DEBUG
-// 				mRR_hash.erase(node);
-// #endif // !NDEBUG
 				__vecTree[RR[j]] = i;
 			}
 			RR.swap(mRR_copy[i - min_tree]);
@@ -1396,11 +1413,11 @@ public:
 		{
 			auto &RR = mRR[mRR.size() - num_new_roots + i];
 			RR.push_back(roots[i]);
-		#ifdef DEBUG
-			if(mRR_hash.find(roots[i]) == mRR_hash.end())
-				mRR_hash.insert(roots[i]);
-		#endif // !NDEBUG
-			int node= RR[0];
+		// #ifdef DEBUG
+		// 	if(mRR_hash.find(roots[i]) == mRR_hash.end())
+		// 		mRR_hash.insert(roots[i]);
+		// #endif // !NDEBUG
+			int node= RR[0], mRR_size_plus_i = mRR_size + i;
 			while(true)
 			{
 				auto &nbrs= (R_graph)[node];
@@ -1412,10 +1429,10 @@ public:
 				int nbrId = nbrs[dsfmt_gv_genrand_uint32_range(nbrs_size)];
 				if (__Activated[nbrId] || (__vecTree[nbrId] > -1 && __vecTree[nbrId] <= min_tree) || __vecNewTree[nbrId] > -1)
 					break;
-				__vecNewTree[nbrId] = mRR_size + i;
-				#ifdef DEBUG
-					mRR_hash.insert(nbrId);
-				#endif
+				__vecNewTree[nbrId] = mRR_size_plus_i;
+				// #ifdef DEBUG
+				// 	mRR_hash.insert(nbrId);
+				// #endif
 				if (__vecTree[nbrId] < 0) // nbrId was not in this mRR previously
 				{
 					auto &frset = _FRsets[nbrId];
@@ -1426,15 +1443,12 @@ public:
 						exit(1);
 					}
 					frset.insert(it, mRRid);
-					#ifdef DEBUG
-						vec_hash_FR[nbrId].insert(mRRid);
-					#endif // !NDEBUG
 				}
 				RR.push_back(nbrId);
 				node = nbrId;
 			}
 		}
-		for(int i=0;i<mRR_copy.size();i++)
+		for(ulint i=0;i<mRR_copy.size();i++)
 		{
 			auto &RR = mRR_copy[i];
 			ulint j=0, RR_size=RR.size();
@@ -1456,9 +1470,9 @@ public:
 					// if (it != frset.end() && *it == mRRid)
 					// {
 						frset.erase(it);
-// #ifdef DEBUG
-// 						vec_hash_FR[node].erase(mRRid);
-// #endif // !NDEBUG
+		// #ifdef DEBUG
+		// 						vec_hash_FR[node].erase(mRRid);
+		// #endif // !NDEBUG
 					// }
 					mask &= mask - 1;
 				}
@@ -1475,12 +1489,12 @@ public:
 				__vecTree[node] = -1;
 			}
 		}
-		#ifdef DEBUG
-			if (v_roots_check(mRRid, string(__func__) + " end"))
-			{
-				exit(1);
-			}
-		#endif
+		// #ifdef DEBUG
+		// 	if (v_roots_check(mRRid, string(__func__) + " end"))
+		// 	{
+		// 		exit(1);
+		// 	}
+		// #endif
 		mRR_size = mRR.size();
 		int safe_size = min_tree;
 		if (min_tree >= mRR_size)
@@ -1521,12 +1535,12 @@ public:
 			__vecNewTree[root] = -1; // reset the tree id
 		}
 		vecRoot_num[mRRid] = mRR_size + v_roots.size();
-		#ifdef DEBUG
-		if (synthetic_check(mRRid, string(__func__) + " end", 1, 1, 0, 0, 1, 1))
-		{
-			exit(1);
-		}
-		#endif
+		// #ifdef DEBUG
+		// if (synthetic_check(mRRid, string(__func__) + " end", 1, 1, 0, 0, 1, 1))
+		// {
+		// 	exit(1);
+		// }
+		// #endif
 	}
 
 	void add_root(int mRRid, int num)
@@ -1535,9 +1549,10 @@ public:
 		mRRset &mRR = _mRRsets[mRRid];
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];
 		#ifdef DEBUG
-		sint &mRR_hash = vec_hash_mRR[mRRid];
-		#endif // !NDEBUG
-		vint roots, new_roots;
+		mRRset mRR_original = mRR, mRR_layer_original = vec_RR_layer;
+		vint_aligned v_roots_original= vv_virtual_roots[mRRid];
+		#endif
+		vint_aligned roots, new_roots;
 		roots.reserve(root_num);
 		new_roots.reserve(num);
 		mRR.reserve(root_num + num);
@@ -1550,7 +1565,7 @@ public:
 			ulint RR_size=RR.size(), j=0;
 			for (; j+16 <= RR_size; j+=16)
 			{
-				__m512i idx = _mm512_load_epi32((const __m512i*)&RR);
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
 				_mm512_i32scatter_epi32(__vecVisitBool.data(), idx, ones512, 4);
 			}
 			for (;j<RR_size;j++)
@@ -1588,30 +1603,28 @@ public:
 			else
 			{
 				auto mRR_size_1 = mRR.size() + 1;
-				// mRR.reserve(mRR_size_1);
 				mRR.resize(mRR_size_1);
-				// vec_RR_layer.reserve(mRR_size_1);
 				vec_RR_layer.resize(mRR_size_1);
 				auto &RR = mRR[mRR_size_1 - 1];
 				RR.push_back(root);
-			#ifdef DEBUG
-				mRR_hash.insert(root);
-			#endif
-				__vecVisitBool[root] = true;
+			// #ifdef DEBUG
+			// 	mRR_hash.insert(root);
+			// #endif
+				__vecVisitBool[root] = 1;
 				auto &frset = _FRsets[root];
 				auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-			#ifdef DEBUG
-				if (it != frset.end() && *it == mRRid)
-				{
-					cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
-					exit(1);
-				}
-			#endif
+			// #ifdef DEBUG
+			// 	if (it != frset.end() && *it == mRRid)
+			// 	{
+			// 		cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+			// 		exit(1);
+			// 	}
+			// #endif
 				frset.insert(it, mRRid);
-			#ifdef DEBUG
-				mRR_hash.insert(root);
-				vec_hash_FR[root].insert(mRRid);
-			#endif // !NDEBUG
+			// #ifdef DEBUG
+			// 	mRR_hash.insert(root);
+			// 	vec_hash_FR[root].insert(mRRid);
+			// #endif // !NDEBUG
 
 				int layer_start = 0, layer_end = 1;
 				while (layer_start < layer_end)
@@ -1626,23 +1639,23 @@ public:
 							if (__vecVisitBool[nbrId] || (__Activated)[nbrId] || dsfmt_gv_genrand_open_close() > prob)
 								continue;
 							RR.push_back(nbrId);
-			#ifdef DEBUG
-							mRR_hash.insert(root);
-			#endif
-							__vecVisitBool[nbrId] = true;
+			// #ifdef DEBUG
+			// 				mRR_hash.insert(root);
+			// #endif
+							__vecVisitBool[nbrId] = 1;
 							auto &frset = _FRsets[nbrId];
 							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-			#ifdef DEBUG
-							if (it != frset.end() && *it == mRRid)
-							{
-								cout << __LINE__ << ", Error: mRRid " << mRRid << " already in the FRset of node " << node << endl;
-								exit(1);
-							}
-			#endif
+			// #ifdef DEBUG
+			// 				if (it != frset.end() && *it == mRRid)
+			// 				{
+			// 					cout << __LINE__ << ", Error: mRRid " << mRRid << " already in the FRset of node " << node << endl;
+			// 					exit(1);
+			// 				}
+			// #endif
 							frset.insert(it, mRRid);
-			#ifdef DEBUG
-							vec_hash_FR[nbrId].insert(mRRid);
-			#endif
+			// #ifdef DEBUG
+			// 				vec_hash_FR[nbrId].insert(mRRid);
+			// #endif
 						}
 					}
 					layer_start = layer_end; // update the start index of the next layer
@@ -1650,18 +1663,18 @@ public:
 				}
 			}
 		}
-		#ifdef DEBUG
-		if (v_roots_check(mRRid, string(__func__) + " end"))
-		{
-			exit(1);
-		}
-		mRRset a = {{}};
-		if (FR_reverse_check_hash(mRRid, a, "add_root"))
-		{
-			cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
-			exit(1);
-		}
-		#endif
+		// #ifdef DEBUG
+		// if (v_roots_check(mRRid, string(__func__) + " end"))
+		// {
+		// 	exit(1);
+		// }
+		// mRRset a = {{}};
+		// if (FR_reverse_check_hash(mRRid, a, "add_root"))
+		// {
+		// 	cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
+		// 	exit(1);
+		// }
+		// #endif
 		for (const auto &RR : mRR)
 		{
 			ulint j=0, RR_size=RR.size();
@@ -1672,7 +1685,7 @@ public:
 			}
 			for (; j < RR_size; ++j)
 			{
-				__vecVisitBool[RR[j]] = false;
+				__vecVisitBool[RR[j]] = 0;
 			}
 		}
 		ulint all_roots_size = roots.size()+v_roots.size()+new_roots.size(), k=0;
@@ -1692,8 +1705,15 @@ public:
 			__vecTree[roots[k]] = -1;
 		}
 		#ifdef DEBUG
-		if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 1))
+		if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 0, 0) || identical_element_check(mRRid, string(__func__) + " end")) //previous: 1, 1, 0, 0, 0, 0, 0
 		{
+			out_mRRset(mRR_original);
+			out_layer(mRR_layer_original);
+			out_vec(v_roots_original);
+
+			out_mRRset(mRR);
+			out_layer(vec_RR_layer);
+			out_vec(v_roots);
 			exit(1);
 		}
 		#endif
@@ -1706,12 +1726,11 @@ public:
 		mRRset &mRR = _mRRsets[mRRid];
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];
 		vint roots;
-		int root_num = mRR.size();
 		for (const auto &RR : mRR) // mark previous roots, and traverse the mRRset
 		{
 			int root = RR[0];
 			roots.push_back(root);
-			__vecVisitBool[root] = true;
+			__vecVisitBool[root] = 1;
 			for(const auto &node:RR)
 			{
 				auto &frset = _FRsets[node];
@@ -1719,10 +1738,10 @@ public:
 				if (it != frset.end() && *it == mRRid)
 				{
 					frset.erase(it);
-					#ifdef DEBUG
-					vec_hash_FR[node].erase(mRRid);
-					mRR_hash.erase(node);
-					#endif // !NDEBUG
+					// #ifdef DEBUG
+					// vec_hash_FR[node].erase(mRRid);
+					// mRR_hash.erase(node);
+					// #endif // !NDEBUG
 				}
 				else
 				{
@@ -1731,33 +1750,33 @@ public:
 			}
 			auto &frset = _FRsets[root];
 			auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-			#ifdef DEBUG
-			if (it != frset.end() && *it == mRRid)
-			{
-				cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
-				exit(1);
-			}
-			#endif
+			// #ifdef DEBUG
+			// if (it != frset.end() && *it == mRRid)
+			// {
+			// 	cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+			// 	exit(1);
+			// }
+			// #endif
 			frset.insert(it, mRRid);
 		}
 		for (int j = 0; j < num; j++) // generate new roots
 		{
 			int root = dsfmt_gv_genrand_uint32_range(__numV);
-			while (__Activated[root] || __vecVisitBool[root] == true)
+			while (__Activated[root] || __vecVisitBool[root] == 1)
 			{
 				root = dsfmt_gv_genrand_uint32_range(__numV);
 			}
 			roots.push_back(root);
-			__vecVisitBool[root] = true;
+			__vecVisitBool[root] = 1;
 			auto &frset = _FRsets[root];
 			auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-			#ifdef DEBUG
-			if (it != frset.end() && *it == mRRid)
-			{
-				cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
-				exit(1);
-			}
-			#endif
+			// #ifdef DEBUG
+			// if (it != frset.end() && *it == mRRid)
+			// {
+			// 	cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+			// 	exit(1);
+			// }
+			// #endif
 			frset.insert(it, mRRid);
 		}
 		mRR.clear();
@@ -1767,7 +1786,7 @@ public:
 		if(model=="IC")
 		{
 			vec_RR_layer.resize(roots.size());
-			for (int i = 0; i < roots.size(); i++)
+			for (ulint i = 0; i < roots.size(); i++)
 			{
 				auto &RR = mRR[i];
 				RR.push_back(roots[i]);
@@ -1785,20 +1804,20 @@ public:
 							if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
 								continue;
 							RR.push_back(nbrId);
-						#ifdef DEBUG
-							mRR_hash.insert(nbrId);
-							vec_hash_FR[nbrId].insert(mRRid);
-						#endif
-							__vecVisitBool[nbrId] = true;
+						// #ifdef DEBUG
+						// 	mRR_hash.insert(nbrId);
+						// 	vec_hash_FR[nbrId].insert(mRRid);
+						// #endif
+							__vecVisitBool[nbrId] = 1;
 							auto &frset = _FRsets[nbrId];
 							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-							#ifdef DEBUG
-							if (it != frset.end() && *it == mRRid)
-							{
-								cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
-								exit(1);
-							}
-							#endif
+							// #ifdef DEBUG
+							// if (it != frset.end() && *it == mRRid)
+							// {
+							// 	cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+							// 	exit(1);
+							// }
+							// #endif
 							frset.insert(it, mRRid);
 						}
 					}
@@ -1811,12 +1830,12 @@ public:
 		{
 			for(const auto &node:RR)
 			{
-			__vecVisitBool[node] = false;
+			__vecVisitBool[node] = 0;
 			}
 		}
 		for(const auto node:roots)
 		{
-			__vecVisitBool[node] = false;
+			__vecVisitBool[node] = 0;
 		}
 		return;
 
@@ -1824,13 +1843,12 @@ public:
 
 	void naive_add_root(int mRRid, int num)
 	{
-		mRRset &mRR_debug = _mRRsets[mRRid];
 		vecRoot_num[mRRid] += num;
 		mRRset &mRR = _mRRsets[mRRid];
 		auto &vec_RR_layer = vec_mRR_layer[mRRid];
-#ifdef DEBUG
-		sint &mRR_hash = vec_hash_mRR[mRRid];
-#endif // !NDEBUG
+// #ifdef DEBUG
+// 		sint &mRR_hash = vec_hash_mRR[mRRid];
+// #endif // !NDEBUG
 		vint roots, new_roots;
 		roots.reserve(root_num);
 		new_roots.reserve(num);
@@ -1842,7 +1860,7 @@ public:
 			__vecTree[root] = 1024;
 			for (const auto &node : RR)
 			{
-				__vecVisitBool[node] = true;
+				__vecVisitBool[node] = 1;
 			}
 		}
 		bool virtual_root = false;
@@ -1861,13 +1879,13 @@ public:
 			new_roots.push_back(root);
 			auto &frset = _FRsets[root];
 			auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-			#ifdef DEBUG
-			if (it != frset.end() && *it == mRRid)
-			{
-				cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
-				exit(1);
-			}
-			#endif
+			// #ifdef DEBUG
+			// if (it != frset.end() && *it == mRRid)
+			// {
+			// 	cout << __LINE__ << ": Error: mRRid=" << mRRid << ", nbrId=" << root << " already in _FRsets." << endl;
+			// 	exit(1);
+			// }
+			// #endif
 			frset.insert(it, mRRid);
 		}
 		roots.insert(roots.end(), new_roots.begin(), new_roots.end());
@@ -1884,10 +1902,10 @@ public:
 				auto &RR = mRR[i];
 				auto &layer_info=vec_RR_layer[i];
 				RR.push_back(roots[i]);
-#ifdef DEBUG
-				mRR_hash.insert(roots[i]);
-				vec_hash_FR[roots[i]].insert(mRRid);
-#endif
+// #ifdef DEBUG
+// 				mRR_hash.insert(roots[i]);
+// 				vec_hash_FR[roots[i]].insert(mRRid);
+// #endif
 
 				int layer_start = 0, layer_end = 1;
 				while (layer_start < layer_end)
@@ -1903,11 +1921,11 @@ public:
 							if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
 								continue;
 							RR.push_back(nbrId);
-						#ifdef DEBUG
-							mRR_hash.insert(nbrId);
-							vec_hash_FR[nbrId].insert(mRRid);
-						#endif
-							if(__vecVisitBool[nbrId]==false)
+						// #ifdef DEBUG
+						// 	mRR_hash.insert(nbrId);
+						// 	vec_hash_FR[nbrId].insert(mRRid);
+						// #endif
+							if(__vecVisitBool[nbrId]==0)
 							{
 								auto &frset = _FRsets[nbrId];
 								auto it = lower_bound(frset.begin(), frset.end(), mRRid);
@@ -1929,7 +1947,7 @@ public:
 			{
 				for(const auto node:RR)
 				{
-					__vecVisitBool[node]=false;
+					__vecVisitBool[node]=0;
 					if(__vecTree[node]<0)
 					{
 						auto &frset = _FRsets[node];
@@ -1937,10 +1955,10 @@ public:
 						if (it != frset.end() && *it == mRRid)
 						{
 							frset.erase(it);
-							#ifdef DEBUG
-							vec_hash_FR[node].erase(mRRid);
-							mRR_hash.erase(node);
-							#endif // !NDEBUG
+							// #ifdef DEBUG
+							// vec_hash_FR[node].erase(mRRid);
+							// mRR_hash.erase(node);
+							// #endif // !NDEBUG
 						}
 						else
 						{
@@ -1966,11 +1984,11 @@ public:
 				vec_RR_layer.resize(mRR_size_1);
 				auto &RR = mRR[mRR_size_1 - 1];
 				RR.push_back(root);
-				__vecVisitBool[root] = true;
-#ifdef DEBUG
-				mRR_hash.insert(root);
-				vec_hash_FR[root].insert(mRRid);
-#endif // !NDEBUG
+				__vecVisitBool[root] = 1;
+// #ifdef DEBUG
+// 				mRR_hash.insert(root);
+// 				vec_hash_FR[root].insert(mRRid);
+// #endif // !NDEBUG
 				int layer_start = 0, layer_end = 1;
 				while (layer_start < layer_end)
 				{
@@ -1985,20 +2003,20 @@ public:
 							if (dsfmt_gv_genrand_open_close() > Inv_inDeg[node])
 								continue;
 							RR.push_back(nbrId);
-							#ifdef DEBUG
-							mRR_hash.insert(nbrId);
-							vec_hash_FR[nbrId].insert(mRRid);
-							#endif
-							__vecVisitBool[nbrId] = true;
+							// #ifdef DEBUG
+							// mRR_hash.insert(nbrId);
+							// vec_hash_FR[nbrId].insert(mRRid);
+							// #endif
+							__vecVisitBool[nbrId] = 1;
 							auto &frset = _FRsets[nbrId];
 							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-							#ifdef DEBUG
-							if (it != frset.end() && *it == mRRid)
-							{
-								cout << __LINE__ << ", Error: mRRid " << mRRid << " already in the FRset of node " << node << endl;
-								exit(1);
-							}
-							#endif
+							// #ifdef DEBUG
+							// if (it != frset.end() && *it == mRRid)
+							// {
+							// 	cout << __LINE__ << ", Error: mRRid " << mRRid << " already in the FRset of node " << node << endl;
+							// 	exit(1);
+							// }
+							// #endif
 							frset.insert(it, mRRid);
 						}
 					}
@@ -2010,7 +2028,7 @@ public:
 			{
 				for (auto &node : RR)
 				{
-					__vecVisitBool[node] = false;
+					__vecVisitBool[node] = 0;
 				}
 			}
 			for(const auto root:roots)
@@ -2018,64 +2036,64 @@ public:
 				__vecTree[root]=-1;
 			}
 		}
-#ifdef DEBUG
-		mRRset a = {{}};
-		if (FR_reverse_check_hash(mRRid, a, "add_root"))
-		{
-			cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
-			exit(1);
-		}
-#endif
-#ifdef DEBUG
-		if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 1))
-		{
-			cout<<"num of new roots is "<<num<<endl;
-			cout<<"the original mRR is "<<endl;
-			for(const auto &RR:mRR_debug)
-			{
-				for(const auto node:RR)				
-				{
-					cout<<node<<" ";
-				}
-				cout<<endl;
-			}	
-			cout<<"the new mRR is "<<endl;
-			for(const auto &RR:mRR)
-			{
-				for(const auto node:RR)				
-				{
-					cout<<node<<" ";
-					auto &frset = _FRsets[node];
-					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
-					if (it == frset.end())
-					{
-						cout << __LINE__ << ", Error: mRRid " << mRRid << " is not in the FRset of node " << node << endl;
-						cout<<"the FRset of node "<<node<<" is: ";
-						for(const auto i:frset)
-						{
-							cout<<i<<" ";
-						}
-						cout<<endl;
-						cout<<"the hash FRset of node "<<node<<" is: ";
-						for(const auto i:vec_hash_FR[node])
-						{
-							cout<<i<<" ";
-						}
-						cout<<endl;
-						cout<<"the mRRhash is ";
-						for(const auto i:mRR_hash)
-						{
-							cout<<i<<" ";
-						}
-						cout<<endl;
-					}
-				}
-				cout<<endl;			
-			}
-			cout<<"virtual_root = "<<virtual_root<<endl;
-			exit(1);
-		}
-#endif
+// #ifdef DEBUG
+// 		mRRset a = {{}};
+// 		if (FR_reverse_check_hash(mRRid, a, "add_root"))
+// 		{
+// 			cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
+// 			exit(1);
+// 		}
+// #endif
+// #ifdef DEBUG
+// 		if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 1))
+// 		{
+// 			cout<<"num of new roots is "<<num<<endl;
+// 			cout<<"the original mRR is "<<endl;
+// 			for(const auto &RR:mRR_debug)
+// 			{
+// 				for(const auto node:RR)				
+// 				{
+// 					cout<<node<<" ";
+// 				}
+// 				cout<<endl;
+// 			}	
+// 			cout<<"the new mRR is "<<endl;
+// 			for(const auto &RR:mRR)
+// 			{
+// 				for(const auto node:RR)				
+// 				{
+// 					cout<<node<<" ";
+// 					auto &frset = _FRsets[node];
+// 					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+// 					if (it == frset.end())
+// 					{
+// 						cout << __LINE__ << ", Error: mRRid " << mRRid << " is not in the FRset of node " << node << endl;
+// 						cout<<"the FRset of node "<<node<<" is: ";
+// 						for(const auto i:frset)
+// 						{
+// 							cout<<i<<" ";
+// 						}
+// 						cout<<endl;
+// 						cout<<"the hash FRset of node "<<node<<" is: ";
+// 						for(const auto i:vec_hash_FR[node])
+// 						{
+// 							cout<<i<<" ";
+// 						}
+// 						cout<<endl;
+// 						cout<<"the mRRhash is ";
+// 						for(const auto i:mRR_hash)
+// 						{
+// 							cout<<i<<" ";
+// 						}
+// 						cout<<endl;
+// 					}
+// 				}
+// 				cout<<endl;			
+// 			}
+// 			cout<<"virtual_root = "<<virtual_root<<endl;
+// 			exit(1);
+// 		}
+// #endif
 		return;
 	}
 
@@ -2083,13 +2101,13 @@ public:
 	{
 		vecRoot_num[mRRid] += num;
 		mRRset &mRR = _mRRsets[mRRid];
-		#ifdef DEBUG
-			if (synthetic_check(mRRid, string(__func__) + "beg", 1, 1, 0, 0, 1, 1))
-			{
-				exit(1);
-			}
-			sint &mRR_hash = vec_hash_mRR[mRRid];
-		#endif // !NDEBUG
+		// #ifdef DEBUG
+		// 	if (synthetic_check(mRRid, string(__func__) + "beg", 1, 1, 0, 0, 1, 1))
+		// 	{
+		// 		exit(1);
+		// 	}
+		// 	sint &mRR_hash = vec_hash_mRR[mRRid];
+		// #endif // !NDEBUG
 		vint roots, new_roots;
 		roots.reserve(root_num);
 		new_roots.reserve(num);
@@ -2103,7 +2121,7 @@ public:
 			ulint RR_size=RR.size(), j=0;
 			for (; j+16 <= RR_size; j+=16)
 			{
-				__m512i idx = _mm512_load_epi32((const __m512i*)&RR);
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
 				_mm512_i32scatter_epi32(__vecVisitBool.data(), idx, ones512, 4);
 			}
 			for (;j<RR_size;j++)
@@ -2111,12 +2129,12 @@ public:
 				__vecVisitBool[RR[j]] = 1;
 			}
 		}
-		#ifdef DEBUG
-			if (v_roots_check(mRRid, string(__func__) + " end"))
-			{
-				exit(1);
-			}
-		#endif
+		// #ifdef DEBUG
+		// 	if (v_roots_check(mRRid, string(__func__) + " end"))
+		// 	{
+		// 		exit(1);
+		// 	}
+		// #endif
 		for (auto root : v_roots)
 		{
 			__vecTree[root] = 1024; // a root
@@ -2142,10 +2160,10 @@ public:
 			mRR.resize(mRR_size+1);
 			auto &RR = mRR[mRR_size];
 			RR.push_back(root);
-			#ifdef DEBUG
-				mRR_hash.insert(root);
-			#endif
-			__vecVisitBool[root] = true;
+			// #ifdef DEBUG
+			// 	mRR_hash.insert(root);
+			// #endif
+			__vecVisitBool[root] = 1;
 			auto &frset = _FRsets[root];
 			auto it = lower_bound(frset.begin(), frset.end(), mRRid);
 			if (it != frset.end() && *it == mRRid)
@@ -2154,10 +2172,10 @@ public:
 				exit(1);
 			}
 			frset.insert(it, mRRid);
-			#ifdef DEBUG
-				mRR_hash.insert(root);
-				vec_hash_FR[root].insert(mRRid);
-			#endif // !NDEBUG
+			// #ifdef DEBUG
+			// 	mRR_hash.insert(root);
+			// 	vec_hash_FR[root].insert(mRRid);
+			// #endif // !NDEBUG
 			int node=root;
 			while(true)
 			{
@@ -2178,27 +2196,27 @@ public:
 					exit(1);
 				}
 				frset.insert(it, mRRid);
-				#ifdef DEBUG
-					mRR_hash.insert(root);
-					vec_hash_FR[nbrId].insert(mRRid);
-				#endif // !NDEBUG
-				__vecVisitBool[nbrId] = true;
+				// #ifdef DEBUG
+				// 	mRR_hash.insert(root);
+				// 	vec_hash_FR[nbrId].insert(mRRid);
+				// #endif // !NDEBUG
+				__vecVisitBool[nbrId] = 1;
 				RR.push_back(nbrId);
 				node = nbrId;
 			}
 		}
-		#ifdef DEBUG
-			if (v_roots_check(mRRid, string(__func__) + " end"))
-			{
-				exit(1);
-			}
-			mRRset a = {{}};
-			if (FR_reverse_check_hash(mRRid, a, "add_root"))
-			{
-				cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
-				exit(1);
-			}
-		#endif
+		// #ifdef DEBUG
+		// 	if (v_roots_check(mRRid, string(__func__) + " end"))
+		// 	{
+		// 		exit(1);
+		// 	}
+		// 	mRRset a = {{}};
+		// 	if (FR_reverse_check_hash(mRRid, a, "add_root"))
+		// 	{
+		// 		cout << __LINE__ << ", Error: FR_reverse_check_hash" << endl;
+		// 		exit(1);
+		// 	}
+		// #endif
 		for (const auto &RR : mRR)
 		{
 			ulint j=0, RR_size=RR.size();
@@ -2209,7 +2227,7 @@ public:
 			}
 			for (; j < RR_size; ++j)
 			{
-				__vecVisitBool[RR[j]] = false;
+				__vecVisitBool[RR[j]] = 0;
 			}
 		}
 		ulint all_roots_size = roots.size()+v_roots.size()+new_roots.size(), k=0;
@@ -2228,12 +2246,12 @@ public:
 		{
 			__vecTree[roots[k]] = -1;
 		}
-		#ifdef DEBUG
-			if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 1))
-			{
-				exit(1);
-			}
-		#endif
+		// #ifdef DEBUG
+		// 	if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 1))
+		// 	{
+		// 		exit(1);
+		// 	}
+		// #endif
 	}
 
 	void delete_root(int mRRid, int num_del_roots)
@@ -2243,9 +2261,9 @@ public:
 		ulint mRR_size = mRR.size();
 		vint_aligned &v_roots = vv_virtual_roots[mRRid], roots;
 		ulint v_roots_size = v_roots.size();
-		if (v_roots_size >= num_del_roots)
+		if (v_roots_size >= static_cast<ulint>(num_del_roots))
 		{
-			v_roots.resize(v_roots_size - num_del_roots);
+			v_roots.resize(v_roots_size - static_cast<ulint>(num_del_roots));
 			num_del_roots = 0;
 		}
 		else
@@ -2321,9 +2339,9 @@ public:
  			vec_mRR_layer.resize(max_size);
 		}
 		_mRRsets.resize(max_size);
-#ifdef DEBUG
-		vec_hash_mRR.resize(max_size);
-#endif // !NDEBUG
+// #ifdef DEBUG
+// 		vec_hash_mRR.resize(max_size);
+// #endif // !NDEBUG
 		for (ulint i = max_size; i < _num_mRRsets; i++)
 		{
 			vint_aligned().swap(vv_virtual_roots[i]);
@@ -2396,6 +2414,79 @@ public:
 			}
 			out_g << endl;
 		}
+	}
+
+	void print_single_mRRset(ulint mRRid)
+	{
+		for(auto &RR:_mRRsets[mRRid])
+		{
+			for(auto node:RR)
+			{
+				std::cout << node << " ";
+			}
+			std::cout << endl;
+		}
+	}
+
+	void out_mRRset(mRRset &mRR)
+	{
+		std::ofstream out_mRR(mRR_output_path, std::ios::app);
+		// for (ulint k = 0; k < _mRRsets.size(); k++)
+		// {
+			out_mRR <<"The mRR-set: "<<endl<<"--";
+			for (auto &RR : mRR)
+			{
+				for(auto node:RR)
+				{
+					out_mRR << node << " ";
+				}
+				out_mRR << endl<<"--";
+			}
+			// out_mRR << endl;
+		// }
+	}
+
+	void out_layer(mRRset &mRR_layer)
+	{
+		std::ofstream out_layer(layer_output_path, std::ios::app);
+		// for(ulint k=0;k<vec_mRR_layer.size();k++)
+		// {
+			out_layer <<"The mRR-layer: "<<endl<<"--";
+			for (auto &layer : mRR_layer)
+			{
+				for(auto node:layer)
+				{
+					out_layer << node << " ";
+				}
+				out_layer << endl<<"--";
+			}
+			// out_layer << endl;
+		// }
+	}
+
+	void out_FR()
+	{
+		std::ofstream out_FR(FR_output_path, std::ios::app);
+		for(ulint k=0;k<_FRsets.size();k++)
+		{
+			out_FR <<"The " <<k << "-th FR-set: ";
+			for (auto &node : _FRsets[k])
+			{
+				out_FR << node << " ";
+			}
+			out_FR << endl;
+		}
+	}
+
+	template<typename T>
+	void out_vec(T vec)
+	{
+		std::ofstream out_vec("../vec.txt", std::ios::app);
+		for(auto &node:vec)
+		{
+			out_vec << node << " ";
+		}
+		out_vec << endl;
 	}
 };
 
