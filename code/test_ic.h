@@ -183,7 +183,7 @@ bool del_nodes_check(int mRRid, vint &del_nodes)
 	}
 	if (i > 0)
 	{
-		out_mRRset(_mRRsets[mRRid]);
+		out_mRRset(_mRRsets[mRRid], mRRid);
 		cout << "Error in del_nodes_check of mRR " << mRRid << ", at least one del_node is not in mRR or new mRR." << endl;
 		vec_out(del_nodes, "del_nodes: ");
 		return true;
@@ -345,9 +345,9 @@ bool FR_reverse_check(string str)
 			if (!find_it)
 			{
 				cout << str + " Error in FR_reverse_check, the node " << i << " is not in any RR of mRR " << rid << "; but the node's _FRsets contains the mRRid" << endl;
-				out_FR();
-				out_layer(vec_mRR_layer[rid]);
-				out_mRRset(_mRRsets[rid]);
+				out_vec(_FRsets[i]);
+				out_layer(vec_mRR_layer[rid], rid);
+				out_mRRset(_mRRsets[rid], rid);
 				return true;
 			}
 		}
@@ -434,7 +434,8 @@ bool FR_check(int rid, const string& str)
     if (found_error.load(std::memory_order_relaxed))
     {
         int node = error_node.load(std::memory_order_relaxed);
-
+		out_mRRset(_mRRsets[rid], rid);
+		out_vec(_FRsets[node]);
         cout << str << " Error in FR_full_check, mRR " << rid
              << " contains the node " << node
              << "; but the mRRid is not in node's _FRsets\n";

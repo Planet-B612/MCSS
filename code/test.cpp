@@ -5,6 +5,7 @@
 #include <mutex>
 #include <omp.h>
 #include <immintrin.h>
+#include <bitset>
 #include <iostream>
 #include <vector>
 #include <chrono>
@@ -45,9 +46,9 @@ using namespace std::chrono;
 int main(int argn, char **argv)
 {   
     vint seeds;
-    int RR_num=200000;
+    int RR_num=100000;
     Argument arg;
-    arg.dataset_No=18;
+    arg.dataset_No=4;
     R_graph.clear(), O_graph.clear();
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
     arg.arg_update(argn, argv);
@@ -60,7 +61,7 @@ int main(int argn, char **argv)
     // RR.out_layer();
     // RR.out_FR();
     // exit(1);
-    for (int j = 0; j < 2000; j++)
+    for (int j = 0; j < 500; j++)
     {
         int root = dsfmt_gv_genrand_uint32_range(arg.numV);
         while (__Activated[root])

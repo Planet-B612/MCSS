@@ -241,7 +241,7 @@ class mRRcollection
 		{
 			for(ulint i=pre_theta;i<num_revise_RR;i++)  // build the basic information of previous mRR-sets, and update these mRR-sets
 			{
-				if(i%2000==0)
+				if(i%10000==0)
 				{
 					cout<<"updating mRR-sets: "<<i<<"/"<<num_revise_RR<<endl;
 				}
@@ -256,7 +256,8 @@ class mRRcollection
 						else
 						{
 							num_update++;
-							mRR_update(i, vv_polluted_nodes[i]);
+							// mRR_update(i, vv_polluted_nodes[i]);
+							mRR_update_and_add_roots(i, vv_polluted_nodes[i]);
 						}
 						// naive_mRR_update(i, vv_polluted_nodes[i]);
 					}
@@ -298,10 +299,10 @@ class mRRcollection
 		int root_diff=0;
 		for(ulint i=pre_theta;i<num_revise_RR;i++)
 		{
-			if(i%2000==0)
-			{
-				cout<<"adding roots to mRR-sets: "<<i<<"/"<<num_revise_RR<<endl;
-			}
+			// if(i%2000==0)
+			// {
+			// 	cout<<"adding roots to mRR-sets: "<<i<<"/"<<num_revise_RR<<endl;
+			// }
 			if (mRR_mark[i] <__numV) // for mRR-sets that have not been directly reused
 			{
 				if (floor_root_RR > 0) // derive floor-rooted mRR first
@@ -715,6 +716,512 @@ class mRRcollection
 		return 0;
 	}
 
+	
+	void mRR_update_and_add_roots(int mRRid, vint &del_nodes)
+	{
+		mRRset &mRR = _mRRsets[mRRid];
+		mRRset &mRR_layer = vec_mRR_layer[mRRid];
+		#ifdef DEBUG
+		mRRset mRR_original = mRR, mRR_layer_original = mRR_layer;
+		vint_aligned v_roots_original= vv_virtual_roots[mRRid];
+		#endif
+		int mRR_size = static_cast<int>(mRR.size());
+		vint_aligned &v_roots = vv_virtual_roots[mRRid];
+		ulint v_roots_size = v_roots.size();
+		vint roots, del_roots;
+		roots.reserve(v_roots_size + mRR_size);
+		del_roots.reserve(mRR_size);
+
+		ulint i = 0;
+		vint del_v_roots;  del_v_roots.reserve(v_roots_size);
+		for(; i+16<=v_roots_size; i+=16)
+		{
+			__m512i idx = _mm512_load_epi32((const void*)(v_roots.data() + i));
+			__m512i active = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
+			__mmask16 mask = _mm512_cmpeq_epi32_mask(active, ones512);
+			if (mask == 0)
+				continue;
+			while (mask) 
+			{
+				int bit = __builtin_ctz((unsigned)mask);
+				del_v_roots.push_back(i + bit);
+				mask &= mask - 1;
+        	}
+		}
+		for(; i<v_roots_size; i++)
+		{
+			if (__Activated[v_roots[i]]) // is a del_node
+			{
+				del_v_roots.push_back(i);
+			}
+		}
+		for(int i = static_cast<int>(del_v_roots.size()) - 1; i > -1; i--)
+		{
+			v_roots.erase(v_roots.begin() + i);
+		}
+		i=0;
+		v_roots_size = v_roots.size();
+		for (; i + 16 <= v_roots_size; i += 16) 
+		{
+			__m512i idx = _mm512_load_epi32((const void*)(v_roots.data()+i));
+			_mm512_i32scatter_epi32(__vecNewTree.data(), idx, numV512, 4);
+    	}
+		for(; i < v_roots_size; i++)
+		{
+			__vecNewTree[v_roots[i]] = __numV;
+		}
+		#ifdef DEBUG
+		if (v_roots_check(mRRid, string(__func__) + " end"))
+		{
+			exit(1);
+		}
+		#endif
+
+		int min_tree = __numV, affected_layer_idx = __numV, first_del_idx = __numV, root=__numV;
+		ulint min_tree_RR_size=__numV;
+		bool find_del = false;
+		for (int i = 0; i < mRR_size; i++) // mark previous roots, and traverse the mRRset. Traversing from the end is not necessary, since we need to know whether a node us already in the mRR if regenerating.
+		{
+			auto &RR = mRR[i];
+			root=RR[0];
+			roots.push_back(root); // also record roots before min_tree.
+			__vecNewTree[root] = __numV;  // mark it as a root
+			min_tree_RR_size = (RR.size());
+			const __m512i treeId512 = _mm512_set1_epi32(i);
+			ulint j = 0;
+			for (; j+16 <= min_tree_RR_size; j+=16)
+			{
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, treeId512, 4);
+				__m512i act = _mm512_i32gather_epi32(idx, __Activated.data(), 4);
+				__mmask16 mask = _mm512_cmpeq_epi32_mask(act, ones512);
+        		if (mask != 0) 
+				{
+					first_del_idx = __builtin_ctz((unsigned)mask)+j; // count from high bit.
+					// not needed, since the states of nodes after first_del_idx in that layer will be reset
+					// for(int j=first_del_idx+1; j<min_tree_RR_size; j++)  // the scatter function assigned valus to 16 elements.
+					// {
+					// 	__vecTree[RR[j]] = -1;
+					// }
+					find_del=true;					
+					min_tree = i;
+
+					break;
+				}
+			}
+			if (find_del)  // j may still be smaller than min_tree_RR_size, and the following loop will continue, and the first_del_idx will become incorrect.
+			{
+				break;
+			}
+			for (; j < min_tree_RR_size; j++)
+			{
+				__vecTree[RR[j]] = i;
+				if (__Activated[RR[j]])
+				{
+					first_del_idx = j;
+					min_tree = i;
+					find_del = true;
+					break;
+				}
+			}
+			if (find_del)
+			{
+				break;
+			}
+		}
+		if(first_del_idx==0)
+		{
+			roots.pop_back();
+			__vecNewTree[root]=-1;
+		}
+		#ifdef DEBUG
+		if(__Activated[mRR[min_tree][first_del_idx]]==0)
+		{
+			cout<<min_tree<<", "<<first_del_idx<<endl;
+			cout<<__LINE__<<endl;
+			out_layer(mRR_layer, mRRid);
+			out_mRRset(mRR, mRRid);
+			exit(1);
+		}
+		for(auto root:roots)
+		{
+			if(__Activated[root])
+			{
+				for(auto root:roots)
+				{
+					cout<<root<<", ";
+				}
+				cout<<endl;
+				for(auto root:roots)
+				{
+					cout<<__Activated[root]<<", ";
+				}
+				cout<<endl;
+				cout<<__LINE__<<": root "<<root<<" is activated in mRR_update_and_add_roots, mRRid="<<mRRid<<endl;
+				out_layer(mRR_layer, mRRid);
+				out_mRRset(mRR, mRRid);
+				exit(1);
+			}
+		}
+		#endif
+		auto min_tree_1=min_tree+1;
+		auto &min_tree_layer = mRR_layer[min_tree];
+		affected_layer_idx = upper_bound(min_tree_layer.begin(), min_tree_layer.end(), first_del_idx) - min_tree_layer.begin() - 1;
+		vint_aligned &min_tree_RR = mRR[min_tree];
+		int affected_layer_beg = min_tree_layer[affected_layer_idx];
+		int affected_next_layer_beg=0, min_tree_layer_size = static_cast<int>(min_tree_layer.size());
+		if (affected_layer_idx == min_tree_layer_size - 1)
+		{
+			affected_next_layer_beg = min_tree_RR_size;
+		}
+		else
+		{
+			affected_next_layer_beg = min_tree_layer[affected_layer_idx + 1];
+		}
+		i=affected_next_layer_beg;
+		auto i_aligned = min((((ulint)i + 15) / 16) * 16, min_tree_RR_size);
+		for (; i < i_aligned; i++)
+		{
+			__vecTree[min_tree_RR[i]] = __numV; // mark nodes since next layer
+		}
+		for (; i+16 <= min_tree_RR_size; i+=16)
+		{
+			__m512i idx = _mm512_load_epi32((const void*)(min_tree_RR.data()+i));
+			_mm512_i32scatter_epi32(__vecTree.data(), idx, numV512, 4);
+		}
+		for (; i < min_tree_RR_size; i++)
+		{
+			__vecTree[min_tree_RR[i]] = __numV;
+		}
+		mRRset mRR_copy(mRR_size - min_tree);
+#ifdef DEBUG
+		if (static_cast<ulint>(affected_next_layer_beg) > min_tree_RR_size)
+		{
+			cout << "Error: affected_next_layer_beg > min_tree_RR_size in mRR_update, mRRid=" << mRRid << ", affected_next_layer_beg=" << affected_next_layer_beg << ", min_tree_RR_size=" << min_tree_RR_size << endl;
+			exit(1);
+		}
+#endif
+
+		mRR_copy[0].reserve(min_tree_RR_size - affected_next_layer_beg);
+		mRR_copy[0] = vint_aligned(std::make_move_iterator(min_tree_RR.begin() + affected_next_layer_beg), std::make_move_iterator(min_tree_RR.end()));
+		
+		min_tree_RR.resize(affected_next_layer_beg);
+		min_tree_layer.resize(affected_layer_idx); // do not contain the beggin of the affected layer.
+
+		for (int i = min_tree_1; i < mRR_size; i++) // traverse trees after the min_tree
+		{
+			auto &RR = mRR[i];
+			if (!__Activated[RR[0]])
+			{
+				roots.push_back(RR[0]);
+				__vecNewTree[RR[0]] = __numV; // should not be added into some tree during the new exploration
+			}
+			ulint j=0;
+			const __m512i treeId512 = _mm512_set1_epi32(i);
+			for(; j+16 <= RR.size(); j+=16)
+			{
+				__m512i idx = _mm512_load_epi32((const void*)(RR.data()+j));
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, treeId512, 4);
+			}
+			for (;j<RR.size();j++)
+			{
+				__vecTree[RR[j]] = i;
+			}
+			RR.swap(mRR_copy[i - min_tree]);
+			mRR_layer[i].clear();
+		}
+
+		for (int i = static_cast<int>(v_roots_size - 1); i > -1; i--)
+		{
+			int root = v_roots[i];
+			if (__vecTree[root] > min_tree) // delete realized v_roots
+			{
+				roots.push_back(root);
+				v_roots.erase(v_roots.begin() + i);
+			}
+		}
+
+		for (int i = affected_next_layer_beg - 1; i >= affected_layer_beg; i--)
+		{
+			int node = min_tree_RR[i];
+			if (__Activated[node]) // only consider the activated nodes in this layer now
+			{
+				__vecTree[node] = -1;						// necessary to make __vecTree all -1
+				min_tree_RR.erase(min_tree_RR.begin() + i); // remove del_nodes
+				affected_next_layer_beg--;
+			}
+			else
+			{
+				__vecTree[node] = min_tree;
+				__vecNewTree[node] = min_tree;
+			}
+		}
+
+		int root_diff=0;
+		if(floor_root_RR>0)
+		{
+			floor_root_RR--;
+			root_diff=root_num-roots.size()-v_roots.size();
+		}
+		else if(ceil_root_RR > 0)
+		{
+			ceil_root_RR--;
+			root_diff=root_num+1-roots.size()-v_roots.size();
+		}
+		if(root_diff>0)
+		{
+			for (int j = 0; j < root_diff; j++) // generate new roots
+			{
+				int root = dsfmt_gv_genrand_uint32_range(__numV);
+				while (__Activated[root] || __vecNewTree[root]>=__numV)
+				{
+					root = dsfmt_gv_genrand_uint32_range(__numV);
+				}
+				__vecNewTree[root] = __numV;
+				if(__vecTree[root]>0 && __vecTree[root]<=min_tree)  // in previous trees.
+				{
+					v_roots.push_back(root);
+					continue;
+				}
+				else
+				{
+					roots.push_back(root);
+				}
+			}
+		}
+		else if(root_diff<0)
+		{
+			delete_root(mRRid, -root_diff);
+		}
+
+		int layer_start = affected_layer_beg, layer_end = affected_next_layer_beg, expand;
+		// min_tree_layer.pop_back();
+		while (layer_start < layer_end)
+		{
+			min_tree_layer.push_back(layer_start);
+			for (int j = layer_start; j < layer_end; j++)
+			{
+				expand = min_tree_RR[j];
+				auto prob=Inv_inDeg[expand];
+				for (const auto &nbrId : (R_graph)[expand])
+				{
+					if (__Activated[nbrId] || (__vecTree[nbrId] > -1 && __vecTree[nbrId] <= min_tree) || __vecNewTree[nbrId] > -1 || dsfmt_gv_genrand_open_close() > prob)
+						continue;
+					min_tree_RR.push_back(nbrId);
+					__vecNewTree[nbrId] = min_tree; // mark the node as in the new mRR
+					#ifndef PREFETCH
+					if (__vecTree[nbrId] < 0)		// nbrId was not in this mRR previously
+					{
+						auto &frset = _FRsets[nbrId];
+						auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+						frset.insert(it, mRRid);
+					}
+					#endif
+				}
+				#ifdef PREFETCH  // useful for 5% acceleration
+				if(min_tree_RR.size()-j>8)
+				{
+					_mm_prefetch(R_graph[j+8].data(), _MM_HINT_T0);
+				}
+				#endif
+			}
+			layer_start = layer_end; // update the start index of the next layer
+			layer_end = min_tree_RR.size();
+		}
+		#ifdef PREFETCH
+		for(int j=layer_start;j<layer_end;j++)
+		{
+			if(j+2<layer_end)
+			{
+				auto &frset=_FRsets[min_tree_RR[j+2]];
+				_mm_prefetch(frset.data()+frset.size(), _MM_HINT_T0);
+			}
+			if (__vecTree[min_tree_RR[j]] < 0)
+			{
+				auto &frset = _FRsets[min_tree_RR[j]];
+				auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+				frset.insert(it, mRRid);
+			}
+		}
+		#endif
+
+		if (min_tree_RR.size() < 1 || __Activated[min_tree_RR[0]] == 1) // make sure it is not empty, // if the last RR root is a del_node
+		{
+			mRR.resize(min_tree); // remove the last RR
+			mRR_layer.resize(min_tree);
+			mRR_size = min_tree;
+		}
+		else
+		{
+			mRR.resize(min_tree_1); // remove the last RR
+			mRR_layer.resize(min_tree_1);
+			mRR_size = min_tree_1;
+		}
+
+		ulint now_roots_size = roots.size();
+		mRR.resize(now_roots_size);
+		mRR_layer.resize(now_roots_size);
+		for (ulint i = min_tree; i < now_roots_size; i++)
+		{
+			auto &RR = mRR[i];
+			auto &RR_layer = mRR_layer[i];
+			RR.push_back(roots[i]);
+			int layer_start = 0, layer_end = 1, node;
+			while (layer_start < layer_end)
+			{
+				RR_layer.push_back(layer_start);
+				for (int j = layer_start; j < layer_end; j++)
+				{
+					node = RR[j];
+					double prob=Inv_inDeg[node];
+					for (const auto &nbrId : (R_graph)[node])
+					{
+						if (__Activated[nbrId] || (__vecTree[nbrId] > -1 && __vecTree[nbrId] <= min_tree) || __vecNewTree[nbrId] > -1 || dsfmt_gv_genrand_open_close() > prob)
+							continue;
+						RR.push_back(nbrId);
+						__vecNewTree[nbrId] = i; // cannot use SIMD here, because this state may be immediately used.
+						#ifndef PREFETCH
+						if (__vecTree[nbrId] < 0) // nbrId was not in this mRR previously
+						{
+							auto &frset = _FRsets[nbrId];
+							auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+							frset.insert(it, mRRid);
+						}
+						#endif
+					}
+					#ifdef PREFETCH  // usefull for 5% acceleration
+					if(RR.size()-j>8)
+					{
+						_mm_prefetch(R_graph[j+8].data(), _MM_HINT_T0);
+					}
+					#endif
+				}
+				layer_start = layer_end; // update the start index of the next layer
+				layer_end = RR.size();
+			}
+			#ifdef PREFETCH  // prefetch here may be unuseful, since the position to be inserted is unknown.
+			for(int j=1;j<layer_end;j++)
+			{
+				if(j+2<layer_end)
+				{
+					auto &frset=_FRsets[RR[j+2]];
+					_mm_prefetch(frset.data()+frset.size(), _MM_HINT_T0);
+					_mm_prefetch(frset.data(), _MM_HINT_T0);
+				}
+				if (__vecTree[RR[j]] < 0)
+				{
+					auto &frset = _FRsets[RR[j]];
+					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+					frset.insert(it, mRRid);
+				}
+			}
+			#endif
+		}
+
+		// for nodes in mRR_copy, their __vecTree should be reset
+		for(ulint i=0;i<mRR_copy.size();i++)
+		{
+			auto &RR = mRR_copy[i];
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
+        	{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				__m512i vals = _mm512_i32gather_epi32(idx, __vecNewTree.data(), 4);
+				__mmask16 mask = _mm512_cmplt_epi32_mask(vals, zeros512);
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);  // set vecTree
+
+				alignas(64) int nodes[16];
+            	_mm512_store_si512(reinterpret_cast<void*>(nodes), idx);
+
+				while (mask)
+				{
+					int node = nodes[__builtin_ctz(mask)];
+					auto &frset = _FRsets[node];
+					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+						frset.erase(it);
+					mask &= mask - 1;
+				}
+			}
+			for (; j < RR_size; ++j)
+			{
+				int node = RR[j];
+				if (__vecNewTree[node] < 0)
+				{
+				    auto &frset = _FRsets[node];
+					auto it = lower_bound(frset.begin(), frset.end(), mRRid);
+					frset.erase(it);
+				}
+				__vecTree[node] = -1;
+			}
+		}
+		// if(FR_reverse_check(string(__func__) + " end"))
+		// {
+		// 	for(auto node:del_nodes)
+		// 	{
+		// 		cout<<node<<", ";
+		// 	}
+		// 	cout<<endl;
+		// 	cout<<min_tree<<", "<<first_del_idx<<", "<<affected_layer_beg<<endl;
+		// 	out_mRRset(mRR, mRRid);
+		// 	cout<<"Error"<<endl;
+		// 	exit(1);
+		// }
+		mRR_size = mRR.size();
+		int safe_size=min_tree;
+		if (min_tree >= mRR_size)
+		{
+			safe_size = mRR_size - 1;
+		}
+		for (int i = 0; i <= safe_size; i++)
+		{
+			auto &RR = mRR[i];
+			ulint j=0, RR_size=RR.size();
+			for (; j + 16 <= RR_size; j += 16)
+        	{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecTree.data(), idx, minus_one512, 4);
+			}
+			for (;j<RR_size;j++)
+			{
+				__vecTree[RR[j]] = -1; // reset the tree id
+			}
+		}
+
+		for (int i = min_tree; i < mRR_size; i++)
+		{
+			auto &RR = mRR[i];
+			ulint j=0, RR_size=RR.size();
+			for(;j+16<=RR_size;j+=16)
+			{
+				__m512i idx = _mm512_load_si512(reinterpret_cast<const void*>(RR.data() + j));
+				_mm512_i32scatter_epi32(__vecNewTree.data(), idx, minus_one512, 4);
+			}
+			for (;j<RR_size;j++)
+			{
+				__vecNewTree[RR[j]] = -1; // reset the tree id
+			}
+		}
+		for (const auto &root : v_roots) // reset the v_roots
+		{
+			__vecNewTree[root] = -1; // reset the tree id
+		}
+		vecRoot_num[mRRid] = mRR_size + v_roots.size();
+		#ifdef DEBUG
+		if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 0, 0) ) //previous: 1, 1, 0, 0, 0, 0, 0
+		{
+			out_mRRset(mRR_original, mRRid);
+			out_layer(mRR_layer_original, mRRid);
+			out_vec(v_roots_original);
+			cout<<"min_tree="<<min_tree<<", first_del_idx="<<first_del_idx<<endl;
+
+			out_mRRset(mRR, mRRid);
+			out_layer(mRR_layer, mRRid);
+			out_vec(v_roots);
+			exit(1);
+		}
+	}
+
+
 	void mRR_update(int mRRid, vint &del_nodes)
 	{
 		mRRset &mRR = _mRRsets[mRRid];
@@ -741,7 +1248,7 @@ class mRRcollection
 				continue;
 			while (mask) 
 			{
-				int bit = __builtin_clz((unsigned)mask);
+				int bit = __builtin_ctz((unsigned)mask);
 				del_v_roots.push_back(i + bit);
 				mask &= mask - 1;
         	}
@@ -751,7 +1258,7 @@ class mRRcollection
 			if (__Activated[v_roots[i]]) // is a del_node
 			{
 				del_v_roots.push_back(i);
-			}		
+			}
 		}
 		for(int i = static_cast<int>(del_v_roots.size()) - 1; i > -1; i--)
 		{
@@ -792,11 +1299,20 @@ class mRRcollection
 				__mmask16 mask = _mm512_cmpeq_epi32_mask(act, ones512);
         		if (mask != 0) 
 				{
-					first_del_idx = __builtin_clz((unsigned)mask)+j; // count from high bit.
+					first_del_idx = __builtin_ctz((unsigned)mask)+j; // count from high bit.
+					// not needed, since the states of nodes after first_del_idx in that layer will be reset
+					// for(int j=first_del_idx+1; j<min_tree_RR_size; j++)  // the scatter function assigned valus to 16 elements.
+					// {
+					// 	__vecTree[RR[j]] = -1;
+					// }
 					find_del=true;					
 					min_tree = i;
 					break;
 				}
+			}
+			if (find_del)
+			{
+				break;
 			}
 			for (; j < min_tree_RR_size; j++)
 			{
@@ -831,7 +1347,7 @@ class mRRcollection
 		auto i_aligned = min((((ulint)i + 15) / 16) * 16, min_tree_RR_size);
 		for (; i < i_aligned; i++)
 		{
-			__vecTree[min_tree_RR[i]] = __numV;
+			__vecTree[min_tree_RR[i]] = __numV; // mark nodes since next layer
 		}
 		for (; i+16 <= min_tree_RR_size; i+=16)
 		{
@@ -844,7 +1360,7 @@ class mRRcollection
 		}
 		mRRset mRR_copy(mRR_size - min_tree);
 #ifdef DEBUG
-		if (affected_next_layer_beg > min_tree_RR_size)
+		if (static_cast<ulint>(affected_next_layer_beg) > min_tree_RR_size)
 		{
 			cout << "Error: affected_next_layer_beg > min_tree_RR_size in mRR_update, mRRid=" << mRRid << ", affected_next_layer_beg=" << affected_next_layer_beg << ", min_tree_RR_size=" << min_tree_RR_size << endl;
 			exit(1);
@@ -918,7 +1434,7 @@ class mRRcollection
 						continue;
 					min_tree_RR.push_back(nbrId);
 					__vecNewTree[nbrId] = min_tree; // mark the node as in the new mRR
-					#ifdef PREFETCH
+					#ifndef PREFETCH
 					if (__vecTree[nbrId] < 0)		// nbrId was not in this mRR previously
 					{
 						auto &frset = _FRsets[nbrId];
@@ -986,7 +1502,7 @@ class mRRcollection
 							continue;
 						RR.push_back(nbrId);
 						__vecNewTree[nbrId] = mRR_size_plus_i; // cannot use SIMD here, because this state may be immediately used.
-						#ifdef PREFETCH
+						#ifndef PREFETCH
 						if (__vecTree[nbrId] < 0) // nbrId was not in this mRR previously
 						{
 							auto &frset = _FRsets[nbrId];
@@ -1023,6 +1539,8 @@ class mRRcollection
 			}
 			#endif
 		}
+
+		// reset all state vectors.
 		for(ulint i=0;i<mRR_copy.size();i++)
 		{
 			auto &RR = mRR_copy[i];
@@ -1101,14 +1619,22 @@ class mRRcollection
 		#ifdef DEBUG
 		if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 0, 0) || identical_element_check(mRRid, string(__func__) + " end")) //previous: 1, 1, 0, 0, 0, 0, 0
 		{
-			out_mRRset(mRR_original);
-			out_layer(mRR_layer_original);
+			out_mRRset(mRR_original, mRRid);
+			out_layer(mRR_layer_original, mRRid);
 			out_vec(v_roots_original);
 
-			out_mRRset(mRR);
-			out_layer(mRR_layer);
+			out_mRRset(mRR, mRRid);
+			out_layer(mRR_layer, mRRid);
 			out_vec(v_roots);
 			exit(1);
+		}
+		for(auto RR:mRR)
+		{
+			if(RR.size()<1)
+			{
+				cout<<"The size of an RR is 0"<<endl;
+				exit(1);
+			}
 		}
 		#endif
 	}
@@ -1274,7 +1800,7 @@ class mRRcollection
 				continue;
 			while (mask) 
 			{
-				int bit = __builtin_clz((unsigned)mask);
+				int bit = __builtin_ctz((unsigned)mask);
 				del_v_roots.push_back(i + bit);
 				mask &= mask - 1;
         	}
@@ -1319,7 +1845,7 @@ class mRRcollection
 				__mmask16 mask = _mm512_cmpeq_epi32_mask(act, ones512);
         		if (mask != 0) 
 				{
-					first_del_idx = __builtin_clz((unsigned)mask)+j;
+					first_del_idx = __builtin_ctz((unsigned)mask)+j;
 					find_del=true;					
 					min_tree = i;
 					break;
@@ -1705,19 +2231,19 @@ class mRRcollection
 		{
 			__vecTree[roots[k]] = -1;
 		}
-		#ifdef DEBUG
-		if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 0, 0) || identical_element_check(mRRid, string(__func__) + " end")) //previous: 1, 1, 0, 0, 0, 0, 0
-		{
-			out_mRRset(mRR_original);
-			out_layer(mRR_layer_original);
-			out_vec(v_roots_original);
+		// #ifdef DEBUG
+		// if (synthetic_check(mRRid, string(__func__) + " end", 0, 0, 0, 0, 0, 0, 0) || identical_element_check(mRRid, string(__func__) + " end")) //previous: 1, 1, 0, 0, 0, 0, 0
+		// {
+		// 	out_mRRset(mRR_original, mRRid);
+		// 	out_layer(mRR_layer_original, mRRid);
+		// 	out_vec(v_roots_original);
 
-			out_mRRset(mRR);
-			out_layer(vec_RR_layer);
-			out_vec(v_roots);
-			exit(1);
-		}
-		#endif
+		// 	out_mRRset(mRR, mRRid);
+		// 	out_layer(vec_RR_layer, mRRid);
+		// 	out_vec(v_roots);
+		// 	exit(1);
+		// }
+		// #endif
 		return;
 	}
 
@@ -2282,10 +2808,6 @@ class mRRcollection
 				if (it != frset.end() && *it == mRRid)
 				{
 					frset.erase(it);
-// #ifdef DEBUG
-// 					vec_hash_mRR[mRRid].erase(node);
-// 					vec_hash_FR[node].erase(mRRid);
-// #endif // !NDEBUG
 				}
 				else
 				{
@@ -2429,12 +2951,12 @@ class mRRcollection
 		}
 	}
 
-	void out_mRRset(mRRset &mRR)
+	void out_mRRset(mRRset &mRR, int rid)
 	{
 		std::ofstream out_mRR(mRR_output_path, std::ios::app);
 		// for (ulint k = 0; k < _mRRsets.size(); k++)
 		// {
-			out_mRR <<"The mRR-set: "<<endl<<"--";
+			out_mRR <<"The " << rid << "-th mRR-set: "<<endl<<"--";
 			for (auto &RR : mRR)
 			{
 				for(auto node:RR)
@@ -2447,12 +2969,12 @@ class mRRcollection
 		// }
 	}
 
-	void out_layer(mRRset &mRR_layer)
+	void out_layer(mRRset &mRR_layer, int rid)
 	{
 		std::ofstream out_layer(layer_output_path, std::ios::app);
 		// for(ulint k=0;k<vec_mRR_layer.size();k++)
 		// {
-			out_layer <<"The mRR-layer: "<<endl<<"--";
+			out_layer <<"The " << rid << "-th mRR-layer: "<<endl<<"--";
 			for (auto &layer : mRR_layer)
 			{
 				for(auto node:layer)
