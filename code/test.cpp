@@ -46,42 +46,73 @@ using namespace std::chrono;
 int main(int argn, char **argv)
 {   
     vint seeds;
-    int RR_num=100000;
+    int RR_num=100;
     Argument arg;
-    arg.dataset_No=4;
+    arg.dataset_No=0;
     R_graph.clear(), O_graph.clear();
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
     arg.arg_update(argn, argv);
     arg.Initialization();
     arg.load_cost_graph(arg.dataset_No);
     mRRcollection RR(arg);
-    root_num=20;
+    root_num=10;
+    RR.vv_virtual_roots.resize(RR_num);
     RR.build_n_mRRsets_tree(RR_num,0);
-    // RR.out_mRRset();
-    // RR.out_layer();
-    // RR.out_FR();
-    // exit(1);
-    for (int j = 0; j < 500; j++)
-    {
-        int root = dsfmt_gv_genrand_uint32_range(arg.numV);
-        while (__Activated[root])
-        {
-            root = dsfmt_gv_genrand_uint32_range(arg.numV);
-        }
-        __Activated[root] = 1;
-        seeds.push_back(root);
-    }
-    RR.realization(seeds);
-    root_num=40;
-    cout<<"updating mRR-sets"<<endl;
-    RR.build_n_mRRsets_tree(RR_num,0);
+    	if(RR.check_node_in_RR_of_FR())
+		{
+			// out_FR();
+			// out_mRRset(_mRRsets[mRRid],mRRid);
+			cout<<"Error"<<__LINE__<<endl;
+			exit(1);
+		}
+    // for(int i=0;i<RR_num;i++)
+    // {
+    //     RR.out_mRRset(RR._mRRsets[i],i);
+    // }
     if(RR.FR_reverse_check(""))
+        {
+            cout<<"\033[31m"<<__LINE__<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
+            exit(1);
+        }
+
+    for(int round=0;round<5;round++)
     {
-        cout<<"\033[31m"<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
-        exit(1);
+        root_num+=10;
+        for (int j = 0; j < 50; j++)
+        {
+            int seed = dsfmt_gv_genrand_uint32_range(arg.numV);
+            while (__Activated[seed])
+            {
+                seed = dsfmt_gv_genrand_uint32_range(arg.numV);
+            }
+            __Activated[seed] = 1;
+            seeds.push_back(seed);
+        }
+        RR.realization(seeds);
+        cout<<"updating mRR-sets in round "<<round<<endl;
+        RR.build_n_mRRsets_tree(RR_num,0);
+        // for(int i=0;i<RR_num;i++)
+        // {
+        //     RR.out_mRRset(RR._mRRsets[i],i);
+        // }
+        if(RR.FR_reverse_check(""))
+        {
+            cout<<"\033[31m"<<__LINE__<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
+            exit(1);
+        }
+        for(int j=0;j<RR_num;j++)
+        {
+            if(RR.FR_check(j, " FR_check"))
+            {
+                RR.out_mRRset(RR._mRRsets[j],j);
+                exit(1);
+            }
+            RR.vv_polluted_nodes[j].clear();
+        }
+        cout<<"Finished updating and adding roots."<<endl;
+        cout<<"num_update: "<<num_update<<", num_add_root: "<<num_add_root<<endl;
+        seeds.clear();
     }
-    cout<<"Finished updating and adding roots."<<endl;
-    cout<<"num_update: "<<num_update<<", num_add_root: "<<num_add_root<<endl;
 }
 
 // int main() {

@@ -202,7 +202,7 @@ bool vec_value_check(T &vec, T1 val, int equality, string str) // equality: 1: s
 		__m512i v_val = _mm512_set1_epi32(val);
 		for(;i+16<n;i+=16)
 		{
-			__m512i v_data = _mm512_load_epi32((const __m512i*)(vec.data() + i));
+			__m512i v_data = _mm512_loadu_si512((const __m512i*)(vec.data() + i));
         	__mmask16 eq_mask = _mm512_cmpeq_epi32_mask(v_data, v_val);
         	__mmask16 neq_mask = _mm512_knot(eq_mask);
 			if (neq_mask == 0) continue;
@@ -232,9 +232,8 @@ bool vec_value_check(T &vec, T1 val, int equality, string str) // equality: 1: s
 			cout << str<<VAR_NAME(vec) << ", vec Value errors: " << endl;
 			for (auto i : vec_ind)
 			{
-				cout << vec[i] << ", ";
+				cout <<i<<": "<< vec[i] << ", ";
 			}
-			vec_out(vec_ind, "vec_ind: ");
 			return true;
 		}
 		return false;
@@ -309,17 +308,68 @@ bool FR_reverse_check_hash(int rid, mRRset &mRR_copy, string str)
 	return false;
 }
 
+bool check_node_in_RR_of_FR()
+{
+	for(int node=0;node<__numV;node++)
+	{
+		if(__Activated[node])
+		{
+			continue;
+		}
+		for(auto rrid:_FRsets[node])
+		{
+			if(mRR_inclusion_check_parallel(rrid, node)==false)
+			{
+				cout<<__LINE__<<string(__func__)<<"node "<<node<<" is not in the mRRset "<<rrid<<endl;
+				out_mRRset(_mRRsets[rrid], rrid);
+				vec_out(_FRsets[node]);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+// bool check_node_in_RR_of_FR(string str)
+// {
+// 	bool flag=false;
+// 	for(int node=0;node<__numV;node++)
+// 	{
+// 		for(auto rrid:_FRsets[node])
+// 		{
+// 			flag=false;
+// 			for(auto &RR:_mRRsets[rrid])
+// 			{
+// 				for(auto idx:RR)
+// 				{
+// 					if(idx==node)
+// 					{
+// 						flag=true;
+// 						break;
+// 					}
+// 				}
+// 			}
+// 			if(flag==false)
+// 			{
+// 				return true;
+// 			}
+// 		}
+// 	}
+// 	return false;
+// }
+
 bool FR_reverse_check(string str)
 {
+	bool find_it=false;
 	for (int i = 0; i < __numV; i++)
 	{
-		bool find_it = false;
+		__m512i i_512 = _mm512_set1_epi32(i);
 		if (__Activated[i])
 			continue;
 		auto &frset = _FRsets[i];
 		for (const auto &rid : frset)
-		{
-			__m512i i_512 = _mm512_set1_epi32(i);
+		{			
+			find_it=false;
 			for (const auto &RR : _mRRsets[rid])
 			{
 				ulint j=0, RR_size=RR.size();
@@ -354,6 +404,58 @@ bool FR_reverse_check(string str)
 	}
 	return false;
 }
+
+bool mRR_inclusion_check_parallel(int rid, int node)
+{
+    const mRRset& mRR = _mRRsets[rid];
+
+    const __m512i v_node = _mm512_set1_epi32(node);
+    constexpr std::size_t SIMD_W = 16;
+	if(__Activated[node])
+	{
+		return true;
+	}
+    for (const auto& RR : mRR)
+    {
+        const int* data = RR.data();
+        const std::size_t n = RR.size();
+        std::size_t i = 0;
+
+        for (; i + SIMD_W <= n; i += SIMD_W)
+        {
+            const __m512i v_data =
+                _mm512_load_si512(static_cast<const void*>(data + i));
+
+            const __mmask16 mask =
+                _mm512_cmpeq_epi32_mask(v_data, v_node);
+
+            if (mask != 0) {
+                return true;
+            }
+        }
+        for (; i < n; ++i)
+        {
+            if (data[i] == node) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+// bool mRR_inclusion_check(int rid, int node)
+// {
+// 	mRRset &mRR = _mRRsets[rid];
+// 	for (const auto &RR : mRR)
+// 	{
+// 		if (std::find(RR.begin(), RR.end(), node) == RR.end())
+// 		{
+// 			return true;
+// 		}
+// 	}
+// 	return false;
+// }
 
 bool FR_check_hash(int rid, string str)
 {
@@ -436,7 +538,7 @@ bool FR_check(int rid, const string& str)
         int node = error_node.load(std::memory_order_relaxed);
 		out_mRRset(_mRRsets[rid], rid);
 		out_vec(_FRsets[node]);
-        cout << str << " Error in FR_full_check, mRR " << rid
+        cout << str << " Error in FR_check, mRR " << rid
              << " contains the node " << node
              << "; but the mRRid is not in node's _FRsets\n";
 
