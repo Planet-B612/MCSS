@@ -288,7 +288,7 @@ public:
 	tuple<int,int,int,int,double,double> AdaptiveSelect()
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
-#ifdef LOG
+#ifdef DEBUG
 		auto now = std::chrono::system_clock::now();
 		time_t tt = std::chrono::system_clock::to_time_t(now);
 		tm ltm;
@@ -310,7 +310,7 @@ public:
 		auto single_start = std::chrono::high_resolution_clock::now();
 		while((__eta_left)>0)
 		{
-		// cout<<"round_num = "<<round_num<<endl;
+			// cout<<"round_num = "<<round_num<<endl;
 			auto start = std::chrono::high_resolution_clock::now();
 			decimal = 1.0 * (__numV_left) / (__eta_left);
 			root_num=floor(decimal);
@@ -402,7 +402,7 @@ public:
 			}
 	
 			round_num++;
-#ifdef LOG
+#ifdef DEBUG
 			result<<(round_num)<<", \t"<<counter<<", \t"<<1.0*(__numV_left+counter)/(__eta_left+counter)<<", \t θ = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add: "<< RR.num_add_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<round_elapsed.count() << " s"<<endl;  // the round that is currently running
 #endif
 			RR.num_update_this_round=0;

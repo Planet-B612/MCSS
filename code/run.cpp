@@ -1,3 +1,9 @@
+#define DEBUG
+#define PREFETCH
+
+#include <atomic>
+#include <mutex>
+#include <omp.h>
 #include "../dSFMT/dSFMT.h"
 #include "graph.h"
 #include <iostream>

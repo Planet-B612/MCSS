@@ -45,40 +45,57 @@ using namespace std::chrono;
 
 int main(int argn, char **argv)
 {   
-    vint seeds;
-    int RR_num=100;
+    vint seeds; 
+    int RR_num=1000;
     Argument arg;
-    arg.dataset_No=0;
+    arg.dataset_No=4;
+    arg.model="IC";
+    int root_num_increase=10, seed_num=500, round_num=20;
+    root_num=10;
+    for(int i=0;i<argn;i++)
+    {
+        if(argv[i]==string("-dataset_No"))
+        {
+            arg.dataset_No=stoi(argv[i+1]);
+        }
+        if(argv[i]==string("-model"))
+        {
+            arg.model=argv[i+1];
+        }
+        if(argv[i]==string("-RR_num"))
+        {
+            RR_num=stoi(argv[i+1]);
+        }
+        if(argv[i]==string("-root_num"))
+        {
+            root_num=stoi(argv[i+1]);
+        }
+        if(argv[i]==string("-root_num_increase"))
+        {
+            root_num_increase=stoi(argv[i+1]);
+        }
+        if(argv[i]==string("-seed_num"))
+        {
+            seed_num=stoi(argv[i+1]);
+        }
+        if(argv[i]==string("-round_num"))
+        {
+            round_num=stoi(argv[i+1]);
+        }
+    }
     R_graph.clear(), O_graph.clear();
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
-    arg.arg_update(argn, argv);
+    // arg.arg_update(argn, argv);
     arg.Initialization();
     arg.load_cost_graph(arg.dataset_No);
     mRRcollection RR(arg);
-    root_num=10;
     RR.vv_virtual_roots.resize(RR_num);
     RR.build_n_mRRsets_tree(RR_num,0);
-    	if(RR.check_node_in_RR_of_FR())
-		{
-			// out_FR();
-			// out_mRRset(_mRRsets[mRRid],mRRid);
-			cout<<"Error"<<__LINE__<<endl;
-			exit(1);
-		}
-    // for(int i=0;i<RR_num;i++)
-    // {
-    //     RR.out_mRRset(RR._mRRsets[i],i);
-    // }
-    if(RR.FR_reverse_check(""))
-        {
-            cout<<"\033[31m"<<__LINE__<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
-            exit(1);
-        }
 
-    for(int round=0;round<5;round++)
+    for(int round=0;round<round_num;round++)
     {
-        root_num+=10;
-        for (int j = 0; j < 50; j++)
+        root_num+=root_num_increase;
+        for (int j = 0; j < seed_num; j++)
         {
             int seed = dsfmt_gv_genrand_uint32_range(arg.numV);
             while (__Activated[seed])
@@ -91,27 +108,17 @@ int main(int argn, char **argv)
         RR.realization(seeds);
         cout<<"updating mRR-sets in round "<<round<<endl;
         RR.build_n_mRRsets_tree(RR_num,0);
-        // for(int i=0;i<RR_num;i++)
-        // {
-        //     RR.out_mRRset(RR._mRRsets[i],i);
-        // }
+        cout<<"FR_reverse_check begins."<<endl;
         if(RR.FR_reverse_check(""))
         {
             cout<<"\033[31m"<<__LINE__<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
             exit(1);
         }
-        for(int j=0;j<RR_num;j++)
-        {
-            if(RR.FR_check(j, " FR_check"))
-            {
-                RR.out_mRRset(RR._mRRsets[j],j);
-                exit(1);
-            }
-            RR.vv_polluted_nodes[j].clear();
-        }
         cout<<"Finished updating and adding roots."<<endl;
         cout<<"num_update: "<<num_update<<", num_add_root: "<<num_add_root<<endl;
         seeds.clear();
+        num_update=0;
+        num_add_root=0;
     }
 }
 

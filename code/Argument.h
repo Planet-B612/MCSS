@@ -60,7 +60,7 @@ int eta_for_verification=20000;
 
 class Argument{
 public:
-    float eta_0 = 2000;
+    float eta_0 = 5000;
     uint eta_start = 0;
     uint eta_end = 1;
     double eta_step = 0.01;
@@ -80,7 +80,7 @@ public:
     string result_dir = "../backup.txt";
     int run_times=1;
     int times=0;
-    int batch=16;
+    int batch=24;
     int linear_search_thr=0;  // recommended 50 for formal running
     bool seed_out=false;
     bool gene_ini_pw=false;
@@ -285,6 +285,7 @@ public:
                 }
                 else
                 {
+                    out_pw.open(pw_path + dataset[dataset_No] + "_pw_lt" + to_string(i) + ".txt");
                     assert((!out_pw.fail()));
                     for(int v=0;v<(numV);v++)
                     {
@@ -309,7 +310,7 @@ public:
                 }
                 out_pw.close();
             }
-            cout << "generate PO Done" <<endl;
+            cout << "generate PO for"<<model<<"at "<<dataset[dataset_No]<<" Done" <<endl;
             exit(0);
         }
         // else

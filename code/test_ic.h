@@ -50,9 +50,9 @@ void gene_syn_mRR()
 	vecRoot_num = {2};
 }
 
-bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool, int seq, int fr, bool reverse = false, bool identical_ele=false)
+bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool, int seq, int fr, bool reverse = false, bool identical_ele=false, bool dup_in_tree=false)
 {
-	bool a = false, b = false, c = false, d = false, e = false, f = false, g=false;
+	bool a = false, b = false, c = false, d = false, e = false, f = false, g=false, h=false;
 	if (newtree)
 		a = vec_value_check(__vecNewTree, -1, 1, str + " __vecNewTree includes non -1 values.");
 	if (tree)
@@ -68,7 +68,11 @@ bool synthetic_check(int mRRid, string str, int newtree, int tree, int visitBool
 	{
 		g=identical_element_check(mRRid, str);
 	}
-	if (a || b || c || d || e || f || g)
+	if(dup_in_tree)
+	{
+		h=duplicate_node_in_tree_check(mRRid, str);
+	}
+	if (a || b || c || d || e || f || g || h)
 	{
 		cout << "Error in synthetic_check of " << str << endl;
 		return true;
@@ -157,6 +161,65 @@ bool identical_element_check(int rid, const string& str)
     return false;
 }
 
+/// Return true if any RR-tree inside mRR[rid] contains a duplicated node id (anywhere in that tree).
+bool duplicate_node_in_tree_check(int rid, const string& str)
+{
+	mRRset& mRR = _mRRsets[rid];
+	for (size_t t = 0; t < mRR.size(); ++t)
+	{
+		const auto& RR = mRR[t];
+		if (RR.size() < 2)
+		{
+			continue;
+		}
+		vint sorted_nodes(RR.begin(), RR.end());
+		std::sort(sorted_nodes.begin(), sorted_nodes.end());
+		for (size_t i = 1; i < sorted_nodes.size(); ++i)
+		{
+			if (sorted_nodes[i] != sorted_nodes[i - 1])
+			{
+				continue;
+			}
+			const int dup = sorted_nodes[i];
+			size_t first_idx = RR.size(), second_idx = RR.size();
+			for (size_t k = 0; k < RR.size(); ++k)
+			{
+				if (RR[k] != dup)
+				{
+					continue;
+				}
+				if (first_idx == RR.size())
+				{
+					first_idx = k;
+				}
+				else
+				{
+					second_idx = k;
+					break;
+				}
+			}
+			cout << str << " Error: duplicate node " << dup
+				 << " in mRR " << rid << " tree " << t
+				 << " (RR[0]=" << RR[0]
+				 << ", first index " << first_idx
+				 << ", again at index " << second_idx << ")"
+				 << endl;
+			cout << "tree " << t << ": ";
+			for (size_t k = 0; k < RR.size(); ++k)
+			{
+				cout << RR[k];
+				if (k + 1 < RR.size())
+				{
+					cout << ", ";
+				}
+			}
+			cout << endl;
+			return true;
+		}
+	}
+	return false;
+}
+
 
 bool v_roots_check(int mRRid, string str)
 {
@@ -194,7 +257,6 @@ bool del_nodes_check(int mRRid, vint &del_nodes)
 template <typename T, typename T1>
 bool vec_value_check(T &vec, T1 val, int equality, string str) // equality: 1: should be equal to val, -1: shoud not equal to val, 2: should be greater than, -2: should be smaller than
 {
-	bool flag = false;
 	vint vec_ind={};
 	if (equality == 1)
 	{
@@ -206,34 +268,47 @@ bool vec_value_check(T &vec, T1 val, int equality, string str) // equality: 1: s
         	__mmask16 eq_mask = _mm512_cmpeq_epi32_mask(v_data, v_val);
         	__mmask16 neq_mask = _mm512_knot(eq_mask);
 			if (neq_mask == 0) continue;
-			flag = true;
 			__m512i v_base = _mm512_set1_epi32((int)i);
         	__m512i v_indices = _mm512_add_epi32(
             _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0), v_base);
         
-        // 用掩码压缩存储：只存储不等于 val 的索引
-        alignas(64) int temp_indices[16];
-        _mm512_mask_compressstoreu_epi32(temp_indices, neq_mask, v_indices);
-        
-        // 计算实际存储的数量
-        int count = __builtin_popcount((unsigned)neq_mask);
-        vec_ind.insert(vec_ind.end(), temp_indices, temp_indices + count);
+			// 用掩码压缩存储：只存储不等于 val 的索引
+			alignas(64) int temp_indices[16];
+			_mm512_mask_compressstoreu_epi32(temp_indices, neq_mask, v_indices);
+			
+			// 计算实际存储的数量
+			int count = __builtin_popcount((unsigned)neq_mask);
+			vec_ind.insert(vec_ind.end(), temp_indices, temp_indices + count);
 		}
-		for (ulint i = 0; i < vec.size(); i++)
+		for (;i < vec.size(); i++)
 		{
-			if (vec[i] != val)
+			if (vec[i] != val && !__Activated[vec[i]])
 			{
-				flag = true;
 				vec_ind.push_back(i);
 			}
 		}
-		if (flag)
+		vint activated_vec_ind={};
+		for(int i=vec_ind.size()-1;i>=0;i--)
+		{
+			if(__Activated[vec[vec_ind[i]]])
+			{
+				activated_vec_ind.push_back(vec_ind[i]);
+				vec_ind.erase(vec_ind.begin()+i);
+			}
+		}
+		if (vec_ind.size()>0)
 		{
 			cout << str<<VAR_NAME(vec) << ", vec Value errors: " << endl;
 			for (auto i : vec_ind)
 			{
 				cout <<i<<": "<< vec[i] << ", ";
 			}
+			cout<<"activated_vec_ind: ";
+			for(auto i:activated_vec_ind)
+			{
+				cout<<i<<", ";
+			}
+			cout<<endl;
 			return true;
 		}
 		return false;
@@ -457,36 +532,36 @@ bool mRR_inclusion_check_parallel(int rid, int node)
 // 	return false;
 // }
 
-bool FR_check_hash(int rid, string str)
-{
-	sint &mRR_hash = vec_hash_mRR[rid];
-	bool flag = false;
-	for (const auto &node : mRR_hash)
-	{
-		if (vec_hash_FR[node].find(rid) == vec_hash_FR[node].end())
-		{
-			// cout<<"RRid in vec_hash_mRR of "<<node <<" includes: ";
-			// for(const auto &id:vec_hash_FR[node])
-			// {
-			// 	cout<<id<<", ";
-			// }
-			// cout<<endl;
-			flag = true;
-			cout << "FR_check error: " << rid << " is not in the FR of " << node << endl;
-			cout<<"RRid in vec_hash_mRR of "<<node <<" includes: ";
-			for(const auto index:vec_hash_FR[node])
-			{
-				cout<<index<<", "<<endl;
-			}
-			return true;
-		}
-	}
-	if(flag)
-	{
-		return true;
-	}
-	return false;
-}
+// bool FR_check_hash(int rid, string str)
+// {
+// 	sint &mRR_hash = vec_hash_mRR[rid];
+// 	bool flag = false;
+// 	for (const auto &node : mRR_hash)
+// 	{
+// 		if (vec_hash_FR[node].find(rid) == vec_hash_FR[node].end())
+// 		{
+// 			// cout<<"RRid in vec_hash_mRR of "<<node <<" includes: ";
+// 			// for(const auto &id:vec_hash_FR[node])
+// 			// {
+// 			// 	cout<<id<<", ";
+// 			// }
+// 			// cout<<endl;
+// 			flag = true;
+// 			cout << "FR_check error: " << rid << " is not in the FR of " << node << endl;
+// 			cout<<"RRid in vec_hash_mRR of "<<node <<" includes: ";
+// 			for(const auto index:vec_hash_FR[node])
+// 			{
+// 				cout<<index<<", "<<endl;
+// 			}
+// 			return true;
+// 		}
+// 	}
+// 	if(flag)
+// 	{
+// 		return true;
+// 	}
+// 	return false;
+// }
 
 bool FR_check(int rid, const string& str)
 {
