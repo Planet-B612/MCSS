@@ -288,25 +288,25 @@ public:
 	tuple<int,int,int,int,double,double> AdaptiveSelect()
 	{
 		approx=1.0-power((1-1.0/batch_size),batch_size);
-#ifdef DEBUG
-		auto now = std::chrono::system_clock::now();
-		time_t tt = std::chrono::system_clock::to_time_t(now);
-		tm ltm;
-		localtime_r(&tt, &ltm);
-		std::stringstream ss;
-		ss << std::put_time(&ltm, "%Y%m%d_%H%M%S"); 
-		string time_str = ss.str();
-		std::ofstream result;
-		string file_name = "/home/cfeng/mRR_Regen/code/log_mine/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps)+time_str + ".txt";
-		result.open(file_name, ios::app);
-		if (result.fail()) 
-		{
-			std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
-			assert(false);
-		}
-			assert(!result.fail());
-		// result << "start recording at " << std::chrono::system_clock::now() << std::endl;
-#endif
+// #ifdef DEBUG
+// 		auto now = std::chrono::system_clock::now();
+// 		time_t tt = std::chrono::system_clock::to_time_t(now);
+// 		tm ltm;
+// 		localtime_r(&tt, &ltm);
+// 		std::stringstream ss;
+// 		ss << std::put_time(&ltm, "%Y%m%d_%H%M%S"); 
+// 		string time_str = ss.str();
+// 		std::ofstream result;
+// 		string file_name = "/home/cfeng/mRR_Regen/code/log_mine/round_" + std::to_string(__dataset_No) + "_" + std::to_string(static_cast<int>(__eta*__numV))+ "_" + std::to_string(batch_size) + "_" + std::to_string(eps)+time_str + ".txt";
+// 		result.open(file_name, ios::app);
+// 		if (result.fail()) 
+// 		{
+// 			std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
+// 			assert(false);
+// 		}
+// 		assert(!result.fail());
+// 		// result << "start recording at " << std::chrono::system_clock::now() << std::endl;
+// #endif
 		auto single_start = std::chrono::high_resolution_clock::now();
 		while((__eta_left)>0)
 		{
@@ -402,9 +402,9 @@ public:
 			}
 	
 			round_num++;
-#ifdef DEBUG
-			result<<(round_num)<<", \t"<<counter<<", \t"<<1.0*(__numV_left+counter)/(__eta_left+counter)<<", \t θ = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add: "<< RR.num_add_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<round_elapsed.count() << " s"<<endl;  // the round that is currently running
-#endif
+// #ifdef DEBUG
+// 			result<<counter<<", \t"<<_eta_left<<", \t"<<1.0*(__numV_left+counter)/(__eta_left+counter)<<", \t θ = "<<theta<<"; \t update: "<< RR.num_update_this_round <<"\t add: "<< RR.num_add_root_this_round<<", \t"<< disp_mem_usage()<<" MB, \t"<<round_elapsed.count() << " s"<<endl;  // the round that is currently running
+// #endif
 			RR.num_update_this_round=0;
 			RR.num_add_root_this_round = 0;
 			RR.num_delete_root_this_round = 0;

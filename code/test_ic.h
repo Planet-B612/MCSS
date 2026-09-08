@@ -19,6 +19,79 @@ void test_mRR()
 	cout<<"test mRR finished."<<endl;
 }
 
+/// Reproduce the bug of calling delete_root() at root_diff<0 inside
+/// mRR_update_and_add_roots (around Ln 1046), instead of only trimming the
+/// planned roots/v_roots (n_del / pop_back).
+///
+/// Mid-update state: trees after min_tree are already swapped into mRR_copy,
+/// and min_tree_RR / min_tree_layer are live references into mRR[min_tree] /
+/// mRR_layer[min_tree]. delete_root() shrinks those vectors from the back and
+/// can destroy the live min_tree; the following BFS then push_back on dangling
+/// refs (use-after-free / heap corruption). Build with -fsanitize=address.
+void repro_delete_root_mid_update()
+{
+	assert(model == "IC");
+	cout << "=== repro_delete_root_mid_update ===" << endl;
+	cout << "If mRR_update_and_add_roots calls delete_root() when root_diff<0,"
+		 << " expect ASan UAF / crash on min_tree BFS." << endl;
+	cout << "Safe path (only pop planned roots / v_roots) should reach the end." << endl;
+
+	for (auto &fr : _FRsets)
+		fr.clear();
+	_mRRsets.clear();
+	vec_mRR_layer.clear();
+	vv_virtual_roots.clear();
+	vv_polluted_nodes.clear();
+	vecRoot_num.clear();
+	fill(__vecTree.begin(), __vecTree.end(), -1);
+	fill(__vecNewTree.begin(), __vecNewTree.end(), -1);
+	fill(__Activated.begin(), __Activated.end(), 0);
+
+	mRRset mRR;
+	mRRset mRR_layer;
+	// tree 0: stays before min_tree
+	mRR.push_back({0, 1, 2, 3});
+	mRR_layer.push_back({0, 1, 2, 3});
+	// tree 1: min_tree; activate a non-root so first_del_idx != 0 (BFS runs)
+	mRR.push_back({10, 11, 12, 13, 14});
+	mRR_layer.push_back({0, 1, 3}); // [10] | [11,12] | [13,14]
+	// trees 2..3: swapped into mRR_copy, then wrongly deleted by delete_root
+	mRR.push_back({20, 21, 22});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({30, 31, 32});
+	mRR_layer.push_back({0, 1, 2});
+
+	for (const auto &RR : mRR)
+	{
+		for (const auto node : RR)
+		{
+			auto &fr = _FRsets[node];
+			auto it = lower_bound(fr.begin(), fr.end(), 0);
+			if (it == fr.end() || *it != 0)
+				fr.insert(it, 0);
+		}
+	}
+
+	_mRRsets.push_back(std::move(mRR));
+	vec_mRR_layer.push_back(std::move(mRR_layer));
+	vv_virtual_roots.resize(1); // empty → delete_root must shrink real trees
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {4};
+	_num_mRRsets = 1;
+
+	__Activated[12] = 1;
+	vint del_nodes = {12};
+
+	// roots will be {0,10,20,30} → size 4; target root_num=1 → root_diff=-3
+	root_num = 1;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots(0, del_nodes);
+	cout << "UNEXPECTED: finished without crash. Either delete_root was not used,"
+		 << " or |root_diff| was too small to free min_tree." << endl;
+}
+
 void gene_syn_mRR()
 {
 	// __Activated[17] = true;
@@ -727,7 +800,7 @@ bool FR_insert_check(int rid, int node)
 template <typename T>
 void vec_out(T &vec, string str = "")
 {
-	std::fstream result_bk(result, ios::app);
+	std::fstream result_bk((*__arg).result_dir, ios::app);
 	assert(!result_bk.fail());
 	result_bk << str + "vec: ";
 	for (auto i : vec)
@@ -746,7 +819,7 @@ void vec_out(T &vec, string str = "")
 
 void mRR_out(int mRRid, string str = "")
 {
-	std::fstream result_bk(result, ios::app);
+	std::fstream result_bk((*__arg).result_dir, ios::app);
 	assert(!result_bk.fail());
 	result_bk << str + "mRRset: " << mRRid << endl;
 	auto &mRR = _mRRsets[mRRid];
@@ -764,8 +837,8 @@ void mRR_out(int mRRid, string str = "")
 
 void set_out(vint p_nodes)
 {
-	// std::fstream result_bk(result, ios::out);
-	(*__arg).result_bk.open(result);
+	// std::fstream result_bk(result_bk, ios::out);
+	(*__arg).result_bk.open((*__arg).result_dir);
 	assert(!(*__arg).result_bk.fail());
 	for (auto i : p_nodes)
 	{
@@ -787,9 +860,9 @@ bool output_info(int mRRid, bool erase = false, vint p_nodes = {})
 	// 	return true;
 	// }
 	if (erase)
-		(*__arg).result_bk.open(result);
+		(*__arg).result_bk.open((*__arg).result_dir);
 	else
-		(*__arg).result_bk.open(result, ios::app);
+		(*__arg).result_bk.open((*__arg).result_dir, ios::app);
 	assert(!(*__arg).result_bk.fail());
 	(*__arg).result_bk << "===========================================================" << endl;
 	(*__arg).result_bk << "The vec_virtual_roots is: " << endl;

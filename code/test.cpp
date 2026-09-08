@@ -52,6 +52,7 @@ int main(int argn, char **argv)
     arg.model="IC";
     int root_num_increase=10, seed_num=500, round_num=20;
     root_num=10;
+    bool repro_delete_root = false;
     for(int i=0;i<argn;i++)
     {
         if(argv[i]==string("-dataset_No"))
@@ -82,9 +83,31 @@ int main(int argn, char **argv)
         {
             round_num=stoi(argv[i+1]);
         }
+        if(argv[i]==string("-repro_delete_root"))
+        {
+            repro_delete_root = true;
+        }
     }
     R_graph.clear(), O_graph.clear();
     dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
+
+    // Tiny in-memory graph: no /data/fc needed. Forces root_diff<0 + delete_root mid-update.
+    if (repro_delete_root)
+    {
+        const int n = 40;
+        arg.numV = n;
+        arg.model = "IC";
+        arg.real_time_pw = true; // avoid loading a large PO into a tiny PO[]
+        R_graph.assign(n, vint_aligned());
+        O_graph.assign(n, vint_aligned());
+        Inv_inDeg.assign(n, 1.0f);
+        __Activated.assign(n, 0);
+        numV512 = _mm512_set1_epi32(n);
+        mRRcollection RR(arg);
+        RR.repro_delete_root_mid_update();
+        return 0;
+    }
+
     // arg.arg_update(argn, argv);
     arg.Initialization();
     arg.load_cost_graph(arg.dataset_No);
