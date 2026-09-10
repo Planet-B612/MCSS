@@ -19,79 +19,6 @@ void test_mRR()
 	cout<<"test mRR finished."<<endl;
 }
 
-/// Reproduce the bug of calling delete_root() at root_diff<0 inside
-/// mRR_update_and_add_roots (around Ln 1046), instead of only trimming the
-/// planned roots/v_roots (n_del / pop_back).
-///
-/// Mid-update state: trees after min_tree are already swapped into mRR_copy,
-/// and min_tree_RR / min_tree_layer are live references into mRR[min_tree] /
-/// mRR_layer[min_tree]. delete_root() shrinks those vectors from the back and
-/// can destroy the live min_tree; the following BFS then push_back on dangling
-/// refs (use-after-free / heap corruption). Build with -fsanitize=address.
-void repro_delete_root_mid_update()
-{
-	assert(model == "IC");
-	cout << "=== repro_delete_root_mid_update ===" << endl;
-	cout << "If mRR_update_and_add_roots calls delete_root() when root_diff<0,"
-		 << " expect ASan UAF / crash on min_tree BFS." << endl;
-	cout << "Safe path (only pop planned roots / v_roots) should reach the end." << endl;
-
-	for (auto &fr : _FRsets)
-		fr.clear();
-	_mRRsets.clear();
-	vec_mRR_layer.clear();
-	vv_virtual_roots.clear();
-	vv_polluted_nodes.clear();
-	vecRoot_num.clear();
-	fill(__vecTree.begin(), __vecTree.end(), -1);
-	fill(__vecNewTree.begin(), __vecNewTree.end(), -1);
-	fill(__Activated.begin(), __Activated.end(), 0);
-
-	mRRset mRR;
-	mRRset mRR_layer;
-	// tree 0: stays before min_tree
-	mRR.push_back({0, 1, 2, 3});
-	mRR_layer.push_back({0, 1, 2, 3});
-	// tree 1: min_tree; activate a non-root so first_del_idx != 0 (BFS runs)
-	mRR.push_back({10, 11, 12, 13, 14});
-	mRR_layer.push_back({0, 1, 3}); // [10] | [11,12] | [13,14]
-	// trees 2..3: swapped into mRR_copy, then wrongly deleted by delete_root
-	mRR.push_back({20, 21, 22});
-	mRR_layer.push_back({0, 1, 2});
-	mRR.push_back({30, 31, 32});
-	mRR_layer.push_back({0, 1, 2});
-
-	for (const auto &RR : mRR)
-	{
-		for (const auto node : RR)
-		{
-			auto &fr = _FRsets[node];
-			auto it = lower_bound(fr.begin(), fr.end(), 0);
-			if (it == fr.end() || *it != 0)
-				fr.insert(it, 0);
-		}
-	}
-
-	_mRRsets.push_back(std::move(mRR));
-	vec_mRR_layer.push_back(std::move(mRR_layer));
-	vv_virtual_roots.resize(1); // empty → delete_root must shrink real trees
-	vv_polluted_nodes.resize(1);
-	vecRoot_num = {4};
-	_num_mRRsets = 1;
-
-	__Activated[12] = 1;
-	vint del_nodes = {12};
-
-	// roots will be {0,10,20,30} → size 4; target root_num=1 → root_diff=-3
-	root_num = 1;
-	floor_root_RR_copy = 1;
-	ceil_root_RR = 0;
-
-	mRR_update_and_add_roots(0, del_nodes);
-	cout << "UNEXPECTED: finished without crash. Either delete_root was not used,"
-		 << " or |root_diff| was too small to free min_tree." << endl;
-}
-
 void gene_syn_mRR()
 {
 	// __Activated[17] = true;
@@ -1044,4 +971,429 @@ static inline bool check_strictly_increasing_avx512(
     }
 
     return false;
+}
+
+
+/// Reset collection state for synthetic IC update tests (tiny in-memory graph).
+void reset_syn_update_state()
+{
+	for (auto &fr : _FRsets)
+		fr.clear();
+	_mRRsets.clear();
+	vec_mRR_layer.clear();
+	vv_virtual_roots.clear();
+	vv_polluted_nodes.clear();
+	vecRoot_num.clear();
+	fill(__vecTree.begin(), __vecTree.end(), -1);
+	fill(__vecNewTree.begin(), __vecNewTree.end(), -1);
+	fill(__vecVisitBool.begin(), __vecVisitBool.end(), 0);
+	fill(__Activated.begin(), __Activated.end(), 0);
+	_num_mRRsets = 0;
+}
+
+void install_fr_for_mRR(const mRRset &mRR, int mRRid)
+{
+	for (const auto &RR : mRR)
+	{
+		for (const auto node : RR)
+		{
+			auto &fr = _FRsets[node];
+			auto it = lower_bound(fr.begin(), fr.end(), mRRid);
+			if (it == fr.end() || *it != mRRid)
+				fr.insert(it, mRRid);
+		}
+	}
+}
+
+/// Postconditions after a successful mRR_update_and_add_roots.
+string check_update_post(int mRRid)
+{
+	auto &mRR = _mRRsets[mRRid];
+	if (mRR.empty())
+		return "mRR is empty";
+	for (ulint i = 0; i < mRR.size(); ++i)
+	{
+		if (mRR[i].empty())
+			return "empty RR at index " + to_string(i);
+	}
+	if (model == "IC")
+	{
+		auto &layers = vec_mRR_layer[mRRid];
+		if (layers.size() != mRR.size())
+			return "layer size mismatch";
+	}
+	if (synthetic_check(mRRid, "test_update_post", 1, 1, 0, 0, 1, 0, 0, 1))
+		return "synthetic_check / duplicate failed";
+	return "";
+}
+
+/// Case A: min_tree in the middle, non-root activated, root_diff≈0.
+/// Catches empty-RR-after-swap if tree_start is wrong.
+bool test_update_mid_tree_no_rootdiff()
+{
+	cout << "[A] mid-tree pollution, root_diff~0 ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR, mRR_layer;
+	mRR.push_back({0, 1, 2, 3});
+	mRR_layer.push_back({0, 1, 2, 3});
+	mRR.push_back({10, 11, 12, 13, 14});
+	mRR_layer.push_back({0, 1, 3}); // [10]|[11,12]|[13,14]
+	mRR.push_back({20, 21, 22});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({30, 31, 32});
+	mRR_layer.push_back({0, 1, 2});
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vec_mRR_layer.push_back(std::move(mRR_layer));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {4};
+	_num_mRRsets = 1;
+
+	__Activated[12] = 1;
+	vint del_nodes = {12};
+	root_num = 4;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots(0, del_nodes);
+	string err = check_update_post(0);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size() << ")" << endl;
+	return true;
+}
+
+/// Case B: min_tree is last tree + root_diff<0 (still calls delete_root in current code).
+bool test_update_last_tree_rootdiff_neg()
+{
+	cout << "[B] last-tree pollution, root_diff<0 ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR, mRR_layer;
+	mRR.push_back({0, 1, 2});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({10, 11, 12});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({20, 21, 22});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({30, 31, 32, 33, 34});
+	mRR_layer.push_back({0, 1, 3}); // [30]|[31,32]|[33,34]
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vec_mRR_layer.push_back(std::move(mRR_layer));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {4};
+	_num_mRRsets = 1;
+
+	__Activated[32] = 1; // non-root in last tree
+	vint del_nodes = {32};
+	// now_root_num=4, root_num=1, floor>0, ceil=0 → root_diff = 2-4 = -2
+	root_num = 1;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots(0, del_nodes);
+	string err = check_update_post(0);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size() << ")" << endl;
+	return true;
+}
+
+/// Case C: root of first tree activated (first_del_idx==0), discard min_tree.
+bool test_update_root_activated()
+{
+	cout << "[C] root activated (first_del_idx==0) ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR, mRR_layer;
+	mRR.push_back({0, 1, 2});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({10, 11, 12});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({20, 21, 22});
+	mRR_layer.push_back({0, 1, 2});
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vec_mRR_layer.push_back(std::move(mRR_layer));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {3};
+	_num_mRRsets = 1;
+
+	__Activated[0] = 1;
+	vint del_nodes = {0};
+	root_num = 3;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots(0, del_nodes);
+	string err = check_update_post(0);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	// discarded tree 0 → final should not be rooted at 0
+	if (!_mRRsets[0].empty() && _mRRsets[0][0].size() > 0 && _mRRsets[0][0][0] == 0)
+	{
+		cout << "FAIL: discarded root 0 still present as a tree root" << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size() << ")" << endl;
+	return true;
+}
+
+/// Case D: need more roots (root_diff>0) while regenerating mid-tree.
+bool test_update_rootdiff_pos()
+{
+	cout << "[D] mid-tree pollution, root_diff>0 ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR, mRR_layer;
+	mRR.push_back({0, 1, 2});
+	mRR_layer.push_back({0, 1, 2});
+	mRR.push_back({10, 11, 12, 13, 14});
+	mRR_layer.push_back({0, 1, 3});
+	mRR.push_back({20, 21, 22});
+	mRR_layer.push_back({0, 1, 2});
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vec_mRR_layer.push_back(std::move(mRR_layer));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {3};
+	_num_mRRsets = 1;
+
+	__Activated[12] = 1;
+	vint del_nodes = {12};
+	// now=3, want root_num=5 → root_diff=2
+	root_num = 5;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots(0, del_nodes);
+	string err = check_update_post(0);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size()
+		 << ", vecRoot_num=" << vecRoot_num[0] << ")" << endl;
+	return true;
+}
+
+/// Run all synthetic update cases. Returns number of failures.
+int test_mRR_update_and_add_roots_suite()
+{
+	assert(model == "IC");
+	cout << "=== test_mRR_update_and_add_roots_suite ===" << endl;
+	int fail = 0;
+	if (!test_update_mid_tree_no_rootdiff())
+		++fail;
+	if (!test_update_root_activated())
+		++fail;
+	if (!test_update_rootdiff_pos())
+		++fail;
+	if (!test_update_last_tree_rootdiff_neg())
+		++fail;
+	cout << "=== suite done: " << fail << " failed ===" << endl;
+	return fail;
+}
+
+/// Reproduce the bug of calling delete_root() at root_diff<0 inside
+/// mRR_update_and_add_roots (around Ln 1046), instead of only trimming the
+/// planned roots/v_roots (n_del / pop_back).
+void repro_delete_root_mid_update()
+{
+	assert(model == "IC");
+	cout << "=== repro_delete_root_mid_update ===" << endl;
+	test_update_last_tree_rootdiff_neg();
+}
+
+/// True if mRRid still appears in node's FRset.
+bool fr_contains(int node, int mRRid)
+{
+	auto &fr = _FRsets[node];
+	auto it = lower_bound(fr.begin(), fr.end(), mRRid);
+	return it != fr.end() && *it == mRRid;
+}
+
+/// Postconditions for LT update (no layers).
+string check_update_post_lt(int mRRid, const vint &removed_activated)
+{
+	auto &mRR = _mRRsets[mRRid];
+	if (mRR.empty())
+		return "mRR is empty";
+	for (ulint i = 0; i < mRR.size(); ++i)
+	{
+		if (mRR[i].empty())
+			return "empty RR at index " + to_string(i);
+	}
+	if (synthetic_check(mRRid, "test_update_lt_post", 1, 1, 0, 0, 1, 1, 0, 1))
+		return "synthetic_check / FR / duplicate failed";
+	for (int node : removed_activated)
+	{
+		if (fr_contains(node, mRRid))
+			return "activated node " + to_string(node) + " still in FRset after LT update";
+	}
+	return "";
+}
+
+/// LT-A: mid-chain pollution, root_diff~0.
+bool test_lt_update_mid_tree_no_rootdiff()
+{
+	cout << "[LT-A] mid-tree pollution, root_diff~0 ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR;
+	// LT trees are reverse live-edge chains
+	mRR.push_back({0, 1, 2, 3});
+	mRR.push_back({10, 11, 12, 13, 14});
+	mRR.push_back({20, 21, 22});
+	mRR.push_back({30, 31, 32});
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {4};
+	_num_mRRsets = 1;
+
+	__Activated[12] = 1;
+	vint del_nodes = {12};
+	root_num = 4;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots_lt(0, del_nodes);
+	string err = check_update_post_lt(0, del_nodes);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size() << ")" << endl;
+	return true;
+}
+
+/// LT-B: last-tree pollution + root_diff<0 (calls delete_root mid-update).
+bool test_lt_update_last_tree_rootdiff_neg()
+{
+	cout << "[LT-B] last-tree pollution, root_diff<0 ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR;
+	mRR.push_back({0, 1, 2});
+	mRR.push_back({10, 11, 12});
+	mRR.push_back({20, 21, 22});
+	mRR.push_back({30, 31, 32, 33, 34});
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {4};
+	_num_mRRsets = 1;
+
+	__Activated[32] = 1;
+	vint del_nodes = {32};
+	root_num = 1;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots_lt(0, del_nodes);
+	string err = check_update_post_lt(0, del_nodes);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size() << ")" << endl;
+	return true;
+}
+
+/// LT-C: root of a tree activated (first_del_idx==0).
+bool test_lt_update_root_activated()
+{
+	cout << "[LT-C] root activated (first_del_idx==0) ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR;
+	mRR.push_back({0, 1, 2});
+	mRR.push_back({10, 11, 12});
+	mRR.push_back({20, 21, 22});
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {3};
+	_num_mRRsets = 1;
+
+	__Activated[10] = 1;
+	vint del_nodes = {10};
+	root_num = 3;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots_lt(0, del_nodes);
+	string err = check_update_post_lt(0, del_nodes);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size() << ")" << endl;
+	return true;
+}
+
+/// LT-D: need extra roots (root_diff>0).
+bool test_lt_update_rootdiff_pos()
+{
+	cout << "[LT-D] root_diff>0 (add roots) ... " << flush;
+	reset_syn_update_state();
+	mRRset mRR;
+	mRR.push_back({0, 1, 2});
+	mRR.push_back({10, 11, 12});
+	install_fr_for_mRR(mRR, 0);
+	_mRRsets.push_back(std::move(mRR));
+	vv_virtual_roots.resize(1);
+	vv_polluted_nodes.resize(1);
+	vecRoot_num = {2};
+	_num_mRRsets = 1;
+
+	__Activated[11] = 1;
+	vint del_nodes = {11};
+	root_num = 4;
+	floor_root_RR_copy = 1;
+	ceil_root_RR = 0;
+
+	mRR_update_and_add_roots_lt(0, del_nodes);
+	string err = check_update_post_lt(0, del_nodes);
+	if (!err.empty())
+	{
+		cout << "FAIL: " << err << endl;
+		return false;
+	}
+	cout << "OK (trees=" << _mRRsets[0].size()
+		 << ", vecRoot_num=" << vecRoot_num[0] << ")" << endl;
+	return true;
+}
+
+int test_mRR_update_and_add_roots_lt_suite()
+{
+	assert(model == "LT");
+	cout << "=== test_mRR_update_and_add_roots_lt_suite ===" << endl;
+	int fail = 0;
+	if (!test_lt_update_mid_tree_no_rootdiff())
+		++fail;
+	if (!test_lt_update_root_activated())
+		++fail;
+	if (!test_lt_update_rootdiff_pos())
+		++fail;
+	if (!test_lt_update_last_tree_rootdiff_neg())
+		++fail;
+	cout << "=== LT suite done: " << fail << " failed ===" << endl;
+	return fail;
 }

@@ -14,19 +14,21 @@ cur_date=$( date +"%m-%d")
 
 # batch=2
 mRR_time_test=0
-dataset_no=11
+dataset_no=4
 eps=0.7
 eta=$1
-batch=4
+batch=2
 start_time=0
 end_time=1
 set="tw"
 Rand_cost=0  #bool Rnd_cost = false;
 delta_amp=1
-model="IC"
+model="LT"
 adapt_IM=0
 ablation_update=0
 ablation_add_root=0
+if [[ "$dataset_no" -eq  ]] || [[ "$1" -ge ${#dataset[@]} ]]; then
+
 if [[ "$model" == "IC" ]]; then
     echo "Should be using IC model."
 fi

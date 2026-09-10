@@ -412,9 +412,9 @@ public:
 		}
 		auto single_end = std::chrono::high_resolution_clock::now();
 		std::chrono::duration <double> single_elapsed = single_end - single_start;
-#ifdef LOG
-		result.close();
-#endif
+// #ifdef DEBUG
+// 		result.close();
+// #endif
 		// cout << "build seed set traversal time " << total_build_seedset_time <<endl;
 		// cout << "mRR traversal time " <<RR.mRR_traversal_time <<endl;
 		cout << "Single time " << single_elapsed.count() << " s" << endl;

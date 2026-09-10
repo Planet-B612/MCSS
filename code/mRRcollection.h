@@ -54,6 +54,7 @@ class mRRcollection
 	vector<vint_aligned> vv_virtual_roots;
 	vvint vv_next_mRRnode;
 	std::ofstream result_out;
+	string __result_dir;
 	std::random_device rd; // initialize random number generator
 
 	double mRR_traversal_time = 0.0;
@@ -75,10 +76,11 @@ class mRRcollection
 		}
 		__vecNewTree = std::vector<int>(__numV, -1);
 		__vecVisitNode = vint(__numV);
-		result_out.open(arg.result_dir, ios::out);
+		__result_dir = arg.result_dir;
+		result_out.open(__result_dir, ios::out);
 		if (result_out.fail()) 
 		{
-			std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
+			// std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
 			assert(false);
 		}
 		PO.resize((__numV), vint_aligned());
@@ -991,17 +993,33 @@ class mRRcollection
 			}
 		}
 
-		int root_diff=0;
+		int root_diff=0, now_root_num=roots.size()+v_roots.size();
 		bool build_min_tree=true;
-		if(floor_root_RR_copy>0)
+		if (now_root_num <= root_num)
 		{
-			floor_root_RR_copy--;
-			root_diff=root_num-roots.size()-v_roots.size();
+			if(floor_root_RR_copy>0)
+			{
+				root_diff = root_num - now_root_num; // 0 when already at target
+				floor_root_RR_copy--;
+			}
+			else if(ceil_root_RR>0)
+			{
+				root_diff = root_num + 1-now_root_num; // 0 when already at target
+				ceil_root_RR--;
+			}
 		}
-		else if(ceil_root_RR > 0)
+		else if(now_root_num>=root_num+1)
 		{
-			ceil_root_RR--;
-			root_diff=root_num+1-roots.size()-v_roots.size();
+			if(ceil_root_RR>0)
+			{
+				root_diff = now_root_num - root_num - 1; // 0 when already at target
+				ceil_root_RR--;
+			}
+			else if(floor_root_RR_copy>0)
+			{
+				root_diff = root_num + 1-now_root_num; // 0 when already at target
+				floor_root_RR_copy--;
+			}
 		}
 		if(root_diff>0)
 		{
@@ -1041,10 +1059,20 @@ class mRRcollection
 			{
 				__vecNewTree[min_tree_RR[i]] = -1;
 			}
+			int num_deleted_roots=v_roots.size()+root_diff;
+			while(num_deleted_roots>0)
+			{
+				__vecNewTree[roots.back()] = -1;
+				roots.pop_back();
+				num_deleted_roots--;
+
+			}
 			delete_root(mRRid, -root_diff);
 		}
 
 		#ifdef DEBUG
+		result_out.close();
+		result_out.open(__result_dir, ios::trunc);
 		if(build_min_tree==false)
 		{
 			result_out<<"build_min_tree = "<<build_min_tree<<endl;
@@ -1079,13 +1107,16 @@ class mRRcollection
 				}
 				result_out<<endl;
 			}
-			result_out<<"The min_tree_RR is :"<<endl;
-			for(auto &node:min_tree_RR)
+			if(build_min_tree)
 			{
-				result_out<<node<<" ";
+				result_out<<"The min_tree_RR is :"<<endl;
+				for(auto &node:min_tree_RR)
+				{
+					result_out<<node<<" ";
+				}
+				result_out<<endl;
+				result_out<<"min_tree_RR.size() = "<<min_tree_RR.size()<<", affected_layer_beg = "<<affected_layer_beg<<",affected_next_layer_beg = "<<affected_next_layer_beg<<endl;
 			}
-			result_out<<endl;
-			result_out<<"min_tree_RR.size() = "<<min_tree_RR.size()<<", affected_layer_beg = "<<affected_layer_beg<<",affected_next_layer_beg = "<<affected_next_layer_beg<<endl;
 		}
 		#endif
 
@@ -1159,20 +1190,16 @@ class mRRcollection
 		}
 		#endif
 
-		// if (min_tree_RR.size() < 1 || __Activated[min_tree_RR[0]] == 1)
-		// {
-		// 	mRR.resize(min_tree); // remove the last RR
-		// 	mRR_layer.resize(min_tree);
-		// 	mRR_size = min_tree;
-		// }
-		// else
-		// {
-		// 	mRR.resize(min_tree_1); // keep regenerated min_tree
-		// 	mRR_layer.resize(min_tree_1);
-		// 	mRR_size = min_tree_1;
-		// }
-
-		mRR_size = mRR.size();
+		// After swap, mRR[min_tree+1..] are empty. Must shrink before rebuild,
+		// otherwise tree_start==old size skips those slots → empty RR.
+		if (!build_min_tree || min_tree_RR.size() < 1 || __Activated[min_tree_RR[0]] == 1)
+		{
+			mRR_size = min_tree;
+		}
+		else
+		{
+			mRR_size = min_tree_1;
+		}
 
 		#ifdef DEBUG
 		result_out<<"The mRR now is:"<<endl;
@@ -1361,7 +1388,23 @@ class mRRcollection
 		}
 		vecRoot_num[mRRid] = mRR_size + v_roots.size();
 		#ifdef DEBUG
-		if (synthetic_check(mRRid, string(__func__) + " end", 1, 1, 0, 0, 1, 0, 0)
+		for (const auto &RR : mRR)
+		{
+			if (RR.empty())
+			{
+				out_mRRset(mRR_original, mRRid);
+			out_layer(mRR_layer_original, mRRid);
+			out_vec(v_roots_original);
+			cout<<"min_tree="<<min_tree<<", first_del_idx="<<first_del_idx<<endl;
+
+			out_mRRset(mRR, mRRid);
+			out_layer(mRR_layer, mRRid);
+			out_vec(v_roots);
+				cout << __LINE__ << ", Error: empty RR in mRR_update_and_add_roots, mRRid=" << mRRid << endl;
+				exit(1);
+			}
+		}
+		if (synthetic_check(mRRid, string(__func__) + " end", 1, 1, 0, 0, 1, 0, 0, 1)
 			|| duplicate_node_in_tree_check(mRRid, string(__func__) + " end"))
 		{
 			out_mRRset(mRR_original, mRRid);
@@ -1372,15 +1415,6 @@ class mRRcollection
 			out_mRRset(mRR, mRRid);
 			out_layer(mRR_layer, mRRid);
 			out_vec(v_roots);
-
-			for(auto &RR:mRR)
-			{
-				if(RR.size()<1)
-				{
-					cout<<__LINE__<<", Error: RR.size()<1 in mRR_update_and_add_roots."<<endl;
-					exit(1);
-				}
-			}
 			exit(1);
 		}
 		#endif
@@ -1955,6 +1989,7 @@ class mRRcollection
 		mRRset &mRR = _mRRsets[mRRid];
 		#ifdef DEBUG
 		mRRset mRR_original = mRR;
+		auto &v_roots_original = vv_virtual_roots[mRRid];
 		#endif
 		int mRR_size = static_cast<int>(mRR.size());
 		vint_aligned &v_roots = vv_virtual_roots[mRRid];
@@ -2191,16 +2226,32 @@ class mRRcollection
 			}
 		}
 
-		int root_diff=0;
-		if(floor_root_RR_copy>0)
+		int root_diff=0, now_root_num=roots.size()+v_roots.size(), delete_min_tree=0;
+		if (now_root_num <= root_num)
 		{
-			floor_root_RR_copy--;
-			root_diff=root_num-roots.size()-v_roots.size();
+			if(floor_root_RR_copy>0)
+			{
+				root_diff = root_num - now_root_num; // 0 when already at target
+				floor_root_RR_copy--;
+			}
+			else if(ceil_root_RR>0)
+			{
+				root_diff = root_num + 1-now_root_num; // 0 when already at target
+				ceil_root_RR--;
+			}
 		}
-		else if(ceil_root_RR > 0)
+		else if(now_root_num>=root_num+1)
 		{
-			ceil_root_RR--;
-			root_diff=root_num+1-roots.size()-v_roots.size();
+			if(ceil_root_RR>0)
+			{
+				root_diff = now_root_num - root_num - 1; // 0 when already at target
+				ceil_root_RR--;
+			}
+			else if(floor_root_RR_copy>0)
+			{
+				root_diff = root_num + 1-now_root_num; // 0 when already at target
+				floor_root_RR_copy--;
+			}
 		}
 		if(root_diff>0)
 		{
@@ -2231,30 +2282,26 @@ class mRRcollection
 		}
 		else if(root_diff<0)
 		{
-			int n_del = -root_diff;
-			const int roots_keep = (first_del_idx == 0) ? min_tree : min_tree_1;
-			while (n_del > 0 && !v_roots.empty())
+			int num_deleted_roots=v_roots.size()+root_diff;
+			if(min_tree==mRR_size-1 && num_deleted_roots>0)
 			{
-				__vecNewTree[v_roots.back()] = -1;
-				v_roots.pop_back();
-				--n_del;
+				delete_min_tree=1;
 			}
-			while (n_del > 0 && static_cast<int>(roots.size()) > roots_keep)
+			while(num_deleted_roots>0)
 			{
 				__vecNewTree[roots.back()] = -1;
 				roots.pop_back();
-				--n_del;
+				num_deleted_roots--;
 			}
+			delete_root(mRRid, -root_diff);
 		}
 
-		if(min_tree_RR.size() < 1 ||__Activated[min_tree_RR[0]] == 1) 
+		if(min_tree_RR.size() < 1 ||__Activated[min_tree_RR[0]] == 1 || delete_min_tree==1) 
 		{
-			mRR.resize(min_tree);
-			mRR_size = min_tree; 
+			mRR_size = min_tree;
 		}
 		else
 		{
-			mRR.resize(min_tree_1);
 			mRR_size = min_tree_1;
 		}
 		ulint now_roots_size = roots.size();
@@ -2411,7 +2458,21 @@ class mRRcollection
 		}
 		vecRoot_num[mRRid] = mRR_size + v_roots.size();
 		#ifdef DEBUG
-		if (synthetic_check(mRRid, string(__func__) + " end", 1, 1, 0, 0, 1, 0, 0, 1))
+		for (const auto &RR : mRR)
+		{
+			if (RR.empty())
+			{
+				out_mRRset(mRR_original, mRRid);
+				out_vec(v_roots_original);
+				cout<<"min_tree="<<min_tree<<", first_del_idx="<<first_del_idx<<endl;
+
+				out_mRRset(mRR, mRRid);
+				out_vec(v_roots);
+				cout << __LINE__ << ", Error: empty RR in mRR_update_and_add_roots, mRRid=" << mRRid << endl;
+				exit(1);
+			}
+		}
+		if (synthetic_check(mRRid, string(__func__) + " end", 1, 1, 0, 0, 1, 0, 0, 0))
 		{
 			cout<<__LINE__<<", Error: synthetic_check failed in mRR_update_and_add_roots."<<endl;
 			out_mRRset(mRR, mRRid);

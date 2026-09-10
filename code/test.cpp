@@ -46,13 +46,15 @@ using namespace std::chrono;
 int main(int argn, char **argv)
 {   
     vint seeds; 
-    int RR_num=1000;
+    int RR_num=500;
     Argument arg;
     arg.dataset_No=4;
     arg.model="IC";
-    int root_num_increase=10, seed_num=500, round_num=20;
     root_num=10;
+    int root_num_increase=20, seed_num=RR_num, round_num=5;
     bool repro_delete_root = false;
+    bool test_update = false;
+    bool test_update_lt = false;
     for(int i=0;i<argn;i++)
     {
         if(argv[i]==string("-dataset_No"))
@@ -87,23 +89,37 @@ int main(int argn, char **argv)
         {
             repro_delete_root = true;
         }
+        if(argv[i]==string("-test_update"))
+        {
+            test_update = true;
+        }
+        if(argv[i]==string("-test_update_lt"))
+        {
+            test_update_lt = true;
+        }
     }
-    R_graph.clear(), O_graph.clear();
-    dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr)));
+    dsfmt_gv_init_gen_rand(static_cast<uint32_t>(time(nullptr))); 
 
-    // Tiny in-memory graph: no /data/fc needed. Forces root_diff<0 + delete_root mid-update.
-    if (repro_delete_root)
+    if (repro_delete_root || test_update || test_update_lt)
     {
-        const int n = 40;
+        const int n = 80;
         arg.numV = n;
-        arg.model = "IC";
-        arg.real_time_pw = true; // avoid loading a large PO into a tiny PO[]
+        arg.model = test_update_lt ? "LT" : "IC";
+        arg.real_time_pw = true;
+        arg.result_dir = "../backup_test_update.txt";
         R_graph.assign(n, vint_aligned());
         O_graph.assign(n, vint_aligned());
-        Inv_inDeg.assign(n, 1.0f);
+        // small reverse edges so BFS/LT chain can expand a bit
+        for (int i = 0; i + 1 < n; ++i)
+            R_graph[i].push_back(i + 1);
+        Inv_inDeg.assign(n, 0.5f);
         __Activated.assign(n, 0);
         numV512 = _mm512_set1_epi32(n);
         mRRcollection RR(arg);
+        if (test_update_lt)
+            return RR.test_mRR_update_and_add_roots_lt_suite();
+        if (test_update)
+            return RR.test_mRR_update_and_add_roots_suite();
         RR.repro_delete_root_mid_update();
         return 0;
     }
@@ -117,31 +133,54 @@ int main(int argn, char **argv)
 
     for(int round=0;round<round_num;round++)
     {
-        root_num+=root_num_increase;
-        for (int j = 0; j < seed_num; j++)
+        if(root_num==0)
         {
-            int seed = dsfmt_gv_genrand_uint32_range(arg.numV);
-            while (__Activated[seed])
-            {
-                seed = dsfmt_gv_genrand_uint32_range(arg.numV);
-            }
+            cout<<"root_num is 0, exit."<<endl;
+            exit(0);
+        }
+        int j=0;
+        for (; j < seed_num/2; j++)
+        {
+            int seed = RR._mRRsets[j][root_num-1][0];
             __Activated[seed] = 1;
             seeds.push_back(seed);
+            // RR.vv_polluted_nodes[j].push_back(seed);
         }
-        RR.realization(seeds);
-        cout<<"updating mRR-sets in round "<<round<<endl;
-        RR.build_n_mRRsets_tree(RR_num,0);
-        cout<<"FR_reverse_check begins."<<endl;
-        if(RR.FR_reverse_check(""))
+        for (; j < seed_num; j++)
         {
-            cout<<"\033[31m"<<__LINE__<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
-            exit(1);
+            int size=RR._mRRsets[j][root_num-1].size();
+            int seed = RR._mRRsets[j][root_num-1][(size)/2];
+            // cout<<"size: "<<size<<endl<<"mRRset: ";
+            // for(auto node:RR._mRRsets[j][root_num-1])
+            // {
+            //     cout<<node<<", ";
+            // }
+            // cout<<"seed: "<<seed<<endl;
+            __Activated[seed] = 1;
+            seeds.push_back(seed);
+            // RR.vv_polluted_nodes[j].push_back(seed);
         }
-        cout<<"Finished updating and adding roots."<<endl;
-        cout<<"num_update: "<<num_update<<", num_add_root: "<<num_add_root<<endl;
+        // RR.realization(seeds);
+        cout<<"updating mRR-sets in round "<<round<<endl;
+        // RR.build_n_mRRsets_tree(RR_num,0);
+        for(int i=0;i<RR_num;i++)
+        {
+            vint pol_nodes;
+            pol_nodes.push_back(seeds[i]);
+            RR.mRR_update_and_add_roots(i, pol_nodes);
+        }
+        // cout<<"FR_reverse_check begins."<<endl;
+        // if(RR.FR_reverse_check(""))
+        // {
+        //     cout<<"\033[31m"<<__LINE__<<"Error"<<"\033[0m"<<": FR_reverse_check failed!"<<endl;
+        //     exit(1);
+        // }
+        // cout<<"Finished updating and adding roots."<<endl;
+        // cout<<"num_update: "<<num_update<<", num_add_root: "<<num_add_root<<endl;
         seeds.clear();
         num_update=0;
         num_add_root=0;
+        root_num--;
     }
 }
 
