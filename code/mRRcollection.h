@@ -215,16 +215,16 @@ class mRRcollection
         ceil_root_RR=dist(gen);
 		floor_root_RR = num_revise_RR - ceil_root_RR;
 		floor_root_RR_copy=floor_root_RR;
-		int num_polluted=0, root_num_1=root_num+1;
+		int root_num_1=root_num+1;
 
 		auto single_start = std::chrono::high_resolution_clock::now();
 		for(ulint i=pre_theta;i<num_revise_RR;i++) 
 		{
 			mRR_mark[i]=vv_polluted_nodes[i].size();
-			if(mRR_mark[i]>0)
-			{
-				num_polluted++;
-			}
+			// if(mRR_mark[i]>0)
+			// {
+			// 	num_polluted++;
+			// }
 		}
 		size_t count = std::count_if(mRR_mark.begin(), mRR_mark.end(), [](int x) { return x > 0; });
 		// if(count<1 && _num_mRRsets>0 && round_num>1 && prevSize>0)
@@ -233,7 +233,7 @@ class mRRcollection
 		// 	cout<<"num_polluted: "<<num_polluted<<", num_revise_RR: "<<num_revise_RR<<", num_mRRsets: "<<_num_mRRsets<<", root_num: "<<root_num<<", prevSize: "<<prevSize<<endl;
 		// 	exit(1);
 		// }
-		if(pre_theta>100 && (1.0*(num_polluted)/(numSamples-pre_theta)>__regen_threshold))  // brute regen is needed
+		if(pre_theta>100 && (1.0*(count)/(numSamples-pre_theta)>__regen_threshold))  // brute regen is needed
 		{
 			refresh_FRmRRsets(pre_theta);
 			num_revise_RR=0;
@@ -264,8 +264,8 @@ class mRRcollection
 						mRR_update_and_add_roots_lt(i, vv_polluted_nodes[i]);
 					}
 					vv_polluted_nodes[i].clear();
-					num_update_this_round++;
-					num_update++;
+					// num_update_this_round++;
+					// num_update++;
 				}
 				// The root info should be recorded after the mRR-sets are updated.
 				if (vecRoot_num[i] == root_num)
@@ -306,7 +306,7 @@ class mRRcollection
 					if (root_diff > 0)
 					{
 						delete_root(i, root_diff);
-						num_delete_root_this_round++;
+						// num_delete_root_this_round++;
 					}
 					else
 					{
@@ -330,8 +330,8 @@ class mRRcollection
 						{
 							add_root_lt(i, -root_diff);
 						}
-						num_add_root_this_round++;
-						num_add_root++;
+						// num_add_root_this_round++;
+						// num_add_root++;
 					}
 					floor_root_RR--;
 				}
@@ -1050,7 +1050,7 @@ class mRRcollection
 		}
 		else if(root_diff<0)
 		{
-			deleted_roots=true;
+			// delete_root=true;
 			if(min_tree==mRR_size-1)
 			{
 				build_min_tree=false;
@@ -3345,12 +3345,12 @@ class mRRcollection
 		{
 			__vecTree[roots[k]] = -1;
 		}
-		// #ifdef DEBUG
-		// 	if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 1))
-		// 	{
-		// 		exit(1);
-		// 	}
-		// #endif
+		#ifdef DEBUG
+		if (synthetic_check(mRRid, string(__func__) + " end", 0, 1, 1, 0, 1, 0,0,1))
+		{
+			exit(1);
+		}
+		#endif
 	}
 
 	void delete_root(int mRRid, int num_del_roots)

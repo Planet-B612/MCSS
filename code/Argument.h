@@ -345,7 +345,7 @@ public:
     
     void seed_record(vector<int> seeds,int k,int i)
     {
-        ofstream out_seeds("../results/seed/MINE_" + dataset[k] + "_" + to_string(eta_0*numV) + "_" + to_string(batch) + "_" + to_string(i) + ".txt", ios::out);
+        ofstream out_seeds("../seeds/MINE_" + dataset[k] + "_" + to_string(eta_0*numV) + "_" + to_string(batch) + "_" + to_string(i) + ".txt", ios::out);
         assert((!out_seeds.fail()));
         for (auto node : seeds)
         {
